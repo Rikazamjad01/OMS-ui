@@ -1,0 +1,158 @@
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
+
+import { getRequest } from '@/utils/api'
+
+export const fetchOrders = createAsyncThunk(
+  'orders/fetchOrders',
+  async ({ page = 1, limit = 25, search = '', filters = {} }, { rejectWithValue, getState }) => {
+    try {
+      // Check if we already have the data to avoid redundant fetches
+      const state = getState()
+      const currentData = state.orders.orders
+
+      // If we're fetching the same page with same filters, skip
+      if (
+        currentData.length > 0 &&
+        state.orders.pagination.currentPage === page &&
+        JSON.stringify(state.orders.lastFilters) === JSON.stringify(filters)
+      ) {
+        return null // Indicate no fetch needed
+      }
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(search && { search }),
+        ...filters
+      })
+
+      const response = await getRequest(`orders/history?${params}`)
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      const data = response.data || {}
+
+      return {
+        orders: data.orders || [],
+        total: data.pagination?.total || 0,
+        page: data.pagination?.page || page,
+        limit: data.pagination?.limit || limit,
+        filters // Store the filters used for this request
+      }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+const ordersSlice = createSlice({
+  name: 'orders',
+  initialState: {
+    orders: [],
+    loading: false,
+    error: null,
+    selectedOrders: null,
+    selectedCustomer: null,
+    lastFilters: {}, // Store last used filters
+    pagination: {
+      currentPage: 1,
+      itemsPerPage: 25,
+      total: 0
+    }
+  },
+  reducers: {
+    setCurrentPage: (state, action) => {
+      state.pagination.currentPage = action.payload
+    },
+    handleOrder: (state, action) => {
+      state.orders = action.payload.orders || []
+      state.pagination = action.payload.pagination
+    },
+    handleFindOrder: (state, action) => {
+        // console.log(state.orders, action.payload, 'state.orders and action.payload in handleFindOrder');
+        const order = state.orders.find(order => order.id == action.payload)
+
+        if (order) {
+          state.selectedOrders = order
+        }
+      },
+    handleFindCustomer: (state, action) => {
+      const customerId = action.payload
+
+      const orderWithCustomer = state.orders.find(order => order.customerData?.id == customerId)
+
+      state.selectedCustomer = orderWithCustomer ? orderWithCustomer.customerData : null
+    },
+    setItemsPerPage: (state, action) => {
+      state.pagination.itemsPerPage = action.payload
+    },
+    clearError: state => {
+      state.error = null
+    },
+    clearSelectedCustomer: state => {
+      state.selectedCustomer = null
+    },
+
+    // Add a reset action to clear state when needed
+    resetOrders: state => {
+      state.orders = []
+      state.selectedOrders = null
+      state.selectedCustomer = null
+      state.pagination = {
+        currentPage: 1,
+        itemsPerPage: 25,
+        total: 0
+      }
+    }
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(fetchOrders.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchOrders.fulfilled, (state, action) => {
+        state.loading = false
+
+        // Only update if we got new data
+        if (action.payload) {
+          state.orders = action.payload.orders
+          state.pagination = {
+            currentPage: action.payload.page,
+            itemsPerPage: action.payload.limit,
+            total: action.payload.total
+          }
+          state.lastFilters = action.payload.filters || {}
+        }
+      })
+      .addCase(fetchOrders.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+  }
+})
+
+export const {
+  setCurrentPage,
+  setItemsPerPage,
+  clearError,
+  handleOrder,
+  handleFindOrder,
+  handleFindCustomer,
+  resetOrders
+} = ordersSlice.actions
+
+export default ordersSlice.reducer
+
+// Selectors
+export const selectOrders = state => state.orders.orders
+export const selectOrdersLoading = state => state.orders.loading
+export const selectOrdersError = state => state.orders.error
+export const selectPagination = state => state.orders.pagination
+export const selectCustomer = state => state.orders.selectedCustomer
+
+export const selectCustomerById = (state, customerId) => {
+  return state.orders.orders.find(order => order.customerData?.id == customerId)?.customerData || null
+}
