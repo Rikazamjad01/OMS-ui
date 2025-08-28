@@ -107,7 +107,6 @@ const OrderListTable = ({ orders, customerId }) => {
     return orders
   }, [orders, customerId])
 
-  console.log(filteredOrders, 'filteredOrders in OrderListTable')
 
   // Transform orders data to match table format
   const tableData = useMemo(() => {

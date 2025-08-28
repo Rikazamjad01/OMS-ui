@@ -7,106 +7,124 @@ import Typography from '@mui/material/Typography'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
-const CustomerStatsCard = ({ statsData }) => {
-  if (!statsData || !Array.isArray(statsData)) return null
+const CustomerStatsCard = props => {
+  const {
+    title = "Customer Stats",
+    avatarIcon = "tabler-user", // fallback icon
+    color = "primary",
+    description = "Customer orders statistics",
+
+    // API fields
+    completedOrdersByCustomer, // ✅ delivered
+    partiallyDelivered,        // ✅ from orderStatus
+    notDelivered,              // ✅ from orderStatus
+
+    fakeShopifyOrders,
+    fakeManualOrders,
+
+    platform,                  // ✅ shopify/manual check
+    device,                    // ❌ not available → keep as is
+    campaign,                  // ❌ not available → keep as is
+    products                   // ✅ use for purchasedCategory
+  } = props
+
+  // Safely compute values
+  const successfullyDelivered = completedOrdersByCustomer ?? 0
+  const partialOrders = partiallyDelivered ?? 0
+  const failedOrders = notDelivered ?? 0
+
+  const totalFakeOrders = (fakeShopifyOrders ?? 0) + (fakeManualOrders ?? 0)
+
+  const shopifyOrders = platform === "shopify" ? successfullyDelivered : 0
+  const manualOrders = platform === "manual" ? successfullyDelivered : 0
+
+  const purchasedCategory =
+    products?.[0]?.category || "General Products"
 
   return (
-    <Grid container spacing={6}>
-      {statsData.map((item, index) => (
-        <Grid key={index} size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent className="flex flex-col gap-2">
+    <Card>
+      <CardContent className="flex flex-col gap-2">
 
-              <Typography variant="h5" className="capitalize flex items-center gap-2">
-                <CustomAvatar variant="rounded" skin="light" color={item.color} size={25}>
-                  <i className={item.avatarIcon} />
-                </CustomAvatar>
-                {item.title}
+        {/* Title */}
+        <Typography variant="h5" className="capitalize flex items-center gap-2">
+          <CustomAvatar variant="rounded" skin="light" color={color} size={25}>
+            <i className={avatarIcon} />
+          </CustomAvatar>
+          {title}
+        </Typography>
+
+        <div className="flex flex-col items-start gap-1">
+          {/* Case 1: Delivery stats */}
+          <div className="flex flex-col gap-1">
+            <Typography variant="body1">
+              Total Orders: <strong>{successfullyDelivered + partialOrders + failedOrders}</strong>
+            </Typography>
+            <Grid container spacing={12}>
+              <Typography variant="body2">
+                Delivered: <strong>{successfullyDelivered}</strong>
               </Typography>
+              <Typography variant="body2">
+                Partial: <strong>{partialOrders}</strong>
+              </Typography>
+              <Typography variant="body2">
+                Not Delivered: <strong>{failedOrders}</strong>
+              </Typography>
+            </Grid>
+          </div>
 
-              <div className="flex flex-col items-start gap-1">
-                {/* Case 1: show order delivery stats */}
-                {item.orders_count !== undefined ? (
-                  <div className="flex flex-col gap-1">
-                    <Typography variant="body1">
-                      Total Orders:{' '}
-                      <strong>
-                        {item.orders_count + item.partiallyDelivered + item.notDelivered}
-                      </strong>
-                    </Typography>
-                    <Grid container spacing={12}>
-                      <Typography variant="body2">
-                        Delivered: <strong>{item.successfullyDelivered}</strong>
-                      </Typography>
-                      <Typography variant="body2">
-                        Partial: <strong>{item.partiallyDelivered}</strong>
-                      </Typography>
-                      <Typography variant="body2">
-                        Not Delivered: <strong>{item.notDelivered}</strong>
-                      </Typography>
-                    </Grid>
-                  </div>
-                ) : null}
+          {/* Case 2: Fake orders */}
+          {totalFakeOrders > 0 && (
+            <div className="flex flex-col gap-1">
+              <Typography variant="body1">
+                Total Fake Orders: <strong>{totalFakeOrders}</strong>
+              </Typography>
+              <Grid container spacing={12}>
+                <Typography variant="body2">
+                  Shopify: <strong>{fakeShopifyOrders ?? 0}</strong>
+                </Typography>
+                <Typography variant="body2">
+                  Manual: <strong>{fakeManualOrders ?? 0}</strong>
+                </Typography>
+              </Grid>
+            </div>
+          )}
 
-                {/* Case 2: fake orders */}
-                {item.fakeShopifyOrders !== undefined ? (
-                  <div className="flex flex-col gap-1">
-                    <Typography variant="body1">
-                      Total Fake Orders:{' '}
-                      <strong>{item.fakeShopifyOrders + item.fakeManualOrders}</strong>
-                    </Typography>
-                    <Grid container spacing={12}>
-                      <Typography variant="body2">
-                        Shopify: <strong>{item.fakeShopifyOrders}</strong>
-                      </Typography>
-                      <Typography variant="body2">
-                        Manual: <strong>{item.fakeManualOrders}</strong>
-                      </Typography>
-                    </Grid>
-                  </div>
-                ) : null}
+          {/* Case 3: Channel orders */}
+          {(shopifyOrders > 0 || manualOrders > 0) && (
+            <Grid container spacing={12}>
+              <Typography variant="body2">
+                Shopify: <strong>{shopifyOrders}</strong>
+              </Typography>
+              <Typography variant="body2">
+                Manual: <strong>{manualOrders}</strong>
+              </Typography>
+            </Grid>
+          )}
 
-                {/* Case 3: channel orders */}
-                {item.shopifyOrders !== undefined && item.manualOrders !== undefined ? (
-                  <Grid container spacing={12}>
-                    <Typography variant="body2">
-                      Shopify: <strong>{item.shopifyOrders}</strong>
-                    </Typography>
-                    <Typography variant="body2">
-                      Manual: <strong>{item.manualOrders}</strong>
-                    </Typography>
-                  </Grid>
-                ) : null}
+          {/* Case 4: Acquisition */}
+          {device || campaign ? (
+            <Grid container spacing={12}>
+              <Typography variant="body2">
+                Device: <strong>{device || "N/A"}</strong>
+              </Typography>
+              <Typography variant="body2">
+                Campaign: <strong>{campaign || "N/A"}</strong>
+              </Typography>
+            </Grid>
+          ) : null}
 
-                {/* Case 4: acquisition strategy */}
-                {item.device && item.campaign ? (
-                  <Grid container spacing={12}>
-                    <Typography variant="body2">
-                      Device: <strong>{item.device}</strong>
-                    </Typography>
-                    <Typography variant="body2">
-                      Campaign: <strong>{item.campaign}</strong>
-                    </Typography>
-                  </Grid>
-                ) : null}
+          {/* Case 5: Purchased category */}
+          <Grid container spacing={12}>
+            <Typography variant="body2">
+              Mostly Purchased Items: <strong>{purchasedCategory}</strong>
+            </Typography>
+          </Grid>
 
-                {/* Case 5: Purchased products Category */}
-                {item.purchasedCategory !== undefined ? (
-                  <Grid container spacing={12}>
-                    <Typography variant="body2">
-                      Mostly Purchased items: <strong>{item.purchasedCategory}</strong>
-                    </Typography>
-                  </Grid>
-                ) : null}
-
-                {/* Always show description */}
-                <Typography variant="body2">{item.description}</Typography>
-              </div>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
-    </Grid>
+          {/* Always show description */}
+          <Typography variant="body2">{description}</Typography>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

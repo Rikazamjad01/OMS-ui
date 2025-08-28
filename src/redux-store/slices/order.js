@@ -83,6 +83,8 @@ const ordersSlice = createSlice({
 
       const orderWithCustomer = state.orders.find(order => order.customerData?.id == customerId)
 
+      console.log(orderWithCustomer, 'orderWithCustomer in handleFindCustomer')
+
       state.selectedCustomer = orderWithCustomer ? orderWithCustomer.customerData : null
     },
     setItemsPerPage: (state, action) => {

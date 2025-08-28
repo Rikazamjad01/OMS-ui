@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -20,9 +20,6 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
   getSortedRowModel
 } from '@tanstack/react-table'
 
@@ -95,20 +92,31 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 }
 
 /* -------------------------- small components ------------------------ */
-const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...props }) => {
+const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, onEnter, ...props }) => {
   const [value, setValue] = useState(initialValue ?? '')
 
-  // keep controlled
-  useMemo(() => setValue(initialValue ?? ''), [initialValue])
+  useEffect(() => {
+    setValue(initialValue ?? '')
+  }, [initialValue])
 
-  // call parent after debounce
-  useMemo(() => {
+  useEffect(() => {
     const t = setTimeout(() => onChange(value), debounce)
 
     return () => clearTimeout(t)
   }, [value, debounce, onChange])
 
-  return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
+  return (
+    <CustomTextField
+      {...props}
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          onEnter?.(value)
+        }
+      }}
+    />
+  )
 }
 
 /* --------------------------- main component ------------------------- */
@@ -122,7 +130,9 @@ const OrderListTable = ({
   onPageChange,
   onLimitChange,
   onSearchChange,
-  onFiltersChange
+  onFiltersChange,
+  onMergeOrders,
+  onDuplicateOrders
 }) => {
   const { lang: locale } = useParams()
 
@@ -132,6 +142,7 @@ const OrderListTable = ({
   const [rawFilters, setRawFilters] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [openFilter, setOpenFilter] = useState(false)
+
 
   // Map backend orders -> table rows
   const data = useMemo(() => {
@@ -262,7 +273,10 @@ const OrderListTable = ({
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} />
-            <Typography color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`} className='font-medium'>
+            <Typography
+              color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
+              className='font-medium'
+            >
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
             </Typography>
           </div>
@@ -274,7 +288,10 @@ const OrderListTable = ({
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <i className={classnames('bx-bxs-circle bs-2 is-2', orderPlatform[row.original.platform].colorClassName)} />
-            <Typography color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`} className='font-medium'>
+            <Typography
+              color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
+              className='font-medium'
+            >
               {orderPlatform[row.original.platform]?.text || row.original.platform || 'Unknown'}
             </Typography>
           </div>
@@ -383,15 +400,10 @@ const OrderListTable = ({
   const table = useReactTable({
     data,
     columns,
-    filterFns: { fuzzy: fuzzyFilter },
-
-    // only selection & columnFilters are client-controlled; do not add globalFilter here
-    state: { rowSelection, columnFilters },
-
+    state: { rowSelection },
     onRowSelectionChange: setRowSelection,
-    onColumnFiltersChange: setColumnFilters,
-
-    // server pagination
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
     pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     onPaginationChange: updater => {
@@ -403,12 +415,6 @@ const OrderListTable = ({
       if (nextPage !== page) onPageChange?.(nextPage)
       if (nextSize !== limit) onLimitChange?.(nextSize)
     },
-
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
@@ -434,19 +440,16 @@ const OrderListTable = ({
           </Button>
 
           <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={val => {
-              setGlobalFilter(val)
-
-              // notify parent (server search)
-              onSearchChange?.(val)
-
-              // reset to first page on search
-              onPageChange?.(1)
+            value={globalFilter}
+            onChange={(val) => {
+              setGlobalFilter(val);
+              onSearchChange?.(val); // Add this line
             }}
-            placeholder='Search Order'
-            className='sm:is-auto'
-            debounce={500}
+            onEnter={(val) => {
+              setGlobalFilter(val);
+              onSearchChange?.(val);
+            }}
+            placeholder="Search Order"
           />
 
           <FilterModal
@@ -477,7 +480,7 @@ const OrderListTable = ({
                 element={Button}
                 elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
                 dialog={ConfirmationDialog}
-                dialogProps={{ type: 'merge-orders', payload: { orderIds: selectedIds } }}
+                dialogProps={{ type: 'merge-orders', payload: { orderIds: selectedIds }, onSuccess: refetchOrders }}
               />
             ) : (
               <Button color='secondary' variant='tonal' disabled>
@@ -490,7 +493,7 @@ const OrderListTable = ({
                 element={Button}
                 elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
                 dialog={ConfirmationDialog}
-                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds } }}
+                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) }, onSuccess: refetchOrders }}
               />
             ) : (
               <Button color='primary' variant='tonal' disabled>
@@ -576,14 +579,14 @@ const OrderListTable = ({
         count={total || 0}
         page={(page || 1) - 1}
         onPageChange={(_e, newPage) => onPageChange?.(newPage + 1)}
-        rowsPerPage={limit || 25}
+        rowsPerPage={limit}
         onRowsPerPageChange={e => {
-          const newLimit = parseInt(e.target.value, 10)
+          const newLimit = parseInt(e.target.value, 25)
 
           onLimitChange?.(newLimit)
           onPageChange?.(1)
         }}
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[ 25, 50, 100]}
       />
     </Card>
   )

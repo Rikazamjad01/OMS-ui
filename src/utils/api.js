@@ -9,7 +9,7 @@ export const getRequest = async endpoint => {
         'Content-Type': 'application/json'
       }
     })
-    
+
     const data = response.data
 
     return data
@@ -17,4 +17,28 @@ export const getRequest = async endpoint => {
     console.error('Failed to fetch orders:', error)
     throw error
   }
+}
+
+
+export const postRequest = async (endpoint, body = {}) => {
+  try {
+    const response = await axios.post(`${baseUrl}/${endpoint}`, body, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    return response.data
+  } catch (error) {
+    console.error('POST request failed:', error)
+    throw error
+  }
+}
+
+export const mergeOrders = async (orderIds) => {
+  return postRequest('orders/merge', { orderIds })
+}
+
+export const duplicateOrders = async (orderIds) => {
+  return postRequest('orders/duplicate', { orderIds })
 }

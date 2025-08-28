@@ -13,23 +13,68 @@ import Button from '@mui/material/Button'
 // Third-party Imports
 import classnames from 'classnames'
 
-const ConfirmationDialog = ({ open, setOpen, type }) => {
+import { mergeOrders, duplicateOrders } from '@/utils/api'
+
+const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
   const [secondDialog, setSecondDialog] = useState(false)
-  const [userInput, setUserInput] = useState(false)
-
-  // Vars
+  const [userInput, setUserInput] = useState(false) // true = user confirmed; false = cancelled or failed
+  const [resultTitle, setResultTitle] = useState(null)
+  const [resultSubtitle, setResultSubtitle] = useState(null)
   const Wrapper = type === 'suspend-account' ? 'div' : Fragment
+
+  const isMerge = type === 'merge-orders' || type === 'merge-order'
+  const isDuplicate = type === 'duplicate-order'
 
   const handleSecondDialogClose = () => {
     setSecondDialog(false)
+    setResultTitle(null)
+    setResultSubtitle(null)
     setOpen(false)
   }
 
-  const handleConfirmation = value => {
-    setUserInput(value)
-    setSecondDialog(true)
+  const handleConfirmation = async value => {
+    // Close the first dialog either way
     setOpen(false)
+
+    // User clicked "Cancel"
+    if (!value) {
+      setUserInput(false)
+      setResultTitle(null)
+      setResultSubtitle(null)
+      setSecondDialog(true)
+
+      return
+    }
+
+    // User clicked "Confirm" -> call backend
+    try {
+      const ids = payload?.orderIds ?? []
+
+      if (isMerge) {
+        if (ids.length < 2) throw new Error('Please select at least 2 orders to merge.')
+        await mergeOrders(ids)
+      } else if (isDuplicate) {
+        if (ids.length !== 1) throw new Error('Please select exactly 1 order to duplicate.')
+        await duplicateOrders(ids)
+      }
+
+      // Success
+      setUserInput(true)
+      setResultTitle(null)
+      setResultSubtitle(null)
+      setSecondDialog(true)
+      onSuccess?.() // optional: parent can refetch
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Something went wrong. Please try again.'
+
+      // Mark as failure (red icon) and show error message
+      setUserInput(false)
+      setResultTitle('Action Failed')
+      setResultSubtitle(msg)
+      setSecondDialog(true)
+      onError?.(err)
+    }
   }
 
   // Title messages for first dialog
@@ -46,6 +91,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
       case 'split-order':
         return 'Are you sure to split this order?'
       case 'merge-order':
+      case 'merge-orders':
         return 'Are you sure to merge these orders?'
       case 'duplicate-order':
         return 'Are you sure to duplicate this order?'
@@ -84,7 +130,8 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
       case 'split-order':
         return 'Yes, Split Order!'
       case 'merge-orders':
-        return 'Yes, Merge orders!'
+      case 'merge-order':
+        return 'Yes, Merge Orders!'
       case 'duplicate-order':
         return 'Yes, Duplicate Order!'
       case 'cancel-order':
@@ -94,7 +141,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
     }
   }
 
-  // Result title for second dialog
+  // Result title for second dialog (used when no override provided)
   const getResultTitle = () => {
     if (!userInput) return 'Cancelled'
 
@@ -112,6 +159,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
       case 'split-order':
         return 'Split Completed'
       case 'merge-orders':
+      case 'merge-order':
         return 'Merged Successfully'
       case 'duplicate-order':
         return 'Duplicated Successfully'
@@ -122,7 +170,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
     }
   }
 
-  // Result subtitle for second dialog
+  // Result subtitle for second dialog (used when no override provided)
   const getResultSubtitle = () => {
     if (userInput) {
       switch (type) {
@@ -139,6 +187,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
         case 'split-order':
           return 'Order has been split successfully.'
         case 'merge-orders':
+        case 'merge-order':
           return 'Orders merged successfully.'
         case 'duplicate-order':
           return 'Order duplicated successfully.'
@@ -162,6 +211,7 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
         case 'split-order':
           return 'Order Split Cancelled'
         case 'merge-orders':
+        case 'merge-order':
           return 'Order Merge Cancelled'
         case 'duplicate-order':
           return 'Order Duplication Cancelled'
@@ -215,9 +265,9 @@ const ConfirmationDialog = ({ open, setOpen, type }) => {
             })}
           />
           <Typography variant='h4' className='mbe-2'>
-            {getResultTitle()}
+            {resultTitle ?? getResultTitle()}
           </Typography>
-          <Typography color='text.primary'>{getResultSubtitle()}</Typography>
+          <Typography color='text.primary'>{resultSubtitle ?? getResultSubtitle()}</Typography>
         </DialogContent>
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
           <Button variant='contained' color='success' onClick={handleSecondDialogClose}>

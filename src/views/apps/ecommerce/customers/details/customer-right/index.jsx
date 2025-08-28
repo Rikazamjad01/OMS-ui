@@ -12,7 +12,7 @@ import Grid from '@mui/material/Grid2'
 // Component Imports
 import CustomTabList from '@core/components/mui/TabList'
 
-const CustomerRight = ({ orders, tabContentList }) => {
+const CustomerRight = ({  tabContentList }) => {
   // States
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -34,7 +34,7 @@ const CustomerRight = ({ orders, tabContentList }) => {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TabPanel value={activeTab} className='p-0'>
-              {tabContentList[activeTab]} orders={orders}
+              {tabContentList[activeTab]}
             </TabPanel>
           </Grid>
         </Grid>
