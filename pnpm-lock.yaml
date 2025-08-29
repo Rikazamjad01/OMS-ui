@@ -76,7 +76,7 @@ importers:
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
       '@reduxjs/toolkit':
-        specifier: 2.5.0
+        specifier: ^2.5.0
         version: 2.5.0(react-redux@9.2.0(@types/react@19.0.2)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@tanstack/match-sorter-utils':
         specifier: 8.19.4
@@ -181,7 +181,7 @@ importers:
         specifier: 2.16.0
         version: 2.16.0(react@18.3.1)
       react-redux:
-        specifier: 9.2.0
+        specifier: ^9.2.0
         version: 9.2.0(@types/react@19.0.2)(react@18.3.1)(redux@5.0.1)
       react-toastify:
         specifier: 10.0.6
@@ -845,6 +845,7 @@ packages:
   '@mui/base@5.0.0-beta.66':
     resolution: {integrity: sha512-1SzcNbtIms0o/Dx+599B6QbvR5qUMBUjwc2Gs47h1HsF7RcEFXxqaq7zrWkIWbvGctIIPx0j330oGx/SkF+UmA==}
     engines: {node: '>=14.0.0'}
+    deprecated: This package has been replaced by @base-ui-components/react
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
