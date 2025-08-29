@@ -17,7 +17,7 @@ const customerSlice = createSlice({
     error: null,
     pagination: {
       page: 1,
-      perPage: 10,
+      perPage: 25,
       total: 0
     }
   },

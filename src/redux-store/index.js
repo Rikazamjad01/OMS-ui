@@ -7,6 +7,7 @@ import calendarReducer from '@/redux-store/slices/calendar'
 import kanbanReducer from '@/redux-store/slices/kanban'
 import emailReducer from '@/redux-store/slices/email'
 import ordersReducer from '@/redux-store/slices/order'
+import customerReducer from '@/redux-store/slices/customer'
 
 export const store = configureStore({
   reducer: {
@@ -15,6 +16,7 @@ export const store = configureStore({
     kanbanReducer,
     emailReducer,
     orders: ordersReducer,
+    customers: customerReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })
