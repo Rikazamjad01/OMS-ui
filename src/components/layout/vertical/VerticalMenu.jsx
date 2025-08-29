@@ -135,19 +135,44 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         </MenuItem>
 
         {/* logistics */}
-        <MenuItem
+        {/* <MenuItem
           href={`/${locale}/apps/logistics/fleet`}
           icon={<i className="bx-car" />}
         >
           {dictionary['navigation'].logistics}
-        </MenuItem>
+        </MenuItem> */}
+
+        <SubMenu
+          label={dictionary['navigation'].logistics}
+          icon={<i className="bx-car" />}
+        >
+          <MenuItem href={`/${locale}/logistics/fleet`}>{dictionary['navigation'].fleet}</MenuItem>
+          <MenuItem href={`/${locale}/logistics/zoneSetup`}>{dictionary['navigation'].zoneSetup}</MenuItem>
+        </SubMenu>
+
 
         {/* CSR Head */}
-        <MenuItem
+        {/* <MenuItem
           href={`/${locale}/pages/CSR-HOD`}
           icon={<i className="bx-user" />}
         >
           {dictionary['navigation'].CSRHead}
+        </MenuItem> */}
+
+        <SubMenu
+          label={dictionary['navigation'].CSRHead}
+          icon={<i className="bx-user" />}
+        >
+          <MenuItem href={`/${locale}/CSR_HOD/agent_task_assignment`}>{dictionary['navigation'].agentTaskAssignment}</MenuItem>
+          <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem>
+        </SubMenu>
+
+        {/* courier */}
+        <MenuItem
+          href={`/${locale}/apps/ecommerce/courier`}
+          icon={<i className='bx-box' />}
+        >
+          {dictionary['navigation'].courier}
         </MenuItem>
 
         {/* agents */}
@@ -240,11 +265,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             <MenuItem href={`/${locale}/apps/roles`}>{dictionary['navigation'].roles}</MenuItem>
             <MenuItem href={`/${locale}/apps/permissions`}>{dictionary['navigation'].permissions}</MenuItem>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].pages} icon={<i className='bx-dock-top' />}>
+          {/* <SubMenu label={dictionary['navigation'].pages} icon={<i className='bx-dock-top' />}>
             <MenuItem href={`/${locale}/pages/user-profile`}>{dictionary['navigation'].userProfile}</MenuItem>
             <MenuItem href={`/${locale}/pages/account-settings`}>{dictionary['navigation'].accountSettings}</MenuItem>
-            {/* <MenuItem href={`/${locale}/pages/faq`}>{dictionary['navigation'].faq}</MenuItem> */}
-            {/* <MenuItem href={`/${locale}/pages/pricing`}>{dictionary['navigation'].pricing}</MenuItem> */}
             <SubMenu label={dictionary['navigation'].miscellaneous}>
               <MenuItem href={`/${locale}/pages/misc/coming-soon`} target='_blank'>
                 {dictionary['navigation'].comingSoon}
@@ -259,7 +282,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
                 {dictionary['navigation'].notAuthorized401}
               </MenuItem>
             </SubMenu>
-          </SubMenu>
+          </SubMenu> */}
           <SubMenu label={dictionary['navigation'].fleetManagement} icon={<i className='bx-dock-top' />}>
             <MenuItem href={`/${locale}/pages/user-profile`}>{dictionary['navigation'].userProfile}</MenuItem>
             <MenuItem href={`/${locale}/pages/account-settings`}>{dictionary['navigation'].accountSettings}</MenuItem>
@@ -280,15 +303,12 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               </MenuItem>
             </SubMenu>
           </SubMenu>
-          <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}>
-            <SubMenu label={dictionary['navigation'].login}>
-              {/* <MenuItem href={`/${locale}/pages/auth/login-v1`} target='_blank'>
-                {dictionary['navigation'].loginV1}
-              </MenuItem> */}
+          {/* <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}> */}
+            {/* <SubMenu label={dictionary['navigation'].login}>
               <MenuItem href={`/${locale}/pages/auth/login-v2`} target='_blank'>
                 {dictionary['navigation'].loginV2}
               </MenuItem>
-            </SubMenu>
+            </SubMenu> */}
             {/* <SubMenu label={dictionary['navigation'].register}>
               <MenuItem href={`/${locale}/pages/auth/register-v1`} target='_blank'>
                 {dictionary['navigation'].registerV1}
@@ -300,48 +320,27 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
                 {dictionary['navigation'].registerMultiSteps}
               </MenuItem>
             </SubMenu> */}
-            <SubMenu label={dictionary['navigation'].verifyEmail}>
+            {/* <SubMenu label={dictionary['navigation'].verifyEmail}>
               <MenuItem href={`/${locale}/pages/auth/verify-email-v1`} target='_blank'>
                 {dictionary['navigation'].verifyEmailV1}
               </MenuItem>
-              {/* <MenuItem href={`/${locale}/pages/auth/verify-email-v2`} target='_blank'>
-                {dictionary['navigation'].verifyEmailV2}
-              </MenuItem> */}
             </SubMenu>
             <SubMenu label={dictionary['navigation'].forgotPassword}>
               <MenuItem href={`/${locale}/pages/auth/forgot-password-v1`} target='_blank'>
                 {dictionary['navigation'].forgotPasswordV1}
               </MenuItem>
-              {/* <MenuItem href={`/${locale}/pages/auth/forgot-password-v2`} target='_blank'>
-                {dictionary['navigation'].forgotPasswordV2}
-              </MenuItem> */}
             </SubMenu>
             <SubMenu label={dictionary['navigation'].resetPassword}>
               <MenuItem href={`/${locale}/pages/auth/reset-password-v1`} target='_blank'>
                 {dictionary['navigation'].resetPasswordV1}
               </MenuItem>
-              {/* <MenuItem href={`/${locale}/pages/auth/reset-password-v2`} target='_blank'>
-                {dictionary['navigation'].resetPasswordV2}
-              </MenuItem> */}
             </SubMenu>
             <SubMenu label={dictionary['navigation'].twoSteps}>
               <MenuItem href={`/${locale}/pages/auth/two-steps-v1`} target='_blank'>
                 {dictionary['navigation'].twoStepsV1}
               </MenuItem>
-              {/* <MenuItem href={`/${locale}/pages/auth/two-steps-v2`} target='_blank'>
-                {dictionary['navigation'].twoStepsV2}
-              </MenuItem> */}
             </SubMenu>
           </SubMenu>
-          {/* <SubMenu label={dictionary['navigation'].wizardExamples} icon={<i className='bx-spreadsheet' />}>
-            <MenuItem href={`/${locale}/pages/wizard-examples/checkout`}>{dictionary['navigation'].checkout}</MenuItem>
-            <MenuItem href={`/${locale}/pages/wizard-examples/property-listing`}>
-              {dictionary['navigation'].propertyListing}
-            </MenuItem>
-            <MenuItem href={`/${locale}/pages/wizard-examples/create-deal`}>
-              {dictionary['navigation'].createDeal}
-            </MenuItem>
-          </SubMenu> */}
           <MenuItem href={`/${locale}/apps/ecommerce/manage-reviews`} icon={<i className='bx-star' />}>
             {dictionary['navigation'].manageReviews}
           </MenuItem>
@@ -455,7 +454,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               </SubMenu>
             </SubMenu>
             <MenuItem disabled>{dictionary['navigation'].disabledMenu}</MenuItem>
-          </SubMenu>
+          </SubMenu> */}
         </MenuSection>
       </Menu>
       {/* <Menu

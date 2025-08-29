@@ -18,6 +18,8 @@ const CustomerDetails = ({ customerData }) => {
     children: 'Edit Details'
   }
 
+  console.log(customerData, 'customerData in customer details')
+
   // Calculate derived values
   const customerName = `${customerData?.first_name || ''} ${customerData?.last_name || ''}`.trim()
   const totalOrders = customerData?.orders_count || 0

@@ -10,9 +10,10 @@ import Typography from '@mui/material/Typography'
 // Component Imports
 import { useDispatch, useSelector } from 'react-redux'
 
+import { handleFindOrder, selectSelectedProductIds } from '@/redux-store/slices/order'
+
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
-import { handleFindOrder } from '@/redux-store/slices/order'
 
 export const paymentStatus = {
   'paid': { text: 'Paid', color: 'success' },
@@ -34,7 +35,28 @@ export const statusChipColor = {
 
 const OrderDetailHeader = ({ order }) => {
   const { selectedOrders } = useSelector(state => state.orders)
+  const selectedProductIds = useSelector(selectSelectedProductIds)
   const dispatch = useDispatch()
+
+  const canSplitOrder = (() => {
+    if (!selectedOrders?.line_items) return false
+
+    const totalProducts = selectedOrders.line_items.length
+
+    // User must select at least one product
+    if (selectedProductIds.length < 1) return false
+
+    if (totalProducts === 1) {
+      // Only 1 product in the order → split allowed if quantity > 1
+      const item = selectedOrders.line_items[0]
+
+      return item?.quantity > 1
+    }
+
+    // Multiple products → split allowed if user selected any
+    return true
+  })()
+
 
   // Vars
   const buttonProps = (children, color, variant) => ({
@@ -98,12 +120,17 @@ const OrderDetailHeader = ({ order }) => {
           dialog={ConfirmationDialog}
           dialogProps={{ type: 'cancel-order' }}
         />
-        <OpenDialogOnElementClick
-          element={Button}
-          elementProps={buttonProps('Split Order', 'success', 'tonal')}
-          dialog={ConfirmationDialog}
-          dialogProps={{ type: 'split-order' }}
-        />
+
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{
+              ...buttonProps('Split Order', 'success', 'tonal'),
+              disabled: !canSplitOrder
+            }}
+            dialog={ConfirmationDialog}
+            dialogProps={{ type: 'split-order', payload: { orderId: order, selectedProductIds } }}
+          />
+
       </div>
     </div>
   )

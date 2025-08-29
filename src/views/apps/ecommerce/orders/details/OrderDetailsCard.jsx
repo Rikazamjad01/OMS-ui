@@ -33,10 +33,10 @@ import Link from '@components/Link'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import { handleOrder, handleFindOrder, selectOrders } from '@/redux-store/slices/order'
+import { handleOrder, handleFindOrder, selectOrders, setSelectedProducts } from '@/redux-store/slices/order'
 
 // 💰 Price formatter for PKR
-const formatPrice = (amount) => {
+const formatPrice = amount => {
   return new Intl.NumberFormat('en-PK', {
     style: 'currency',
     currency: 'PKR',
@@ -55,9 +55,10 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 
 const columnHelper = createColumnHelper()
 
-const OrderTable = ({ data }) => {
+const OrderTable = ({ data, onSelectionChange }) => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
+  const dispatch = useDispatch()
 
   const columns = useMemo(
     () => [
@@ -79,6 +80,10 @@ const OrderTable = ({ data }) => {
           />
         )
       },
+      columnHelper.accessor('id', {
+        header: 'ID',
+        cell: ({ row }) => <Typography>{row.original.id}</Typography>
+      }),
       columnHelper.accessor('productName', {
         header: 'Product',
         cell: ({ row }) => (
@@ -123,12 +128,36 @@ const OrderTable = ({ data }) => {
   const table = useReactTable({
     data: data || [],
     columns,
+    getRowId: row => row.id.toString(),
     filterFns: { fuzzy: fuzzyFilter },
     state: { rowSelection, globalFilter },
     initialState: { pagination: { pageSize: 25 } },
     enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: newSelection => {
+      setRowSelection(newSelection)
+
+      // Get the selected product IDs directly from the data
+      const selectedIds = Object.keys(newSelection)
+        .filter(id => newSelection[id])
+        .map(id => {
+          // Find the row data for this ID
+          const rowData = data.find(item => item.id.toString() === id)
+
+          return rowData ? rowData.id : null
+        })
+        .filter(id => id !== null)
+
+      console.log(selectedIds, 'selected product IDs')
+
+      // Send to parent component
+      if (onSelectionChange) {
+        onSelectionChange(selectedIds)
+      }
+
+      // Also dispatch to Redux
+      dispatch(setSelectedProducts(selectedIds))
+    },
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
@@ -195,11 +224,18 @@ const OrderDetailsCard = ({ orderId }) => {
   const dispatch = useDispatch()
   const selectedOrder = useSelector(state => state.orders.selectedOrders)
   const orders = useSelector(selectOrders)
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+
+  // Handle selection changes
+  const handleSelectionChange = selectedIds => {
+    setSelectedProductIds(selectedIds)
+    console.log('Selected Product IDs:', selectedIds)
+  }
 
   // Find the order in Redux store or dispatch action to find it
   useEffect(() => {
     if (orderId && !selectedOrder) {
-      dispatch(handleFindOrder(order))
+      dispatch(handleFindOrder(orderId))
     }
   }, [orderId, selectedOrder, dispatch])
 
@@ -223,12 +259,12 @@ const OrderDetailsCard = ({ orderId }) => {
       const variant = product.variants?.[0] || {}
 
       return {
-        id: lineItem.name,
-        title: product.title || 'Unknown Product',
+        id: lineItem.id,
+        title: product.title || lineItem.title || 'Unknown Product',
         vendor: product.vendor || 'N/A',
-        price: Number(product.price) || 0,
+        price: Number(product.price) || Number(lineItem.price) || 0,
         quantity: lineItem.quantity || 0,
-        discountedPrice: (Number(product.price) || 0) * 0.9, // 10% discount for example
+        discountedPrice: Number(selectedOrder?.current_total_discounts) || 0,
         barCode: variant.barCode || 'N/A',
         weight: variant.weight || 0,
         image: product.image || { src: '/images/placeholder.png' }
@@ -237,12 +273,11 @@ const OrderDetailsCard = ({ orderId }) => {
   }, [selectedOrder, productMap])
 
   // 💰 Calculations
-  const subtotal = tableData.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-  const discountedSubtotal = tableData.reduce((acc, item) => acc + (item.discountedPrice * item.quantity), 0)
-  const discount = subtotal - discountedSubtotal
+  const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
   const shippingFee = Number(selectedOrder?.shipping_lines?.[0]?.price) || 0
-  const taxRate = Number(selectedOrder?.current_total_tax)
-  const tax = discountedSubtotal * taxRate
+  const taxRate = Number(selectedOrder?.current_total_tax) || 0
+  const tax = discountedSubtotal * (taxRate / 100)
   const total = discountedSubtotal + shippingFee + tax
 
   if (!selectedOrder) {
@@ -259,7 +294,7 @@ const OrderDetailsCard = ({ orderId }) => {
           </Typography>
         }
       />
-      <OrderTable data={tableData} />
+      <OrderTable data={tableData} onSelectionChange={handleSelectionChange} />
       <CardContent className='flex justify-end'>
         <div>
           <div className='flex items-center gap-12'>

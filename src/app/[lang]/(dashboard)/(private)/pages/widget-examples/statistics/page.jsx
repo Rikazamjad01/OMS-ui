@@ -4,7 +4,7 @@ import Grid from '@mui/material/Grid2'
 // Component Imports
 import HorizontalStatisticsCard from '@views/pages/widget-examples/statistics/HorizontalStatisticsCard'
 import CustomerStatisticsCard from '@views/pages/widget-examples/statistics/CustomerStatisticsCard'
-import LogisticsStatisticsCard from '@views/apps/logistics/dashboard/LogisticsStatisticsCard'
+import LogisticsStatisticsCard from '@/views/logistics/dashboard/LogisticsStatisticsCard'
 import UserListCards from '@views/pages/widget-examples/statistics/UserListCards'
 import VerticalStatisticsCardWithHeader from '@views/pages/widget-examples/statistics/VerticalStatisticsCardWithHeader'
 import VerticalStatisticsCard from '@views/pages/widget-examples/statistics/VerticalStatisticsCard'

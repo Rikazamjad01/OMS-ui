@@ -24,7 +24,8 @@ const CustomerDetails = ({ customerId }) => {
   const dispatch = useDispatch()
   const orders = useSelector(state => state.orders.orders)
   const loading = useSelector(state => state.orders.loading)
-  const selectedCustomer = useSelector(state => selectCustomerById(state, customerId))
+
+  // const selectedCustomer = useSelector(state => selectCustomerById(state, customerId))
 
   const [hasFetched, setHasFetched] = useState(false)
 
@@ -37,6 +38,8 @@ return orders.find(order => order.customerData?.id == customerId) || null
 
   // Extract customerData
   const customerData = orderWithCustomer?.customerData || null
+
+  console.log(customerData, 'customerData in customer details index')
 
   // Fetch orders only once when component mounts
   useEffect(() => {
@@ -63,7 +66,8 @@ return orders.find(order => order.customerData?.id == customerId) || null
   // Handle edge cases
   if (loading && !hasFetched) return <div>Loading customer details...</div>
   if (!customerId) return <div>Customer ID not found.</div>
-  if (!customerData?.email) return <div>No customer data found for ID: {customerId}.</div>
+
+  // if (!customerData) return <div>No customer data found for ID: {customerId}.</div>
 
   return (
     <Grid container spacing={6}>

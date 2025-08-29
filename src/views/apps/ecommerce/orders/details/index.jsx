@@ -7,11 +7,9 @@ import OrderDetailsCard from './OrderDetailsCard'
 import ShippingActivity from './ShippingActivityCard'
 import CustomerDetails from './CustomerDetailsCard'
 import OrderComments from './orderComments'
-  
+
 const OrderDetails = async ({ params }) => {
 let data = await params
-
-console.log(data, 'data in order details')
 
   return (
     <Grid container spacing={6}>

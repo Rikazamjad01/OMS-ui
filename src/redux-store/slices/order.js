@@ -60,7 +60,8 @@ const ordersSlice = createSlice({
       currentPage: 1,
       itemsPerPage: 25,
       total: 0
-    }
+    },
+    selectedProductIds: [],
   },
   reducers: {
     setCurrentPage: (state, action) => {
@@ -95,6 +96,10 @@ const ordersSlice = createSlice({
     },
     clearSelectedCustomer: state => {
       state.selectedCustomer = null
+    },
+
+    setSelectedProducts: (state, action) => {
+      state.selectedProductIds = action.payload
     },
 
     // Add a reset action to clear state when needed
@@ -143,7 +148,8 @@ export const {
   handleOrder,
   handleFindOrder,
   handleFindCustomer,
-  resetOrders
+  resetOrders,
+  setSelectedProducts
 } = ordersSlice.actions
 
 export default ordersSlice.reducer
@@ -154,6 +160,7 @@ export const selectOrdersLoading = state => state.orders.loading
 export const selectOrdersError = state => state.orders.error
 export const selectPagination = state => state.orders.pagination
 export const selectCustomer = state => state.orders.selectedCustomer
+export const selectSelectedProductIds = (state) => state.orders.selectedProductIds
 
 export const selectCustomerById = (state, customerId) => {
   return state.orders.orders.find(order => order.customerData?.id == customerId)?.customerData || null

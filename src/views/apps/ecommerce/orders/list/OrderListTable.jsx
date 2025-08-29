@@ -16,12 +16,7 @@ import MenuItem from '@mui/material/MenuItem'
 
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getSortedRowModel
-} from '@tanstack/react-table'
+import { flexRender, getCoreRowModel, useReactTable, getSortedRowModel } from '@tanstack/react-table'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -83,13 +78,13 @@ export const normalizePaymentMethod = (names = []) => {
   return 'other'
 }
 
-const fuzzyFilter = (row, columnId, value, addMeta) => {
-  const itemRank = rankItem(row.getValue(columnId), value)
+// const fuzzyFilter = (row, columnId, value, addMeta) => {
+//   const itemRank = rankItem(row.getValue(columnId), value)
 
-  addMeta({ itemRank })
+//   addMeta({ itemRank })
 
-  return itemRank.passed
-}
+//   return itemRank.passed
+// }
 
 /* -------------------------- small components ------------------------ */
 const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, onEnter, ...props }) => {
@@ -131,8 +126,6 @@ const OrderListTable = ({
   onLimitChange,
   onSearchChange,
   onFiltersChange,
-  onMergeOrders,
-  onDuplicateOrders
 }) => {
   const { lang: locale } = useParams()
 
@@ -142,7 +135,6 @@ const OrderListTable = ({
   const [rawFilters, setRawFilters] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [openFilter, setOpenFilter] = useState(false)
-
 
   // Map backend orders -> table rows
   const data = useMemo(() => {
@@ -414,11 +406,12 @@ const OrderListTable = ({
 
       if (nextPage !== page) onPageChange?.(nextPage)
       if (nextSize !== limit) onLimitChange?.(nextSize)
-    },
+    }
   })
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
   const selectedIds = useMemo(() => table.getSelectedRowModel().flatRows.map(r => r.original.id), [table, rowSelection])
+
 
   if (error) {
     return (
@@ -441,15 +434,15 @@ const OrderListTable = ({
 
           <DebouncedInput
             value={globalFilter}
-            onChange={(val) => {
-              setGlobalFilter(val);
-              onSearchChange?.(val); // Add this line
+            onChange={val => {
+              setGlobalFilter(val)
+              onSearchChange?.(val) // Add this line
             }}
-            onEnter={(val) => {
-              setGlobalFilter(val);
-              onSearchChange?.(val);
+            onEnter={val => {
+              setGlobalFilter(val)
+              onSearchChange?.(val)
             }}
-            placeholder="Search Order"
+            placeholder='Search Order'
           />
 
           <FilterModal
@@ -480,7 +473,14 @@ const OrderListTable = ({
                 element={Button}
                 elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
                 dialog={ConfirmationDialog}
-                dialogProps={{ type: 'merge-orders', payload: { orderIds: selectedIds }, onSuccess: refetchOrders }}
+                dialogProps={{
+                  type: 'merge-orders',
+                  payload: (() => {
+                    console.log('Merge Payload:', { orderIds: selectedIds })
+
+                    return { orderIds: selectedIds }
+                  })()
+                }}
               />
             ) : (
               <Button color='secondary' variant='tonal' disabled>
@@ -493,7 +493,7 @@ const OrderListTable = ({
                 element={Button}
                 elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
                 dialog={ConfirmationDialog}
-                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) }, onSuccess: refetchOrders }}
+                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
               />
             ) : (
               <Button color='primary' variant='tonal' disabled>
@@ -586,7 +586,7 @@ const OrderListTable = ({
           onLimitChange?.(newLimit)
           onPageChange?.(1)
         }}
-        rowsPerPageOptions={[ 25, 50, 100]}
+        rowsPerPageOptions={[25, 50, 100]}
       />
     </Card>
   )

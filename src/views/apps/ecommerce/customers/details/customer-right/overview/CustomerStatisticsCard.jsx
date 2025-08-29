@@ -2,18 +2,93 @@
 import Grid from '@mui/material/Grid2'
 
 // Component Imports
-import CustomerStats from '@components/card-statistics/CustomerStats'
+import CustomerStatsCard from '@/components/card-statistics/CustomerStats'
 
-const CustomerStatisticsCard = ({ order = [] }) => {
-  // console.log(order, 'order in CustomerStatisticsCard')
+// Helper to safely compute stats (taken from earlier logic)
+const computeStatsFromOrder = (props = {}) => {
+  const {
+    title = 'Order Stats',
+    avatarIcon = 'bx-user',
+    color = 'primary',
+    description = 'Customer orders statistics',
+
+    completedOrdersByCustomer,
+    pendingOrders,
+    notDelivered,
+
+    fakeShopifyOrders,
+    fakeManualOrders,
+
+    platform,
+    device,
+    campaign,
+
+    products,
+    productData,
+    line_items,
+    orderStatus,
+    customerData,
+    totalOrdersByCustomer
+  } = props
+
+  const successfullyDelivered = completedOrdersByCustomer ?? (orderStatus === 'delivered' ? 1 : 0)
+  const pending = pendingOrders ?? (orderStatus === 'pending' ? 1 : 0)
+  const failedOrders = notDelivered ?? (orderStatus === 'cancelled' || orderStatus === 'failed' ? 1 : 0)
+
+  // ✅ Correct mapping for Shopify vs Manual
+  const shopifyOrders = platform === 'shopify' ? (totalOrdersByCustomer ?? 0) : 0
+  const manualOrders = platform === 'manual' ? (totalOrdersByCustomer ?? 0) : 0
+
+  const purchasedCategory =
+    products?.[0]?.category ||
+    productData?.[0]?.vendor ||
+    productData?.[0]?.title ||
+    line_items?.[0]?.name ||
+    'General Products'
+
+  // ✅ Take total orders from API
+  const totalOrders = customerData?.orders_count ?? totalOrdersByCustomer ?? 0
+
+  return {
+    title,
+    avatarIcon,
+    color,
+    description,
+    completedOrdersByCustomer: successfullyDelivered,
+    pendingOrders: pending,
+    notDelivered: failedOrders,
+    fakeShopifyOrders,
+    fakeManualOrders,
+    platform,
+    device,
+    campaign,
+    products,
+    shopifyOrders,
+    manualOrders,
+    purchasedCategory,
+    totalOrders
+  }
+}
+
+
+const CustomerStatisticsCard = ({ order }) => {
+  if (!order) return null
+
+  const ordersArray = Array.isArray(order) ? order : [order]
+
+  console.log(ordersArray, 'ordersArrayyyyyyyyyyyyyyyyyyyyyy')
 
   return (
     <Grid container spacing={6}>
-      {order?.map((item, index) => (
-        <Grid size={{ xs: 12, md: 6 }} key={index}>
-          <CustomerStats {...item} />
-        </Grid> )
-        )}
+      {ordersArray.map((o, idx) => {
+        const stats = computeStatsFromOrder(o)
+
+        return (
+          <Grid size={{ xs: 12, md: 6 }} key={o?.id ?? idx}>
+            <CustomerStatsCard {...stats} />
+          </Grid>
+        )
+      })}
     </Grid>
   )
 }

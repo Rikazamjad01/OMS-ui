@@ -9,28 +9,29 @@ import CustomAvatar from '@core/components/mui/Avatar'
 
 const CustomerStatsCard = props => {
   const {
-    title = "Customer Stats",
-    avatarIcon = "tabler-user", // fallback icon
-    color = "primary",
-    description = "Customer orders statistics",
+    title,
+    avatarIcon,
+    color,
+    description,
 
     // API fields
-    completedOrdersByCustomer, // ✅ delivered
-    partiallyDelivered,        // ✅ from orderStatus
-    notDelivered,              // ✅ from orderStatus
+    totalOrders,
+    completedOrdersByCustomer,
+    pendingOrders,
+    notDelivered,
 
     fakeShopifyOrders,
     fakeManualOrders,
 
-    platform,                  // ✅ shopify/manual check
-    device,                    // ❌ not available → keep as is
-    campaign,                  // ❌ not available → keep as is
-    products                   // ✅ use for purchasedCategory
+    platform,
+    device,
+    campaign,
+    products
   } = props
 
   // Safely compute values
   const successfullyDelivered = completedOrdersByCustomer ?? 0
-  const partialOrders = partiallyDelivered ?? 0
+  const partialOrders = pendingOrders ?? 0
   const failedOrders = notDelivered ?? 0
 
   const totalFakeOrders = (fakeShopifyOrders ?? 0) + (fakeManualOrders ?? 0)
@@ -47,7 +48,7 @@ const CustomerStatsCard = props => {
 
         {/* Title */}
         <Typography variant="h5" className="capitalize flex items-center gap-2">
-          <CustomAvatar variant="rounded" skin="light" color={color} size={25}>
+          <CustomAvatar variant="rounded" skin="light" color={color} size={25} className="p-1">
             <i className={avatarIcon} />
           </CustomAvatar>
           {title}
@@ -55,20 +56,28 @@ const CustomerStatsCard = props => {
 
         <div className="flex flex-col items-start gap-1">
           {/* Case 1: Delivery stats */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-4">
             <Typography variant="body1">
-              Total Orders: <strong>{successfullyDelivered + partialOrders + failedOrders}</strong>
+              Total Orders: <strong>{totalOrders}</strong>
             </Typography>
-            <Grid container spacing={12}>
-              <Typography variant="body2">
-                Delivered: <strong>{successfullyDelivered}</strong>
-              </Typography>
-              <Typography variant="body2">
-                Partial: <strong>{partialOrders}</strong>
-              </Typography>
-              <Typography variant="body2">
-                Not Delivered: <strong>{failedOrders}</strong>
-              </Typography>
+            <Grid container spacing={4}>
+              <div className='grid grid-cols-2 space-x-5'>
+                <div className='flex flex-col gap-2'>
+                  <Typography variant="body2">
+                    Delivered: <strong>{successfullyDelivered}</strong>
+                  </Typography>
+
+                  <Typography variant="body2">
+                    Partial: <strong>{partialOrders}</strong>
+                  </Typography>
+                </div>
+                <div className='flex flex-col gap-2'>
+                  <Typography variant="body2">
+                    Not Delivered: <strong>{failedOrders}</strong>
+                  </Typography>
+                </div>
+              </div>
+
             </Grid>
           </div>
 
@@ -114,14 +123,16 @@ const CustomerStatsCard = props => {
           ) : null}
 
           {/* Case 5: Purchased category */}
+          {products?.length > 0 && (
           <Grid container spacing={12}>
             <Typography variant="body2">
               Mostly Purchased Items: <strong>{purchasedCategory}</strong>
             </Typography>
           </Grid>
+          )}
 
           {/* Always show description */}
-          <Typography variant="body2">{description}</Typography>
+          <Typography variant="body2" className='mt-4'>{description}</Typography>
         </div>
       </CardContent>
     </Card>
