@@ -123,7 +123,7 @@ const CustomerListTable = () => {
   // Fetch data when pagination changes
   useEffect(() => {
     dispatch(fetchCustomers({ page: pagination.page, perPage: pagination.perPage }))
-  }, [dispatch])
+  }, [dispatch, pagination.page, pagination.perPage])
 
   const columns = useMemo(
     () => [

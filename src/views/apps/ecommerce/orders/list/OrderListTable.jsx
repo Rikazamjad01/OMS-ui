@@ -410,7 +410,7 @@ const OrderListTable = ({
   })
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
-  const selectedIds = useMemo(() => table.getSelectedRowModel().flatRows.map(r => r.original.id), [table, rowSelection])
+  const selectedIds = useMemo(() => table.getSelectedRowModel().flatRows.map(r => r.original.id), [table])
 
 
   if (error) {
