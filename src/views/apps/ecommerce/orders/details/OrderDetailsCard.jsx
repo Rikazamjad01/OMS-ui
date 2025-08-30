@@ -286,12 +286,6 @@ const OrderDetailsCard = ({ orderId }) => {
   }, [selectedOrder, productMap])
 
 
-  // Debug: Log the current selections
-  useEffect(() => {
-    console.log('Current selectedProductIds state:', selectedProductIds)
-    console.log('Current selectedProducts state:', selectedProducts)
-  }, [selectedProductIds, selectedProducts])
-
   // 💰 Calculations
   const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
