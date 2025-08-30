@@ -9,7 +9,7 @@ const api = axios.create({
   }
 })
 
-// ✅ Generic GET with optional params
+// Generic GET with optional params
 export const getRequest = async (endpoint, params = {}) => {
   try {
     const response = await api.get(endpoint, { params })
@@ -21,7 +21,7 @@ export const getRequest = async (endpoint, params = {}) => {
   }
 }
 
-// ✅ Generic POST
+// Generic POST
 export const postRequest = async (endpoint, body = {}) => {
   try {
     const response = await api.post(endpoint, body)
@@ -33,12 +33,12 @@ export const postRequest = async (endpoint, body = {}) => {
   }
 }
 
-// ✅ Customers API (with filters, pagination, search, etc.)
+// Customers API (with filters, pagination, search, etc.)
 export const getCustomers = async (params = {}) => {
   return getRequest('customers', params)
 }
 
-// ✅ Merge two orders
+// Merge two orders
 export const mergeOrders = async orderIds => {
   if (orderIds.length !== 2) {
     throw new Error('Merge requires exactly 2 orders')
@@ -50,13 +50,26 @@ export const mergeOrders = async orderIds => {
   })
 }
 
-// ✅ Duplicate one order
-export const duplicateOrders = async orderIds => {
-  if (orderIds.length !== 1) {
-    throw new Error('Duplicate requires exactly 1 order')
+// split an order into two, based on selected product IDs
+export const splitOrder = async (orderId, selectedLineItems) => {
+  if (!orderId) {
+    throw new Error('Order ID is required for splitting')
   }
 
-  return postRequest('orders/duplicate', {
-    orderId: orderIds[0]
+  console.log(selectedLineItems, 'selectedLineItems in splitOrder')
+
+  if (!selectedLineItems || selectedLineItems.length < 1) {
+    throw new Error('At least one product must be selected for splitting')
+  }
+
+  // Convert selectedLineItems to the format expected by API
+  const lineItems = selectedLineItems.map(item => ({
+    id: item.id, // or item.lineItemId if that's the property name
+    quantity: item.quantity
+  }))
+
+  return postRequest('orders/split_order', {
+    id: orderId,
+    line_items: lineItems
   })
 }

@@ -128,7 +128,7 @@ const OrderDetailHeader = ({ order }) => {
               disabled: !canSplitOrder
             }}
             dialog={ConfirmationDialog}
-            dialogProps={{ type: 'split-order', payload: { orderId: order, selectedProductIds } }}
+            dialogProps={{ type: 'split-order', payload: { orderIds: order, selectedProductIds } }}
           />
 
       </div>

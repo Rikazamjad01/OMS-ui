@@ -13,7 +13,7 @@ import Button from '@mui/material/Button'
 // Third-party Imports
 import classnames from 'classnames'
 
-import { mergeOrders, duplicateOrders } from '@/utils/api'
+import { mergeOrders, splitOrder } from '@/utils/api'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
@@ -21,10 +21,10 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [userInput, setUserInput] = useState(false) // true = user confirmed; false = cancelled or failed
   const [resultTitle, setResultTitle] = useState(null)
   const [resultSubtitle, setResultSubtitle] = useState(null)
-  const Wrapper = type === 'suspend-account' ? 'div' : Fragment
 
+  const Wrapper = type === 'suspend-account' ? 'div' : Fragment
   const isMerge = type === 'merge-orders' || type === 'merge-order'
-  const isDuplicate = type === 'duplicate-order'
+  const isSplit = type === 'split-order'
 
   const handleSecondDialogClose = () => {
     setSecondDialog(false)
@@ -49,14 +49,19 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
 
     // User clicked "Confirm" -> call backend
     try {
-      const ids = payload?.orderIds ?? []
-
       if (isMerge) {
+        const ids = payload?.orderIds ?? []
+
         if (ids.length < 2) throw new Error('Please select at least 2 orders to merge.')
         await mergeOrders(ids)
-      } else if (isDuplicate) {
-        if (ids.length !== 1) throw new Error('Please select exactly 1 order to duplicate.')
-        await duplicateOrders(ids)
+      } else if (isSplit) {
+        const orderId = payload?.orderId
+        const selectedLineItems = payload?.selectedLineItems ?? []
+
+        if (!orderId) throw new Error('Order ID is required for splitting.')
+        if (selectedLineItems.length < 1) throw new Error('Please select at least 1 product to split.')
+
+        await splitOrder(orderId, selectedLineItems)
       }
 
       // Success

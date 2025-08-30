@@ -11,7 +11,7 @@ import { fetchOrders } from '@/redux-store/slices/order' // <-- import it
 
 const OrderList = () => {
   const dispatch = useDispatch()
-  const { orders, loading, error, pagination } = useSelector(state => state.orders)
+  const { orders, loading, error, pagination = {} } = useSelector(state => state.orders)
 
   // parent-controlled server params
   const [page, setPage] = useState(1)

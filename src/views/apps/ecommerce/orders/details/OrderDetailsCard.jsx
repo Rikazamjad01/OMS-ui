@@ -80,10 +80,6 @@ const OrderTable = ({ data, onSelectionChange }) => {
           />
         )
       },
-      columnHelper.accessor('id', {
-        header: 'ID',
-        cell: ({ row }) => <Typography>{row.original.id}</Typography>
-      }),
       columnHelper.accessor('productName', {
         header: 'Product',
         cell: ({ row }) => (
@@ -128,35 +124,41 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const table = useReactTable({
     data: data || [],
     columns,
-    getRowId: row => row.id.toString(),
+    getRowId: row => row.id.toString(), // This uses the row's id field
     filterFns: { fuzzy: fuzzyFilter },
     state: { rowSelection, globalFilter },
     initialState: { pagination: { pageSize: 25 } },
     enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: newSelection => {
+    onRowSelectionChange: newSelectionUpdater => {
+
+      // Handle the updater function properly
+      const newSelection =
+        typeof newSelectionUpdater === 'function' ? newSelectionUpdater(rowSelection) : newSelectionUpdater
+
       setRowSelection(newSelection)
 
-      // Get the selected product IDs directly from the data
-      const selectedIds = Object.keys(newSelection)
-        .filter(id => newSelection[id])
-        .map(id => {
-          // Find the row data for this ID
-          const rowData = data.find(item => item.id.toString() === id)
+      // Get the selected row IDs (these are the keys in newSelection)
+      const selectedRowIds = Object.keys(newSelection).filter(id => newSelection[id]) // Only get selected rows (true values)
 
-          return rowData ? rowData.id : null
-        })
-        .filter(id => id !== null)
+      // Get the actual product data for the selected rows
+      const selectedProducts = data.filter(item => {
+        const itemIdString = item.id.toString()
+        const isSelected = selectedRowIds.includes(itemIdString)
 
-      console.log(selectedIds, 'selected product IDs')
+        return isSelected
+      })
+
+      // Extract the product IDs from selected products
+      const selectedProductIds = selectedProducts.map(item => item.productId || item.id).filter(id => id != null)
 
       // Send to parent component
       if (onSelectionChange) {
-        onSelectionChange(selectedIds)
+        onSelectionChange(selectedProductIds, selectedProducts)
       }
 
       // Also dispatch to Redux
-      dispatch(setSelectedProducts(selectedIds))
+      dispatch(setSelectedProducts(selectedProductIds))
     },
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
@@ -225,10 +227,12 @@ const OrderDetailsCard = ({ orderId }) => {
   const selectedOrder = useSelector(state => state.orders.selectedOrders)
   const orders = useSelector(selectOrders)
   const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [selectedProducts, setSelectedProducts] = useState([])
 
-  // Handle selection changes
-  const handleSelectionChange = selectedIds => {
+  // Handle selection changes - now receives both IDs and full product data
+  const handleSelectionChange = (selectedIds, selectedProductsData) => {
     setSelectedProductIds(selectedIds)
+    setSelectedProducts(selectedProductsData)
     console.log('Selected Product IDs:', selectedIds)
   }
 
@@ -252,14 +256,19 @@ const OrderDetailsCard = ({ orderId }) => {
 
   // Transform line items with product data for the table
   const tableData = useMemo(() => {
-    if (!selectedOrder?.line_items) return []
+    if (!selectedOrder?.line_items) {
+      return []
+    }
 
-    return selectedOrder.line_items.map(lineItem => {
+    const transformedData = selectedOrder.line_items.map((lineItem, index) => {
       const product = productMap[lineItem.id] || {}
       const variant = product.variants?.[0] || {}
 
-      return {
-        id: lineItem.id,
+      const transformedItem = {
+        // Use a combination of approaches for the ID
+        id: product.id || lineItem.id || index, // Fallback to index if both IDs are missing
+        lineItemId: lineItem.id, // Keep line item ID for reference
+        productId: product.id, // Explicit product ID (might be undefined)
         title: product.title || lineItem.title || 'Unknown Product',
         vendor: product.vendor || 'N/A',
         price: Number(product.price) || Number(lineItem.price) || 0,
@@ -269,8 +278,19 @@ const OrderDetailsCard = ({ orderId }) => {
         weight: variant.weight || 0,
         image: product.image || { src: '/images/placeholder.png' }
       }
+
+      return transformedItem
     })
+
+    return transformedData
   }, [selectedOrder, productMap])
+
+
+  // Debug: Log the current selections
+  useEffect(() => {
+    console.log('Current selectedProductIds state:', selectedProductIds)
+    console.log('Current selectedProducts state:', selectedProducts)
+  }, [selectedProductIds, selectedProducts])
 
   // 💰 Calculations
   const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -278,7 +298,7 @@ const OrderDetailsCard = ({ orderId }) => {
   const shippingFee = Number(selectedOrder?.shipping_lines?.[0]?.price) || 0
   const taxRate = Number(selectedOrder?.current_total_tax) || 0
   const tax = discountedSubtotal * (taxRate / 100)
-  const total = discountedSubtotal + shippingFee + tax
+  const total = subtotal + discountedSubtotal + shippingFee + tax
 
   if (!selectedOrder) {
     return <div>Loading order details...</div>
@@ -294,6 +314,14 @@ const OrderDetailsCard = ({ orderId }) => {
           </Typography>
         }
       />
+
+      {/* Debug info - remove in production */}
+      <CardContent>
+        <Typography variant='body2' color='text.secondary'>
+          Selected Product IDs: {selectedProductIds.join(', ') || 'None'}
+        </Typography>
+      </CardContent>
+
       <OrderTable data={tableData} onSelectionChange={handleSelectionChange} />
       <CardContent className='flex justify-end'>
         <div>
