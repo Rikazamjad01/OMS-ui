@@ -34,6 +34,8 @@ export const fetchOrders = createAsyncThunk(
 
       const data = response.data || {}
 
+      console.log(data, 'data in fetchOrders')
+
       return {
         orders: data.orders || [],
         total: data.pagination?.total || 0,
@@ -83,8 +85,6 @@ const ordersSlice = createSlice({
       const customerId = action.payload
 
       const orderWithCustomer = state.orders.find(order => order.customerData?.id == customerId)
-
-      console.log(orderWithCustomer, 'orderWithCustomer in handleFindCustomer')
 
       state.selectedCustomer = orderWithCustomer ? orderWithCustomer.customerData : null
     },
@@ -163,5 +163,11 @@ export const selectCustomer = state => state.orders.selectedCustomer
 export const selectSelectedProductIds = (state) => state.orders.selectedProductIds
 
 export const selectCustomerById = (state, customerId) => {
-  return state.orders.orders.find(order => order.customerData?.id == customerId)?.customerData || null
+  if (!state.orders.orders?.length) return []
+
+  return state.orders.orders.filter(order => String(order.customerData?.id) === String(customerId))
+}
+
+export const selectOrderById = (state, orderId) => {
+  return state.orders.orders.find(order => order.id === orderId) || null
 }

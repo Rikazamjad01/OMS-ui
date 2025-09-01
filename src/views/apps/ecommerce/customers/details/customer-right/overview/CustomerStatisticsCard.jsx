@@ -13,8 +13,8 @@ const computeStatsFromOrder = (props = {}) => {
     description = 'Customer orders statistics',
 
     completedOrdersByCustomer,
-    pendingOrders,
-    notDelivered,
+    pendingOrdersByCustomer,
+    cancelledOrdersByCustomer,
 
     fakeShopifyOrders,
     fakeManualOrders,
@@ -26,14 +26,9 @@ const computeStatsFromOrder = (props = {}) => {
     products,
     productData,
     line_items,
-    orderStatus,
     customerData,
     totalOrdersByCustomer
   } = props
-
-  const successfullyDelivered = completedOrdersByCustomer ?? (orderStatus === 'delivered' ? 1 : 0)
-  const pending = pendingOrders ?? (orderStatus === 'pending' ? 1 : 0)
-  const failedOrders = notDelivered ?? (orderStatus === 'cancelled' || orderStatus === 'failed' ? 1 : 0)
 
   // ✅ Correct mapping for Shopify vs Manual
   const shopifyOrders = platform === 'shopify' ? (totalOrdersByCustomer ?? 0) : 0
@@ -46,7 +41,7 @@ const computeStatsFromOrder = (props = {}) => {
     line_items?.[0]?.name ||
     'General Products'
 
-  // ✅ Take total orders from API
+
   const totalOrders = customerData?.orders_count ?? totalOrdersByCustomer ?? 0
 
   return {
@@ -54,9 +49,9 @@ const computeStatsFromOrder = (props = {}) => {
     avatarIcon,
     color,
     description,
-    completedOrdersByCustomer: successfullyDelivered,
-    pendingOrders: pending,
-    notDelivered: failedOrders,
+    completedOrdersByCustomer,
+    pendingOrders: pendingOrdersByCustomer,
+    notDelivered: cancelledOrdersByCustomer,
     fakeShopifyOrders,
     fakeManualOrders,
     platform,
@@ -75,8 +70,6 @@ const CustomerStatisticsCard = ({ order }) => {
   if (!order) return null
 
   const ordersArray = Array.isArray(order) ? order : [order]
-
-  console.log(ordersArray, 'ordersArrayyyyyyyyyyyyyyyyyyyyyy')
 
   return (
     <Grid container spacing={6}>

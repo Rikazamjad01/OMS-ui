@@ -7,6 +7,8 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+import { useSelector } from 'react-redux'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -29,6 +31,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
+
+import { selectOrderById } from '@/redux-store/slices/order'
 
 // Component Imports
 import OptionMenu from '@core/components/option-menu'
@@ -88,7 +92,16 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 // Column Definitions
 const columnHelper = createColumnHelper()
 
-const OrderListTable = ({ orders, customerId }) => {
+const OrderListTable = ({order, customerData }) => {
+
+  const customerId = customerData?.id || null
+
+  // Get last order ID from customer data
+  const lastOrderId = customerData?.last_order_id
+
+  // Lookup last order in Redux store
+  const lastOrder = useSelector(state => selectOrderById(state, lastOrderId))
+
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
@@ -98,42 +111,58 @@ const OrderListTable = ({ orders, customerId }) => {
 
   // Filter orders by customer ID if provided
   const filteredOrders = useMemo(() => {
-    if (!orders) return []
+    if (!order) return []
 
     if (customerId) {
-      return orders.find(order => order.customer == customerId)
+      return order.find(order => order.customer == customerId)
     }
 
-    return orders
-  }, [orders, customerId])
+    return order
+  }, [order, customerId])
 
 
   // Transform orders data to match table format
   const tableData = useMemo(() => {
-    if (!filteredOrders) return []
+    let baseData = []
 
-    // If filteredOrders is an array (no customerId)
+    if (!filteredOrders) return baseData
+
     if (Array.isArray(filteredOrders)) {
-      return filteredOrders.map(order => ({
-        id: Number(order.customerData?.last_order_id || '0'),
-        order: order.last_order_name,
+      baseData = filteredOrders.map(order => ({
+        id: order.id,
+        order: order.name,
         date: order.created_at,
         status: order.orderStatus || order.financial_status,
         spent: order.current_total_price || '0.00',
         customer: order.customer
       }))
+    } else {
+      baseData = [{
+        id: filteredOrders?.id,
+        order: filteredOrders?.name,
+        date: filteredOrders?.created_at,
+        status: filteredOrders?.orderStatus || filteredOrders?.financial_status,
+        spent: filteredOrders?.current_total_price || '0.00',
+        customer: filteredOrders?.customer
+      }]
     }
 
-    // If filteredOrders is a single object (with customerId)
-    return [{
-      id: Number(filteredOrders?.customerData?.last_order_id || '0'),
-      order: filteredOrders?.last_order_name,
-      date: filteredOrders?.created_at,
-      status: filteredOrders?.orderStatus || filteredOrders?.financial_status,
-      spent: filteredOrders?.current_total_price || '0.00',
-      customer: filteredOrders?.customer
-    }]
-  }, [filteredOrders])
+    // If lastOrder is found, add it
+    if (lastOrder && !baseData.some(o => o.id === lastOrder.id)) {
+      baseData.splice(1, 0, {
+        id: lastOrder.id,
+        order: lastOrder.name,
+        date: lastOrder.created_at,
+        status: lastOrder.orderStatus || lastOrder.financial_status,
+        spent: lastOrder.current_total_price || '0.00',
+        customer: lastOrder.customer
+      })
+    }
+
+    return baseData
+  }, [filteredOrders, lastOrder])
+
+
 
 
   const columns = useMemo(

@@ -54,12 +54,13 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
 
         if (ids.length < 2) throw new Error('Please select at least 2 orders to merge.')
         await mergeOrders(ids)
-      } else if (isSplit) {
-        const orderId = payload?.orderId
-        const selectedLineItems = payload?.selectedLineItems ?? []
+      }
+      else if (isSplit) {
+        const orderId = payload?.orderIds ?? []
+        const selectedLineItems = payload?.selectedProductIds ?? []
 
         if (!orderId) throw new Error('Order ID is required for splitting.')
-        if (selectedLineItems.length < 1) throw new Error('Please select at least 1 product to split.')
+        if (selectedLineItems.length == 0) throw new Error('Please select at least 1 product to split.')
 
         await splitOrder(orderId, selectedLineItems)
       }

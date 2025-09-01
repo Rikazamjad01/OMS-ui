@@ -11,14 +11,12 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import EditUserInfo from '@components/dialogs/edit-user-info'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
-const CustomerDetails = ({ customerData }) => {
+const CustomerDetails = ({ customerData, customerId }) => {
   // Vars
   const buttonProps = {
     variant: 'contained',
     children: 'Edit Details'
   }
-
-  console.log(customerData, 'customerData in customer details')
 
   // Calculate derived values
   const customerName = `${customerData?.first_name || ''} ${customerData?.last_name || ''}`.trim()
@@ -40,8 +38,8 @@ const CustomerDetails = ({ customerData }) => {
               {getInitials(customerName)}
             </CustomAvatar>
             <div className='flex flex-col items-center text-center'>
-              <Typography variant='h5'>{customerName}</Typography>
-              <Typography>Customer ID #{customerData?.id}</Typography>
+              <Typography variant='h5'>{customerName || 'customer name not available'}</Typography>
+              <Typography>Customer ID #{customerId}</Typography>
             </div>
           </div>
           <div className='grid grid-cols-2 items-center justify-around gap-4 is-full'>
@@ -89,7 +87,7 @@ const CustomerDetails = ({ customerData }) => {
           <div className='flex flex-col gap-2'>
             <div className='flex items-center gap-1'>
               <Typography variant='h6'>Name:</Typography>
-              <Typography>{customerName}</Typography>
+              <Typography>{customerName || 'Not available'}</Typography>
             </div>
             <div className='flex items-center gap-1'>
               <Typography variant='h6'>Email:</Typography>

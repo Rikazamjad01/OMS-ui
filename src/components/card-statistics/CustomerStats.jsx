@@ -31,7 +31,7 @@ const CustomerStatsCard = props => {
 
   // Safely compute values
   const successfullyDelivered = completedOrdersByCustomer ?? 0
-  const partialOrders = pendingOrders ?? 0
+  const Pending = pendingOrders ?? 0
   const failedOrders = notDelivered ?? 0
 
   const totalFakeOrders = (fakeShopifyOrders ?? 0) + (fakeManualOrders ?? 0)
@@ -68,7 +68,7 @@ const CustomerStatsCard = props => {
                   </Typography>
 
                   <Typography variant="body2">
-                    Partial: <strong>{partialOrders}</strong>
+                    Pending: <strong>{Pending}</strong>
                   </Typography>
                 </div>
                 <div className='flex flex-col gap-2'>

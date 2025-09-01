@@ -151,22 +151,28 @@ const CustomerListTable = () => {
       },
       columnHelper.accessor('name', {
         header: 'Customers',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            {getAvatar({ avatar: row.original?.avatar, customer: row.original?.name })}
-            <div className='flex flex-col items-start'>
-              <Typography
-                variant='h6'
-                component={Link}
-                href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original?.id}`, locale)}
-                className='hover:text-primary'
-              >
-                {row.original?.name || 'N/A'}
-              </Typography>
-              <Typography variant='body2'>{row.original?.email || 'N/A'}</Typography>
+        cell: ({ row }) => {
+          const firstName = row.original?.first_name?.trim() || ''
+          const lastName = row.original?.last_name?.trim() || ''
+          const fullName = [firstName, lastName].filter(Boolean).join(' ') || '-'
+
+          return (
+            <div className='flex items-center gap-3'>
+              {getAvatar({ avatar: row.original?.avatar, customer: fullName })}
+              <div className='flex flex-col items-start'>
+                <Typography
+                  variant='h6'
+                  component={Link}
+                  href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original?.id}`, locale)}
+                  className='hover:text-primary'
+                >
+                  {fullName}
+                </Typography>
+                <Typography variant='body2'>{row.original?.email || '-'}</Typography>
+              </div>
             </div>
-          </div>
-        )
+          )
+        }
       }),
       columnHelper.accessor('id', {
         header: 'Customer Id',
@@ -176,14 +182,14 @@ const CustomerListTable = () => {
         header: 'Country',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            {row.original?.countryFlag && <img src={row.original.countryFlag} height={22} alt={row.original.country} />}
-            <Typography>{row.original?.country || 'N/A'}</Typography>
+            {/* {row.original?.countryFlag && <img src={row.original.countryFlag} height={22} alt={row.original.country} />} */}
+            <Typography>{row.original?.addresses[0]?.country || 'N/A'}</Typography>
           </div>
         )
       }),
       columnHelper.accessor('orders', {
         header: 'Orders',
-        cell: ({ row }) => <Typography>{row.original?.orders || 0}</Typography>
+        cell: ({ row }) => <Typography>{row.original?.orders_count || 0}</Typography>
       }),
       columnHelper.accessor('total_spent', {
         header: 'Total Spent',
@@ -239,7 +245,7 @@ const CustomerListTable = () => {
       return <CustomAvatar src={avatar} skin='light' size={34} />
     } else {
       return (
-        <CustomAvatar skin='light' size={34}>
+        <CustomAvatar skin='light' size={34} className='bg-primary text-white'>
           {getInitials(customer || 'N/A')}
         </CustomAvatar>
       )

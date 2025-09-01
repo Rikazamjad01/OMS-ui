@@ -85,7 +85,7 @@ const OrderDetailHeader = ({ order }) => {
     <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
       <div className='flex flex-col items-start gap-1'>
         <div className='flex items-center gap-2'>
-          <Typography variant='h5'>{`Order ${order}`}</Typography>
+          <Typography variant='h5'>{`Order ${order}`}</Typography>    
           <Chip
             variant='tonal'
             label={selectedOrders?.orderStatus || 'Unknown'}

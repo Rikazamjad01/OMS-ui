@@ -14,7 +14,7 @@ let data = await params
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <OrderDetailHeader  order={data.id} />
+        <OrderDetailHeader  order={data.id}  />
       </Grid>
       <Grid size={{ xs: 12, md: 8 }}>
         <Grid container spacing={6}>

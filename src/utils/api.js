@@ -12,9 +12,10 @@ const api = axios.create({
 // Generic GET with optional params
 export const getRequest = async (endpoint, params = {}) => {
   try {
-    const response = await api.get(endpoint, { params })
+    const response = await axios.get(`${baseUrl}/${endpoint}`, { params })
 
     return response.data
+
   } catch (error) {
     console.error(`Failed to GET ${endpoint}:`, error)
     throw error
@@ -23,10 +24,12 @@ export const getRequest = async (endpoint, params = {}) => {
 
 // Generic POST
 export const postRequest = async (endpoint, body = {}) => {
+
   try {
     const response = await api.post(endpoint, body)
 
     return response.data
+
   } catch (error) {
     console.error(`Failed to POST ${endpoint}:`, error)
     throw error
@@ -63,10 +66,7 @@ export const splitOrder = async (orderId, selectedLineItems) => {
   }
 
   // Convert selectedLineItems to the format expected by API
-  const lineItems = selectedLineItems.map(item => ({
-    id: item.id, // or item.lineItemId if that's the property name
-    quantity: item.quantity
-  }))
+  const lineItems = selectedLineItems.map(id => ({ id }))
 
   return postRequest('orders/split_order', {
     id: orderId,

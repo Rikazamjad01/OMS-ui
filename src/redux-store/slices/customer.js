@@ -36,7 +36,7 @@ const customerSlice = createSlice({
       })
       .addCase(fetchCustomers.fulfilled, (state, action) => {
         state.loading = false
-        state.tableRows = action.payload.data
+        state.tableRows = action.payload.customers
         state.pagination.total = action.payload.total // depends on API shape
       })
       .addCase(fetchCustomers.rejected, (state, action) => {
@@ -54,3 +54,5 @@ export const selectCustomersTableRows = state => state.customers.tableRows
 export const selectCustomersPagination = state => state.customers.pagination
 
 export default customerSlice.reducer
+
+

@@ -30,23 +30,24 @@ const CustomerDetails = ({ customerId }) => {
   const [hasFetched, setHasFetched] = useState(false)
 
   // Find the order that matches customerId
-  const orderWithCustomer = useMemo(() => {
-    if (!customerId || !orders.length) return null
+  const orderList = useMemo(() => {
+    if (!orders.length) return []
 
-return orders.find(order => order.customerData?.id == customerId) || null
+    const filteredOrders = orders.filter(order => order.customerData?.id == customerId)
+
+    console.log(filteredOrders, 'filteredOrders in CustomerDetails')
+
+    return filteredOrders
   }, [customerId, orders])
 
   // Extract customerData
-  const customerData = orderWithCustomer?.customerData || null
-
-  console.log(customerData, 'customerData in customer details index')
+  const customerData = orderList.length > 0 ? orderList[0].customerData : null
 
   // Fetch orders only once when component mounts
   useEffect(() => {
     if (!hasFetched && customerId) {
       dispatch(
         fetchOrders({
-          filters: { customer_id: customerId },
           page: 1,
           limit: 10
         })
@@ -58,9 +59,9 @@ return orders.find(order => order.customerData?.id == customerId) || null
   // Memoize tab content
   const tabContentList = useMemo(
     () => ({
-      overview: <OverViewTab customerData={customerData} order={orderWithCustomer} />
+      overview: <OverViewTab customerData={customerData} order={orderList} />
     }),
-    [customerData, orderWithCustomer]
+    [customerData, orderList]
   )
 
   // Handle edge cases
@@ -72,11 +73,11 @@ return orders.find(order => order.customerData?.id == customerId) || null
   return (
     <Grid container spacing={6}>
       <Grid size={12}>
-        <CustomerDetailsHeader customerData={customerData} />
+        <CustomerDetailsHeader customerData={customerData} customerId={customerId} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 4 }}>
-        <CustomerLeftOverview customerData={customerData} />
+        <CustomerLeftOverview customerData={customerData} customerId={customerId} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 8 }}>
