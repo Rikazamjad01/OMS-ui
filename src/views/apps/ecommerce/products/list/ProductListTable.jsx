@@ -36,6 +36,10 @@ import {
   getSortedRowModel
 } from '@tanstack/react-table'
 
+import { useSelector, useDispatch } from 'react-redux'
+
+import {   fetchProducts, selectProducts, selectProductsLoading, selectProductsPagination } from '@/redux-store/slices/products'
+
 // Component Imports
 import TableFilters from './TableFilters'
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -83,31 +87,41 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
   )
 }
 
-// Vars
-const productCategoryObj = {
-  Accessories: { icon: 'bx-headphone', color: 'error' },
-  'Home Decor': { icon: 'bx-home-smile', color: 'info' },
-  Electronics: { icon: 'bx-laptop', color: 'primary' },
-  Shoes: { icon: 'bx-walk', color: 'success' },
-  Office: { icon: 'bx-briefcase', color: 'warning' },
-  Games: { icon: 'bx-game', color: 'secondary' }
-}
 
 const productStatusObj = {
-  Scheduled: { title: 'Scheduled', color: 'warning' },
-  Published: { title: 'Publish', color: 'success' },
-  Inactive: { title: 'Inactive', color: 'error' }
+  active: { title: 'Active', color: 'success' },
+  draft: { title: 'Draft', color: 'warning' },
+  archived: { title: 'Archived', color: 'secondary' }
 }
 
 // Column Definitions
 const columnHelper = createColumnHelper()
 
-const ProductListTable = ({ productData }) => {
+const ProductListTable = () => {
+
+  const dispatch = useDispatch()
+
+  const products = useSelector(selectProducts)
+  const loading = useSelector(selectProductsLoading)
+  const pagination = useSelector(selectProductsPagination)
+
   // States
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[productData])
-  const [filteredData, setFilteredData] = useState(data)
+  const [data, setData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
+
+  useEffect(() => {
+      dispatch(fetchProducts({ page: pagination.currentPage, limit: pagination.itemsPerPage }))
+    }, [dispatch, pagination.currentPage, pagination.itemsPerPage])
+
+  useEffect(() => {
+    if(products){
+      setData(products)
+      setFilteredData(products)
+    }
+  }, [products])
+
 
   // Hooks
   const { lang: locale } = useParams()
@@ -150,10 +164,10 @@ const ProductListTable = ({ productData }) => {
         header: 'Product',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
-            <img src={row.original.image} width={38} height={38} className='rounded bg-actionHover' />
+            <img src={row.original.image?.src} width={38} height={38} className='rounded bg-actionHover' />
             <div className='flex flex-col'>
-              <Typography variant='h6'>{row.original.productName}</Typography>
-              <Typography variant='body2'>{row.original.productBrand}</Typography>
+              <Typography variant='h6'>{row.original.title}</Typography>
+              <Typography variant='body2'>{row.original.vendor}</Typography>
             </div>
           </div>
         )
@@ -162,40 +176,41 @@ const ProductListTable = ({ productData }) => {
         header: 'Category',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
-            <CustomAvatar skin='light' color={productCategoryObj[row.original.category].color} size={30}>
-              <i className={classnames(productCategoryObj[row.original.category].icon, 'text-lg')} />
-            </CustomAvatar>
-            <Typography color='text.primary'>{row.original.category}</Typography>
+            <Typography color='text.primary'>{row.original.category || '-'}</Typography>
           </div>
         )
       }),
       columnHelper.accessor('stock', {
         header: 'Stock',
-        cell: ({ row }) => <Switch defaultChecked={row.original.stock} />,
+        cell: ({ row }) => <Switch defaultChecked={row.original.stock || false} />,
         enableSorting: false
       }),
       columnHelper.accessor('sku', {
         header: 'SKU',
-        cell: ({ row }) => <Typography>{row.original.sku}</Typography>
+        cell: ({ row }) => <Typography>{row.original.sku || '-'}</Typography>
       }),
       columnHelper.accessor('price', {
         header: 'Price',
-        cell: ({ row }) => <Typography>{row.original.price}</Typography>
+        cell: ({ row }) => <Typography>{row.original.price || '-'}</Typography>
       }),
       columnHelper.accessor('qty', {
         header: 'QTY',
-        cell: ({ row }) => <Typography>{row.original.qty}</Typography>
+        cell: ({ row }) => <Typography>{row.original.qty || '-'}</Typography>
       }),
       columnHelper.accessor('status', {
         header: 'Status',
-        cell: ({ row }) => (
-          <Chip
-            label={productStatusObj[row.original.status].title}
-            variant='tonal'
-            color={productStatusObj[row.original.status].color}
-            size='small'
-          />
-        )
+        cell: ({ row }) => {
+          const statusInfo = productStatusObj[row.original.status] || { title: 'Unknown', color: 'default' }
+
+          return (
+            <Chip
+              label={statusInfo.title}
+              variant='tonal'
+              color={statusInfo.color}
+              size='small'
+            />
+          )
+        }
       }),
       columnHelper.accessor('actions', {
         header: 'Actions',
@@ -227,7 +242,7 @@ const ProductListTable = ({ productData }) => {
   )
 
   const table = useReactTable({
-    data: filteredData,
+    data: data || [],
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -259,14 +274,14 @@ const ProductListTable = ({ productData }) => {
     <>
       <Card>
         <div className='flex items-center justify-between flex-wrap gap-4 p-6'>
-        <div className='flex gap-4'>
-          <TableFilters setData={setFilteredData} productData={data} />
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Product'
-          />
-        </div>
+          <div className='flex gap-4'>
+            <TableFilters setData={setFilteredData} productData={products} />
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Search Product'
+            />
+          </div>
           <div className='flex sm:items-center flex-wrap max-sm:flex-col max-sm:is-full gap-4'>
             <CustomTextField
               select
@@ -276,6 +291,7 @@ const ProductListTable = ({ productData }) => {
             >
               <MenuItem value='25'>25</MenuItem>
               <MenuItem value='50'>50</MenuItem>
+              <MenuItem value='100'>100</MenuItem>
             </CustomTextField>
             <Button color='secondary' variant='tonal' startIcon={<i className='bx-export' />}>
               Export

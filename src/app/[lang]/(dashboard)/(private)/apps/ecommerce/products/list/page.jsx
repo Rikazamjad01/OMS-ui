@@ -5,9 +5,6 @@ import Grid from '@mui/material/Grid2'
 import ProductListTable from '@views/apps/ecommerce/products/list/ProductListTable'
 import ProductCard from '@views/apps/ecommerce/products/list/ProductCard'
 
-// Data Imports
-import { getEcommerceData } from '@/app/server/actions'
-
 /**
  * ! If you need data using an API call, uncomment the below API code, update the `process.env.API_URL` variable in the
  * ! `.env` file found at root of your project and also update the API endpoints like `/apps/ecommerce` in below example.
@@ -25,16 +22,13 @@ import { getEcommerceData } from '@/app/server/actions'
   return res.json()
 } */
 const eCommerceProductsList = async () => {
-  // Vars
-  const data = await getEcommerceData()
-
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
         <ProductCard />
       </Grid>
       <Grid size={{ xs: 12 }}>
-        <ProductListTable productData={data?.products} />
+        <ProductListTable />
       </Grid>
     </Grid>
   )

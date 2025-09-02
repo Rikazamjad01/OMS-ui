@@ -12,11 +12,9 @@ import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementCli
 
 // Redux Imports
 
-const CustomerDetailHeader = ({ customerData, customerId }) => {
+const CustomerDetailHeader = ({ customerData, customerId, order }) => {
   // Get customer data from Redux store
   const { selectedOrders } = useSelector(state => state.orders)
-
-  console.log(customerData, 'customerData in CustomerDetailHeader')
 
   // const customerData = selectedOrders?.customerData || {}
 
@@ -33,13 +31,7 @@ const CustomerDetailHeader = ({ customerData, customerId }) => {
   // const customerId = customerData?.id || 'N/A'
 
   // Use the order creation date as a proxy for customer join date
-  const joinDate = selectedOrders?.created_at
-    ? new Date(selectedOrders.created_at).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    : 'Date not available'
+  const joinDate = new Date(order[0]?.created_at).toLocaleDateString()
 
   return (
     <div className='flex flex-wrap justify-between max-sm:flex-col sm:items-center gap-x-6 gap-y-4'>

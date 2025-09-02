@@ -41,6 +41,10 @@ export const getCustomers = async (params = {}) => {
   return getRequest('customers', params)
 }
 
+export const getProducts = async (params = {}) => {
+  return getRequest('products', params)
+}
+
 // Merge two orders
 export const mergeOrders = async orderIds => {
   if (orderIds.length !== 2) {

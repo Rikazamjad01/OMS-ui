@@ -5,7 +5,13 @@ export const getInitials = string => {
   const initials = string
     .trim()
     .split(/\s+/)
-    .reduce((response, word) => (response += word[0] || ''), '')
+    .map(word => {
+      // Find first English letter in each word
+      const match = word.match(/[A-Za-z]/)
+      
+      return match ? match[0] : ''
+    })
+    .join('')
     .toUpperCase()
 
   return initials || null // return null if no initials

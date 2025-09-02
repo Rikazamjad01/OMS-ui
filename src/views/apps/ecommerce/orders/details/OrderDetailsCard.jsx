@@ -309,13 +309,6 @@ const OrderDetailsCard = ({ orderId }) => {
         }
       />
 
-      {/* Debug info - remove in production */}
-      <CardContent>
-        <Typography variant='body2' color='text.secondary'>
-          Selected Product IDs: {selectedProductIds.join(', ') || 'None'}
-        </Typography>
-      </CardContent>
-
       <OrderTable data={tableData} onSelectionChange={handleSelectionChange} />
       <CardContent className='flex justify-end'>
         <div>

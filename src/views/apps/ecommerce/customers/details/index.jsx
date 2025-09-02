@@ -35,8 +35,6 @@ const CustomerDetails = ({ customerId }) => {
 
     const filteredOrders = orders.filter(order => order.customerData?.id == customerId)
 
-    console.log(filteredOrders, 'filteredOrders in CustomerDetails')
-
     return filteredOrders
   }, [customerId, orders])
 
@@ -73,11 +71,11 @@ const CustomerDetails = ({ customerId }) => {
   return (
     <Grid container spacing={6}>
       <Grid size={12}>
-        <CustomerDetailsHeader customerData={customerData} customerId={customerId} />
+        <CustomerDetailsHeader customerData={customerData} customerId={customerId} order={orderList} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 4 }}>
-        <CustomerLeftOverview customerData={customerData} customerId={customerId} />
+        <CustomerLeftOverview customerData={customerData} customerId={customerId} order={orderList} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 8 }}>

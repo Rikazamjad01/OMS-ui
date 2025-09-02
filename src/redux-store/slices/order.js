@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 
-import { getRequest } from '@/utils/api'
+import { getRequest, postRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
@@ -34,14 +34,62 @@ export const fetchOrders = createAsyncThunk(
 
       const data = response.data || {}
 
-      console.log(data, 'data in fetchOrders')
+      const ordersWithArrays = data.orders.map(order => ({
+        ...order,
+        comments:
+          typeof order.comments === 'string'
+            ? order.comments.split('\n').filter(c => c.trim() !== '')
+            : order.comments || [],
+        remarks:
+          typeof order.remarks === 'string'
+            ? order.remarks.split('\n').filter(r => r.trim() !== '')
+            : order.remarks || []
+      }))
 
       return {
-        orders: data.orders || [],
+        orders: ordersWithArrays || [],
         total: data.pagination?.total || 0,
         page: data.pagination?.page || page,
         limit: data.pagination?.limit || limit,
         filters // Store the filters used for this request
+      }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const updateOrderCommentsAndRemarks = createAsyncThunk(
+  'orders/updateCommentsAndRemarks',
+  async ({ orderId, comments, remarks }, { rejectWithValue, getState }) => {
+    try {
+      const state = getState()
+      const order = selectOrderById(state, orderId)
+
+      const normalizeToString = val => {
+        if (Array.isArray(val)) return val.join('\n') // or comma, depending on backend
+
+        return val ?? ''
+      }
+
+      // Use the correct endpoint and format from your Postman example
+      const response = await postRequest(`orders/add`, {
+        id: orderId,
+        tags: normalizeToString(order?.tags),
+        remarks: remarks !== undefined ? remarks : order?.remarks || '',
+        comments: comments !== undefined ? comments : order?.comments || ''
+      })
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      // Return the updated order data
+      return {
+        orderId,
+        comments: response.data?.comments || '',
+        remarks: response.data?.remarks || '',
+        tags: response.data?.tags || ''
       }
     } catch (error) {
       return rejectWithValue(error.message)
@@ -63,7 +111,7 @@ const ordersSlice = createSlice({
       itemsPerPage: 25,
       total: 0
     },
-    selectedProductIds: [],
+    selectedProductIds: []
   },
   reducers: {
     setCurrentPage: (state, action) => {
@@ -74,13 +122,13 @@ const ordersSlice = createSlice({
       state.pagination = action.payload.pagination
     },
     handleFindOrder: (state, action) => {
-        // console.log(state.orders, action.payload, 'state.orders and action.payload in handleFindOrder');
-        const order = state.orders.find(order => order.id == action.payload)
+      // console.log(state.orders, action.payload, 'state.orders and action.payload in handleFindOrder');
+      const order = state.orders.find(order => order.id == action.payload)
 
-        if (order) {
-          state.selectedOrders = order
-        }
-      },
+      if (order) {
+        state.selectedOrders = order
+      }
+    },
     handleFindCustomer: (state, action) => {
       const customerId = action.payload
 
@@ -138,6 +186,20 @@ const ordersSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+      .addCase(updateOrderCommentsAndRemarks.fulfilled, (state, action) => {
+        const { orderId, comments, remarks, tags } = action.payload
+        const orderIndex = state.orders.findIndex(order => order.id === orderId)
+
+        if (orderIndex !== -1) {
+          // Update the order with new data
+          state.orders[orderIndex] = {
+            ...state.orders[orderIndex],
+            comments: typeof comments === 'string' ? comments.split('\n') : comments,
+            remarks: typeof remarks === 'string' ? remarks.split('\n') : remarks,
+            tags: tags || state.orders[orderIndex].tags
+          }
+        }
+      })
   }
 })
 
@@ -160,7 +222,7 @@ export const selectOrdersLoading = state => state.orders.loading
 export const selectOrdersError = state => state.orders.error
 export const selectPagination = state => state.orders.pagination
 export const selectCustomer = state => state.orders.selectedCustomer
-export const selectSelectedProductIds = (state) => state.orders.selectedProductIds
+export const selectSelectedProductIds = state => state.orders.selectedProductIds
 
 export const selectCustomerById = (state, customerId) => {
   if (!state.orders.orders?.length) return []

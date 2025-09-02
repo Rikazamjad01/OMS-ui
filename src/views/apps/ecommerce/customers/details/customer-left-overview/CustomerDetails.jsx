@@ -10,8 +10,9 @@ import Button from '@mui/material/Button'
 import CustomAvatar from '@core/components/mui/Avatar'
 import EditUserInfo from '@components/dialogs/edit-user-info'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
+import { getInitials } from '@/utils/getInitials'
 
-const CustomerDetails = ({ customerData, customerId }) => {
+const CustomerDetails = ({ customerData, customerId, order }) => {
   // Vars
   const buttonProps = {
     variant: 'contained',
@@ -28,6 +29,8 @@ const CustomerDetails = ({ customerData, customerId }) => {
   const address = customerData?.addresses?.[0] || {}
   const phone = address?.phone || 'Not available'
   const country = address?.country || address?.country_name || 'Not available'
+
+  const averageBasketValue = order[0]?.line_items?.length / totalOrders || 0
 
   return (
     <Card>
@@ -66,7 +69,7 @@ const CustomerDetails = ({ customerData, customerId }) => {
                 <i className='bx-basket' />
               </CustomAvatar>
               <div>
-                <Typography variant='h6'>{/* You might need to calculate this */}N/A</Typography>
+                <Typography variant='h6'>{averageBasketValue.toFixed(0)}</Typography>
                 <Typography variant='body2'>Average Basket Size</Typography>
               </div>
             </div>
@@ -136,16 +139,5 @@ const CustomerDetails = ({ customerData, customerId }) => {
   )
 }
 
-// Helper function to get initials from name
-const getInitials = name => {
-  if (!name) return 'customer name'
-
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 3)
-}
 
 export default CustomerDetails
