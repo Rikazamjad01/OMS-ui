@@ -26,6 +26,10 @@ const CustomerStatsCard = props => {
     fakeShopifyOrders,
     fakeManualOrders,
 
+    // These should come as aggregated counts from parent, not platform string
+    shopifyOrders,
+    manualOrders,
+    splitOrders,
     platform,
     device,
     campaign,
@@ -41,11 +45,10 @@ const CustomerStatsCard = props => {
 
   const totalFakeOrders = (Number(fakeShopifyOrders ?? 0) + Number(fakeManualOrders ?? 0))
 
-  const shopifyOrders = platform === "shopify" ? 1 : 0
-  const manualOrders = platform === "manual" ? 1 : 0
-  const splitOrders = platform === "split" ? 1 : 0
-
-  // const purchasedCategory = products?.[0]?.category
+  // Use the aggregated counts passed from parent component
+  const shopifyCount = shopifyOrders ?? 0
+  const manualCount = manualOrders ?? 0
+  const splitCount = splitOrders ?? 0
 
   return (
     <Card>
@@ -110,17 +113,17 @@ const CustomerStatsCard = props => {
           )}
 
           {/* Case 3: Channel orders */}
-          {(shopifyOrders > 0 || manualOrders > 0 || splitOrders > 0) && (
+          {(shopifyCount > 0 || manualCount > 0 || splitCount > 0) && (
             <Grid container spacing={12}>
               <div className='flex flex-col gap-5'>
                 <Typography variant="body2">
-                  Shopify Orders: <strong>{safely(shopifyOrders)}</strong>
+                  Shopify Orders: <strong>{safely(shopifyCount)}</strong>
                 </Typography>
                 <Typography variant="body2">
-                  Manual Orders: <strong>{safely(manualOrders)}</strong>
+                  Manual Orders: <strong>{safely(manualCount)}</strong>
                 </Typography>
                 <Typography variant="body2">
-                  Split Orders: <strong>{safely(splitOrders)}</strong>
+                  Split Orders: <strong>{safely(splitCount)}</strong>
                 </Typography>
               </div>
             </Grid>

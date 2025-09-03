@@ -61,21 +61,15 @@ export const fetchOrders = createAsyncThunk(
 
 export const updateOrderCommentsAndRemarks = createAsyncThunk(
   'orders/updateCommentsAndRemarks',
-  async ({ orderId, comments, remarks }, { rejectWithValue, getState }) => {
+  async ({ orderId, comments, remarks, tags }, { rejectWithValue, getState }) => {
     try {
       const state = getState()
       const order = selectOrderById(state, orderId)
 
-      const normalizeToString = val => {
-        if (Array.isArray(val)) return val.join('\n') // or comma, depending on backend
-
-        return val ?? ''
-      }
-
       // Use the correct endpoint and format from your Postman example
       const response = await postRequest(`orders/add`, {
         id: orderId,
-        tags: normalizeToString(order?.tags),
+        tags: tags || '',
         remarks: remarks !== undefined ? remarks : order?.remarks || '',
         comments: comments !== undefined ? comments : order?.comments || ''
       })
@@ -192,11 +186,19 @@ const ordersSlice = createSlice({
 
         if (orderIndex !== -1) {
           // Update the order with new data
-          state.orders[orderIndex] = {
+          const updatedOrder = {
             ...state.orders[orderIndex],
             comments: typeof comments === 'string' ? comments.split('\n') : comments,
             remarks: typeof remarks === 'string' ? remarks.split('\n') : remarks,
-            tags: tags || state.orders[orderIndex].tags
+            tags: Array.isArray(tags)
+              ? tags.join(', ') // convert array → "urgent, paid"
+              : tags || order?.tags || ''
+          }
+
+          state.orders[orderIndex] = updatedOrder
+
+          if (state.selectedOrders?.id === orderId) {
+            state.selectedOrders = updatedOrder
           }
         }
       })

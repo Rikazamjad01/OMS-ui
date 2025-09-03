@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -28,19 +28,21 @@ const getAvatar = ({ avatar, agentName }) => {
 }
 
 const CommentsAndRemarks = ({ orderData }) => {
-  const comments = orderData?.comments || []
-  const remarks = orderData?.remarks || []
-
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [showRemarkInput, setShowRemarkInput] = useState(false)
 
   const [newComment, setNewComment] = useState('')
   const [newRemark, setNewRemark] = useState('')
 
+  const orderFromStore = useSelector(state => state.orders.selectedOrders)
+
+  const comments = orderFromStore?.comments || []
+  const remarks = orderFromStore?.remarks || []
+
+
   const dispatch = useDispatch()
 
   const handleAddComment = () => {
-
     if (newComment.trim()) {
       dispatch(
         updateOrderCommentsAndRemarks({
@@ -64,7 +66,7 @@ const CommentsAndRemarks = ({ orderData }) => {
     if (newRemark.trim()) {
       dispatch(
         updateOrderCommentsAndRemarks({
-          orderId: orderData.id,
+          orderId: orderData,
           remarks: newRemark.trim(),
           comments: undefined // Keep existing comments
         })

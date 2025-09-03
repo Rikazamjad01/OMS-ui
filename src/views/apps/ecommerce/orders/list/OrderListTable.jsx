@@ -1,10 +1,10 @@
 'use client'
-
 import { useState, useMemo, useEffect } from 'react'
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+import { useDispatch } from 'react-redux'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
@@ -15,8 +15,12 @@ import TablePagination from '@mui/material/TablePagination'
 import MenuItem from '@mui/material/MenuItem'
 
 import classnames from 'classnames'
-import { rankItem } from '@tanstack/match-sorter-utils'
+
 import { flexRender, getCoreRowModel, useReactTable, getSortedRowModel } from '@tanstack/react-table'
+
+import TagEditDialog from '@/components/tagEdit/TagEditDialog'
+
+import { updateOrderCommentsAndRemarks } from '@/redux-store/slices/order'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -125,9 +129,11 @@ const OrderListTable = ({
   onPageChange,
   onLimitChange,
   onSearchChange,
-  onFiltersChange,
+  onFiltersChange
 }) => {
   const { lang: locale } = useParams()
+  const dispatch = useDispatch()
+  const [tagsMap, setTagsMap] = useState({})
 
   // Local UI state
   const [rowSelection, setRowSelection] = useState({})
@@ -135,6 +141,18 @@ const OrderListTable = ({
   const [rawFilters, setRawFilters] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [openFilter, setOpenFilter] = useState(false)
+
+  const [tagModal, setTagModal] = useState({
+    open: false,
+    orderId: null,
+    tags: []
+  })
+
+  const openTagEditor = (orderId, currentTags = []) => {
+    setTagModal({ open: true, orderId, tags: Array.isArray(currentTags) ? currentTags : [currentTags].filter(Boolean) })
+  }
+
+  const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
 
   // Map backend orders -> table rows
   const data = useMemo(() => {
@@ -144,6 +162,12 @@ const OrderListTable = ({
         : order.payment_gateway_names
           ? [order.payment_gateway_names]
           : []
+
+      const parsedTags = typeof order.tags === 'string'
+      ? order.tags.split(',').map(t => t.trim()).filter(Boolean) // "a,b" → ["a","b"]
+      : Array.isArray(order.tags)
+        ? order.tags.filter(Boolean)
+        : []
 
       return {
         id: order.id,
@@ -160,7 +184,7 @@ const OrderListTable = ({
         methodLabel: names[0] || 'Unknown',
         Amount: Number(order.current_total_price),
         city: order.customerData?.addresses?.[0]?.city || '',
-        Tag: order.tags?.filter(Boolean) || []
+        Tag: parsedTags
       }
     })
   }, [orderData])
@@ -183,6 +207,45 @@ const OrderListTable = ({
         <i className='bx-user' />
       </CustomAvatar>
     )
+  }
+
+  const handleSaveTags = async newTagsArray => {
+    const orderId = tagModal.orderId
+
+    if (!orderId) return
+
+    // normalize tags for API payload if needed
+    // choose appropriately: send array, or string. Here we send an array but
+    // adapt if your backend expects string e.g. newTagsArray.join(',')
+    const tagsPayload = newTagsArray
+
+    try {
+      const result = await dispatch(updateOrderCommentsAndRemarks({ orderId, tags: tagsPayload })).unwrap()
+
+      // `result.tags` can be array or string depending on your API.
+      // Normalize to array for UI:
+      let normalizedTags = []
+
+      if (Array.isArray(result.tags)) normalizedTags = result.tags
+      else if (typeof result.tags === 'string') {
+        // try split by comma or newline
+        normalizedTags = result.tags
+          .split(/[,|\n]+/)
+          .map(t => t.trim())
+          .filter(Boolean)
+      } else {
+        normalizedTags = newTagsArray
+      }
+
+      // optimistic/local update so table shows new tags immediately
+      setTagsMap(prev => ({ ...prev, [orderId]: normalizedTags }))
+
+      closeTagEditor()
+    } catch (err) {
+      console.error('Failed to update tags:', err)
+
+      // show toast/snackbar here if you have one
+    }
   }
 
   const columns = useMemo(
@@ -349,13 +412,29 @@ const OrderListTable = ({
         accessorKey: 'Tag',
         header: 'Tags',
         cell: ({ row }) => {
-          const tags = Array.isArray(row.original.Tag) ? row.original.Tag : [row.original.Tag]
-          const hasTags = tags && tags.length > 0 && tags.some(tag => !!tag)
+          const originalTags = Array.isArray(row.original.Tag)
+            ? row.original.Tag
+            : row.original.Tag
+              ? [row.original.Tag]
+              : []
+
+          const displayedTags = tagsMap[row.original.id] ?? originalTags
+          const hasTags = displayedTags && displayedTags.length > 0
 
           return (
-            <div className='flex gap-2 w-48 flex-wrap'>
+            <div
+              className='flex gap-2 w-48 flex-wrap cursor-pointer'
+              onClick={() => openTagEditor(row.original.id, displayedTags)}
+              role='button'
+              tabIndex={0}
+              onKeyDown={e => {
+                if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
+              }}
+            >
               {hasTags ? (
-                tags.map((tag, i) => <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />)
+                displayedTags.map((tag, i) => (
+                  <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
+                ))
               ) : (
                 <Typography variant='body2' color='text.secondary'>
                   -
@@ -386,7 +465,7 @@ const OrderListTable = ({
         enableSorting: false
       }
     ],
-    [locale]
+    [locale, tagsMap]
   )
 
   const table = useReactTable({
@@ -411,8 +490,6 @@ const OrderListTable = ({
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
   const selectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
-
-  console.log(selectedIds, 'selectedIds in OrderListTable')
 
   if (error) {
     return (
@@ -589,6 +666,14 @@ const OrderListTable = ({
         }}
         rowsPerPageOptions={[25, 50, 100]}
       />
+
+      <TagEditDialog
+        open={tagModal.open}
+        initialTags={tagModal.tags}
+        onClose={closeTagEditor}
+        onSave={handleSaveTags}
+      />
+
     </Card>
   )
 }

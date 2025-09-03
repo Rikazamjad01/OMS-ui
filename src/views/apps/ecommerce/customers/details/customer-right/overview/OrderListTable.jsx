@@ -114,7 +114,7 @@ const OrderListTable = ({order, customerData }) => {
     if (!order) return []
 
     if (customerId) {
-      return order.find(order => order.customer == customerId)
+      return order.filter(order => order.customer == customerId)
     }
 
     return order

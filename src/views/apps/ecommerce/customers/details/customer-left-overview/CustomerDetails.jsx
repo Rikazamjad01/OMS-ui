@@ -1,3 +1,5 @@
+import { useSelector } from 'react-redux'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -11,22 +13,28 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import EditUserInfo from '@components/dialogs/edit-user-info'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import { getInitials } from '@/utils/getInitials'
+import { findCustomerById } from '@/redux-store/slices/customer'
 
 const CustomerDetails = ({ customerData, customerId, order }) => {
+
+  console.log(order, 'order in CustomerDetails')
+
   // Vars
   const buttonProps = {
     variant: 'contained',
     children: 'Edit Details'
   }
 
+  const customer = useSelector(findCustomerById(customerId))
+
   // Calculate derived values
-  const customerName = `${customerData?.first_name || ''} ${customerData?.last_name || ''}`.trim()
-  const totalOrders = customerData?.orders_count || 0
-  const totalSpent = parseFloat(customerData?.total_spent || 0)
+  const customerName = `${customerData?.first_name || customer?.first_name || ''} ${customerData?.last_name || customer?.last_name || ''}`.trim()
+  const totalOrders = customerData?.orders_count || customer?.orders_count || 0
+  const totalSpent = parseFloat(customerData?.total_spent || customer?.total_spent || 0)
   const averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0
 
   // Get address information
-  const address = customerData?.addresses?.[0] || {}
+  const address = customerData?.addresses?.[0] || customer?.addresses?.[0] || {}
   const phone = address?.phone || 'Not available'
   const country = address?.country || address?.country_name || 'Not available'
 

@@ -53,6 +53,13 @@ export const selectCustomersLoading = state => state.customers.loading
 export const selectCustomersTableRows = state => state.customers.tableRows
 export const selectCustomersPagination = state => state.customers.pagination
 
+export const findCustomerById = id => state =>
+  state.customers.tableRows.find(customer => {
+    if (Array.isArray(customer.id)) {
+      return customer.id.map(String).includes(String(id))
+    }
+
+    return String(customer.id) === String(id)
+  }) || null
+
 export default customerSlice.reducer
-
-
