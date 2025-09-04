@@ -6,6 +6,8 @@ import { getRequest } from '@/utils/api' // adjust path
 export const fetchCustomers = createAsyncThunk('customers/fetchCustomers', async ({ page, perPage }) => {
   const response = await getRequest(`customers?page=${page}&limit=${perPage}`)
 
+  console.log('fetchCustomers response:', response)
+
   return response
 })
 
@@ -35,9 +37,12 @@ const customerSlice = createSlice({
         state.loading = true
       })
       .addCase(fetchCustomers.fulfilled, (state, action) => {
-        state.loading = false
-        state.tableRows = action.payload.customers
-        state.pagination.total = action.payload.total // depends on API shape
+        state.tableRows = action.payload.customers || []
+        const apiPagination = action.payload.pagination || {}
+
+        state.pagination.total = apiPagination.total ?? 0
+        state.pagination.page = apiPagination.page ?? state.pagination.page
+        state.pagination.perPage = apiPagination.limit ?? state.pagination.perPage
       })
       .addCase(fetchCustomers.rejected, (state, action) => {
         state.loading = false

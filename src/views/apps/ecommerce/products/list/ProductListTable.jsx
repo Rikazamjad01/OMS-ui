@@ -38,7 +38,14 @@ import {
 
 import { useSelector, useDispatch } from 'react-redux'
 
-import {   fetchProducts, selectProducts, selectProductsLoading, selectProductsPagination } from '@/redux-store/slices/products'
+import { Dialog, DialogActions, DialogContent } from '@mui/material'
+
+import {
+  fetchProducts,
+  selectProducts,
+  selectProductsLoading,
+  selectProductsPagination
+} from '@/redux-store/slices/products'
 
 // Component Imports
 import TableFilters from './TableFilters'
@@ -87,7 +94,6 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
   )
 }
 
-
 const productStatusObj = {
   active: { title: 'Active', color: 'success' },
   draft: { title: 'Draft', color: 'warning' },
@@ -98,7 +104,6 @@ const productStatusObj = {
 const columnHelper = createColumnHelper()
 
 const ProductListTable = () => {
-
   const dispatch = useDispatch()
 
   const products = useSelector(selectProducts)
@@ -110,18 +115,19 @@ const ProductListTable = () => {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewSrc, setPreviewSrc] = useState('')
 
   useEffect(() => {
-      dispatch(fetchProducts({ page: pagination.currentPage, limit: pagination.itemsPerPage }))
-    }, [dispatch, pagination.currentPage, pagination.itemsPerPage])
+    dispatch(fetchProducts({ page: pagination.currentPage, limit: pagination.itemsPerPage }))
+  }, [dispatch, pagination.currentPage, pagination.itemsPerPage])
 
   useEffect(() => {
-    if(products){
+    if (products) {
       setData(products)
       setFilteredData(products)
     }
   }, [products])
-
 
   // Hooks
   const { lang: locale } = useParams()
@@ -151,28 +157,46 @@ const ProductListTable = () => {
         )
       },
       columnHelper.accessor('id', {
+        enableGlobalFilter: true,
         header: 'ID',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <div className='flex flex-col'>
-              <Typography variant='h6'>#{row.original.id}</Typography>
+              <Typography variant='h6' className='cursor-default'>
+                {row.original.id}
+              </Typography>
             </div>
           </div>
         )
       }),
-      columnHelper.accessor('productName', {
+      columnHelper.accessor('title', {
         header: 'Product',
+        enableGlobalFilter: true,
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
-            <img src={row.original.image?.src} width={38} height={38} className='rounded bg-actionHover' />
+            <img
+              src={row.original.image?.src}
+              width={38}
+              height={38}
+              className='rounded bg-actionHover cursor-pointer'
+              onClick={() => {
+                setPreviewSrc(row.original.image?.src)
+                setPreviewOpen(true)
+              }}
+            />
             <div className='flex flex-col'>
-              <Typography variant='h6'>{row.original.title}</Typography>
-              <Typography variant='body2'>{row.original.vendor}</Typography>
+              <Typography variant='h6' className='cursor-default'>
+                {row.original.title}
+              </Typography>
+              <Typography variant='body2' className='cursor-default'>
+                {row.original.vendor}
+              </Typography>
             </div>
           </div>
         )
       }),
       columnHelper.accessor('category', {
+        enableGlobalFilter: true,
         header: 'Category',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
@@ -181,35 +205,33 @@ const ProductListTable = () => {
         )
       }),
       columnHelper.accessor('stock', {
+        enableGlobalFilter: true,
         header: 'Stock',
         cell: ({ row }) => <Switch defaultChecked={row.original.stock || false} />,
         enableSorting: false
       }),
       columnHelper.accessor('sku', {
+        enableGlobalFilter: true,
         header: 'SKU',
         cell: ({ row }) => <Typography>{row.original.sku || '-'}</Typography>
       }),
       columnHelper.accessor('price', {
+        enableGlobalFilter: true,
         header: 'Price',
         cell: ({ row }) => <Typography>{row.original.price || '-'}</Typography>
       }),
       columnHelper.accessor('qty', {
+        enableGlobalFilter: true,
         header: 'QTY',
         cell: ({ row }) => <Typography>{row.original.qty || '-'}</Typography>
       }),
       columnHelper.accessor('status', {
         header: 'Status',
+        enableGlobalFilter: true,
         cell: ({ row }) => {
           const statusInfo = productStatusObj[row.original.status] || { title: 'Unknown', color: 'default' }
 
-          return (
-            <Chip
-              label={statusInfo.title}
-              variant='tonal'
-              color={statusInfo.color}
-              size='small'
-            />
-          )
+          return <Chip label={statusInfo.title} variant='tonal' color={statusInfo.color} size='small' />
         }
       }),
       columnHelper.accessor('actions', {
@@ -370,6 +392,16 @@ const ProductListTable = () => {
             table.setPageIndex(page)
           }}
         />
+        <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth='md'>
+          <DialogContent sx={{ p: 0 }}>
+            <img src={previewSrc} alt='Preview' style={{ maxWidth: '50vw', height: '50vh', display: 'block' }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPreviewOpen(false)} color='primary' variant='contained'>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Card>
     </>
   )

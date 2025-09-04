@@ -25,6 +25,8 @@ export const getRequest = async (endpoint, params = {}) => {
 // Generic POST
 export const postRequest = async (endpoint, body = {}) => {
 
+  console.log(body, 'body in postRequest')
+
   try {
     const response = await api.post(endpoint, body)
 

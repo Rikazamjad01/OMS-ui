@@ -66,12 +66,18 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
       const state = getState()
       const order = selectOrderById(state, orderId)
 
+      const normalizeToString = val => {
+        if (Array.isArray(val)) return val.join('\n') // or ', ', depends on how you want it combined
+
+        return val ?? '' // null/undefined → ''
+      }
+
       // Use the correct endpoint and format from your Postman example
       const response = await postRequest(`orders/add`, {
         id: orderId,
-        tags: tags || '',
-        remarks: remarks !== undefined ? remarks : order?.remarks || '',
-        comments: comments !== undefined ? comments : order?.comments || ''
+        tags: Array.isArray(tags) ? tags.join(', ') : tags,
+        remarks: normalizeToString(remarks !== undefined ? remarks : order?.remarks),
+        comments: normalizeToString(comments !== undefined ? comments : order?.comments)
       })
 
       if (!response.status) {

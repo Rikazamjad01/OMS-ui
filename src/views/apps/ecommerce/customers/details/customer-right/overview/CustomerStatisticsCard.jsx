@@ -9,8 +9,6 @@ const CustomerStatisticsCard = ({ order }) => {
     // Ensure we have an array
     const orderArray = Array.isArray(orders) ? orders : [orders]
 
-    console.log(orderArray, 'orderArray in computeAggregatedStats')
-
     // Initialize counters
     let stats = {
       completedOrdersByCustomer: 0,
@@ -33,9 +31,6 @@ const CustomerStatisticsCard = ({ order }) => {
 
     // Aggregate data from all orders
     orderArray.forEach((orderItem, index) => {
-      console.log(`Order ${index + 1} platform:`, orderItem.platform)
-      console.log(`Order ${index + 1} status:`, orderItem.orderStatus, orderItem.financial_status)
-
       // Count by status
       if (orderItem.orderStatus === 'completed' || orderItem.financial_status === 'completed') {
         stats.completedOrdersByCustomer++

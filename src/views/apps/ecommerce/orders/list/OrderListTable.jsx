@@ -16,7 +16,15 @@ import MenuItem from '@mui/material/MenuItem'
 
 import classnames from 'classnames'
 
-import { flexRender, getCoreRowModel, useReactTable, getSortedRowModel } from '@tanstack/react-table'
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getSortedRowModel,
+  getFilteredRowModel
+} from '@tanstack/react-table'
+
+import { rankItem } from '@tanstack/match-sorter-utils'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
@@ -46,9 +54,9 @@ export const paymentStatus = {
 }
 
 export const orderPlatform = {
-  1: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
-  2: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  3: { text: 'Manually', color: 'primary', colorClassName: 'text-primary' }
+  shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
+  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
+  manual: { text: 'Manually', color: 'primary', colorClassName: 'text-primary' }
 }
 
 export const statusChipColor = {
@@ -69,6 +77,22 @@ const getTagColor = tag => {
   const hash = [...tag].reduce((acc, char) => acc + char.charCodeAt(0), 0)
 
   return chipColors[hash % chipColors.length]
+}
+
+const fuzzyFilter = (row, columnId, value, addMeta) => {
+  const itemRank = rankItem(row.getValue(columnId), value)
+
+  addMeta?.({ itemRank })
+
+  return itemRank.passed
+}
+
+export const paymentMethodsMap = {
+  cod: { text: 'Cash on Delivery' },
+  paypal: { text: 'PayPal' },
+  card: { text: 'Credit / Debit Card' },
+  wallet: { text: 'Wallet' },
+  other: { text: 'Other' }
 }
 
 export const normalizePaymentMethod = (names = []) => {
@@ -135,6 +159,8 @@ const OrderListTable = ({
   const dispatch = useDispatch()
   const [tagsMap, setTagsMap] = useState({})
 
+  console.log(orderData, 'orderData in OrderListTable')
+
   // Local UI state
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
@@ -163,11 +189,15 @@ const OrderListTable = ({
           ? [order.payment_gateway_names]
           : []
 
-      const parsedTags = typeof order.tags === 'string'
-      ? order.tags.split(',').map(t => t.trim()).filter(Boolean) // "a,b" → ["a","b"]
-      : Array.isArray(order.tags)
-        ? order.tags.filter(Boolean)
-        : []
+      const parsedTags =
+        typeof order.tags === 'string'
+          ? order.tags
+              .split(',')
+              .map(t => t.trim())
+              .filter(Boolean) // "a,b" → ["a","b"]
+          : Array.isArray(order.tags)
+            ? order.tags.filter(Boolean)
+            : []
 
       return {
         id: order.id,
@@ -178,7 +208,7 @@ const OrderListTable = ({
         customerId: order.customerData?.id,
         email: order.email,
         payment: order.financial_status === 'paid' ? 1 : 2,
-        platform: order.platform === 'shopify' ? 1 : 2, // note: lowercase 'platform'
+        platform: order.platform?.toLowerCase() || 'manual', // note: lowercase 'platform'
         status: order.orderStatus,
         method: normalizePaymentMethod(names),
         methodLabel: names[0] || 'Unknown',
@@ -217,7 +247,9 @@ const OrderListTable = ({
     // normalize tags for API payload if needed
     // choose appropriately: send array, or string. Here we send an array but
     // adapt if your backend expects string e.g. newTagsArray.join(',')
-    const tagsPayload = newTagsArray
+    const tagsPayload = Array.isArray(newTagsArray)
+      ? newTagsArray.join(',') // "a,b,c"
+      : newTagsArray || ''
 
     try {
       const result = await dispatch(updateOrderCommentsAndRemarks({ orderId, tags: tagsPayload })).unwrap()
@@ -270,7 +302,8 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'orderNumber',
-        header: 'Order',
+        id: 'order',
+        header: 'Order #',
         cell: ({ row }) => (
           <Typography
             component={Link}
@@ -304,7 +337,7 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'customer',
-        header: 'Customers',
+        header: 'Customer Name',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             {getAvatar(row.original)}
@@ -340,17 +373,25 @@ const OrderListTable = ({
       {
         accessorKey: 'platform', // fixed: lowercase
         header: 'Platform',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1'>
-            <i className={classnames('bx-bxs-circle bs-2 is-2', orderPlatform[row.original.platform].colorClassName)} />
-            <Typography
-              color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
-              className='font-medium'
-            >
-              {orderPlatform[row.original.platform]?.text || row.original.platform || 'Unknown'}
-            </Typography>
-          </div>
-        )
+        cell: ({ row }) => {
+          const platformInfo = orderPlatform[row.original.platform] ?? {
+            text: row.original.platform || 'Unknown',
+            color: 'default',
+            colorClassName: 'text-secondary'
+          }
+
+          return (
+            <div className='flex items-center gap-1'>
+              <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} />
+              <Typography
+                color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
+                className='font-medium'
+              >
+                {orderPlatform[row.original.platform]?.text || row.original.platform || 'Unknown'}
+              </Typography>
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'status',
@@ -471,10 +512,14 @@ const OrderListTable = ({
   const table = useReactTable({
     data,
     columns,
-    state: { rowSelection },
+    state: { rowSelection, globalFilter, columnFilters },
     onRowSelectionChange: setRowSelection,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: fuzzyFilter,
     manualPagination: true,
     pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     onPaginationChange: updater => {
@@ -511,9 +556,9 @@ const OrderListTable = ({
           </Button>
 
           <DebouncedInput
-            value={globalFilter}
+            value={globalFilter ?? ''}
             onChange={val => {
-              setGlobalFilter(val)
+              setGlobalFilter(String(val))
               onSearchChange?.(val) // Add this line
             }}
             onEnter={val => {
@@ -673,7 +718,6 @@ const OrderListTable = ({
         onClose={closeTagEditor}
         onSave={handleSaveTags}
       />
-
     </Card>
   )
 }

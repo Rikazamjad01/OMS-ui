@@ -25,6 +25,8 @@ const CustomerDetails = ({ customerId }) => {
   const orders = useSelector(state => state.orders.orders)
   const loading = useSelector(state => state.orders.loading)
 
+  console.log(orders, 'orders in customer details')
+
   // const selectedCustomer = useSelector(state => selectCustomerById(state, customerId))
 
   const [hasFetched, setHasFetched] = useState(false)

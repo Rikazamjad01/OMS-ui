@@ -207,7 +207,7 @@ const CustomerListTable = () => {
   }
 
   const handleChangeRowsPerPage = event => {
-    const newPerPage = parseInt(event.target.value, 25)
+    const newPerPage = Number(event.target.value); 
 
     dispatch(setCustomersItemsPerPage(newPerPage))
     dispatch(setCustomersCurrentPage(1))
@@ -262,14 +262,6 @@ const CustomerListTable = () => {
   //   dispatch(setCustomersItemsPerPage(newPerPage))
   //   dispatch(setCustomersCurrentPage(1))
   // }
-
-  if (loading) {
-    return (
-      <div className='flex items-center justify-center h-96'>
-        <CircularProgress />
-      </div>
-    )
-  }
 
   return (
     <>
