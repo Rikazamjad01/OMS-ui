@@ -38,13 +38,15 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
   const handleReset = () => {
     const emptyFilters = {
       order: '',
-      date: '',
+      dateFrom: '',
+      dateTo: '',
       customer: '',
       payment: '',
       platform: '',
       status: '',
       method: '',
-      amount: '',
+      amountMin: '',
+      amountMax: '',
       city: '',
       tag: ''
     }
@@ -63,14 +65,21 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
           onChange={e => handleChange('order', e.target.value)}
         />
         <CustomTextField
-          label='Order Date'
-          value={filters.date || ''}
-          onChange={e => handleChange('date', e.target.value)}
-        />
-        <CustomTextField
           label='Customer Name'
           value={filters.customer || ''}
           onChange={e => handleChange('customer', e.target.value)}
+        />
+        <CustomTextField
+          type='date'
+          label='Order Date From'
+          value={filters.dateFrom || ''}
+          onChange={e => handleChange('dateFrom', e.target.value)}
+        />
+        <CustomTextField
+          type='date'
+          label='Order Date To'
+          value={filters.dateTo || ''}
+          onChange={e => handleChange('dateTo', e.target.value)}
         />
         <CustomTextField
           select
@@ -85,7 +94,6 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
             </MenuItem>
           ))}
         </CustomTextField>
-
         <CustomTextField
           select
           label='Order Platform'
@@ -99,7 +107,6 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
             </MenuItem>
           ))}
         </CustomTextField>
-
         <CustomTextField
           select
           label='Order Status'
@@ -113,7 +120,6 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
             </MenuItem>
           ))}
         </CustomTextField>
-
         <CustomTextField
           select
           label='Payment Method'
@@ -127,15 +133,19 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
             </MenuItem>
           ))}
         </CustomTextField>
-
         <CustomTextField
-          label='Amount Range'
-          value={filters.amount || ''}
-          onChange={e => handleChange('amount', e.target.value)}
+          type='number'
+          label='Amount Min'
+          value={filters.amountMin || ''}
+          onChange={e => handleChange('amountMin', e.target.value)}
         />
-
+        <CustomTextField
+          type='number'
+          label='Amount Max'
+          value={filters.amountMax || ''}
+          onChange={e => handleChange('amountMax', e.target.value)}
+        />
         <CustomTextField label='City' value={filters.city || ''} onChange={e => handleChange('city', e.target.value)} />
-
         <CustomTextField label='Tags' value={filters.tag || ''} onChange={e => handleChange('tag', e.target.value)} />
       </DialogContent>
       <DialogActions className='justify-between p-5'>

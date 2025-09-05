@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
-import { useDispatch } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
@@ -28,7 +28,7 @@ import { rankItem } from '@tanstack/match-sorter-utils'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
-import { updateOrderCommentsAndRemarks } from '@/redux-store/slices/order'
+import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination } from '@/redux-store/slices/order'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -47,10 +47,10 @@ import tableStyles from '@core/styles/table.module.css'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
-  1: { text: 'Paid', color: 'success', colorClassName: 'text-success' },
-  2: { text: 'Pending', color: 'warning', colorClassName: 'text-warning' },
-  3: { text: 'Cancelled', color: 'secondary', colorClassName: 'text-secondary' },
-  4: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
+  paid: { text: 'Paid', color: 'success', colorClassName: 'text-success' },
+  pending: { text: 'Pending', color: 'warning', colorClassName: 'text-warning' },
+  cancelled: { text: 'Cancelled', color: 'secondary', colorClassName: 'text-secondary' },
+  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
 }
 
 export const orderPlatform = {
@@ -157,9 +157,9 @@ const OrderListTable = ({
 }) => {
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
-  const [tagsMap, setTagsMap] = useState({})
 
-  console.log(orderData, 'orderData in OrderListTable')
+  // const pagination = useSelector(selectPagination)
+  const [tagsMap, setTagsMap] = useState({})
 
   // Local UI state
   const [rowSelection, setRowSelection] = useState({})
@@ -179,6 +179,28 @@ const OrderListTable = ({
   }
 
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
+
+  const dateRangeFilterFn = (row, columnId, filterValue) => {
+    const rowDate = new Date(row.getValue(columnId))
+    const from = filterValue.from ? new Date(filterValue.from) : null
+    const to = filterValue.to ? new Date(filterValue.to) : null
+
+    if (from && rowDate < from) return false
+    if (to && rowDate > to) return false
+
+    return true
+  }
+
+  const amountRangeFilterFn = (row, columnId, filterValue) => {
+    const amount = Number(row.getValue(columnId))
+    const min = filterValue.min !== '' ? Number(filterValue.min) : null
+    const max = filterValue.max !== '' ? Number(filterValue.max) : null
+
+    if (min !== null && amount < min) return false
+    if (max !== null && amount > max) return false
+
+    return true
+  }
 
   // Map backend orders -> table rows
   const data = useMemo(() => {
@@ -207,7 +229,7 @@ const OrderListTable = ({
         customer: `${order.customerData?.first_name || ''} ${order.customerData?.last_name || ''}`.trim(),
         customerId: order.customerData?.id,
         email: order.email,
-        payment: order.financial_status === 'paid' ? 1 : 2,
+        payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.platform?.toLowerCase() || 'manual', // note: lowercase 'platform'
         status: order.orderStatus,
         method: normalizePaymentMethod(names),
@@ -316,7 +338,8 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'date',
-        header: 'Date',
+        header: 'Order Date',
+        filterFn: dateRangeFilterFn,
         cell: ({ row }) => {
           const dateObj = new Date(row.original.date)
           const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' })
@@ -438,6 +461,7 @@ const OrderListTable = ({
       {
         accessorKey: 'Amount',
         header: 'Amount',
+        filterFn: amountRangeFilterFn,
         cell: ({ row }) => (
           <Typography className='font-medium text-gray-800'>
             {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount)}
@@ -515,6 +539,10 @@ const OrderListTable = ({
     state: { rowSelection, globalFilter, columnFilters },
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
+    filterFns: {
+      dateRange: dateRangeFilterFn,
+      amountRange: amountRangeFilterFn
+    },
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -575,11 +603,9 @@ const OrderListTable = ({
             onApply={appliedFilters => {
               setRawFilters(appliedFilters)
 
-              const newColumnFilters = Object.entries(appliedFilters)
-                .filter(([_, value]) => value !== '')
-                .map(([id, value]) => ({ id, value }))
+              dispatch(fetchOrders({ page: 1, limit: 25, filters: appliedFilters }))
 
-              setColumnFilters(newColumnFilters)
+              // setColumnFilters(newColumnFilters)
 
               // notify parent to fetch with new filters
               onFiltersChange?.(appliedFilters)

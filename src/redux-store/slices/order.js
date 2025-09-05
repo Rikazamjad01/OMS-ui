@@ -19,11 +19,18 @@ export const fetchOrders = createAsyncThunk(
         return null // Indicate no fetch needed
       }
 
+      const filterParams = {}
+      
+      if (filters.amountMin) filterParams.min_total = filters.amountMin
+      if (filters.amountMax) filterParams.max_total = filters.amountMax
+      if (filters.dateFrom) filterParams.start_date = filters.dateFrom
+      if (filters.dateTo) filterParams.end_date = filters.dateTo
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
         ...(search && { search }),
-        ...filters
+        ...filterParams
       })
 
       const response = await getRequest(`orders/history?${params}`)
