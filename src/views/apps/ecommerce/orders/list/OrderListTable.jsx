@@ -23,6 +23,7 @@ import {
   getSortedRowModel,
   getFilteredRowModel
 } from '@tanstack/react-table'
+import { Alert, Snackbar } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -56,7 +57,7 @@ export const paymentStatus = {
 export const orderPlatform = {
   shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
   whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  manual: { text: 'Manually', color: 'primary', colorClassName: 'text-primary' }
+  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' },
 }
 
 export const statusChipColor = {
@@ -158,6 +159,8 @@ const OrderListTable = ({
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
 
+  const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
+
   // const pagination = useSelector(selectPagination)
   const [tagsMap, setTagsMap] = useState({})
 
@@ -175,7 +178,9 @@ const OrderListTable = ({
   })
 
   const openTagEditor = (orderId, currentTags = []) => {
-    setTagModal({ open: true, orderId, tags: Array.isArray(currentTags) ? currentTags : [currentTags].filter(Boolean) })
+    const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
+
+    setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
   }
 
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
@@ -223,11 +228,11 @@ const OrderListTable = ({
 
       return {
         id: order.id,
-        orderNumber: order.name?.replace('#', ''),
+        orderNumber: order?.name?.replace('#', ''),
         date: order.created_at,
         time: new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        customer: `${order.customerData?.first_name || ''} ${order.customerData?.last_name || ''}`.trim(),
-        customerId: order.customerData?.id,
+        customer: `${order?.first_name || ''} ${order?.last_name || ''}`.trim(),
+        customerId: order?.id,
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.platform?.toLowerCase() || 'manual', // note: lowercase 'platform'
@@ -235,8 +240,8 @@ const OrderListTable = ({
         method: normalizePaymentMethod(names),
         methodLabel: names[0] || 'Unknown',
         Amount: Number(order.current_total_price),
-        city: order.customerData?.addresses?.[0]?.city || '',
-        Tag: parsedTags
+        city: order?.city || '',
+        tags: parsedTags
       }
     })
   }, [orderData])
@@ -261,44 +266,58 @@ const OrderListTable = ({
     )
   }
 
-  const handleSaveTags = async newTagsArray => {
+  const handleSaveTags = async newTag => {
+    const tagPayload = String(newTag || '').trim()
+
+    if (!tagPayload || !tagPayload.trim()) {
+      setAlert({ open: true, message: 'Tag cannot be empty.', severity: 'error' })
+
+      return
+    }
+
     const orderId = tagModal.orderId
 
     if (!orderId) return
 
-    // normalize tags for API payload if needed
-    // choose appropriately: send array, or string. Here we send an array but
-    // adapt if your backend expects string e.g. newTagsArray.join(',')
-    const tagsPayload = Array.isArray(newTagsArray)
-      ? newTagsArray.join(',') // "a,b,c"
-      : newTagsArray || ''
+    if (!tagPayload) {
+      console.warn('No tag to update, skipping request.')
+
+      return
+    }
 
     try {
-      const result = await dispatch(updateOrderCommentsAndRemarks({ orderId, tags: tagsPayload })).unwrap()
+      const result = await dispatch(
+        updateOrderCommentsAndRemarks({
+          orderId,
+          tags: tagPayload // <-- send as string, exactly like Postman
+        })
+      ).unwrap()
 
-      // `result.tags` can be array or string depending on your API.
-      // Normalize to array for UI:
-      let normalizedTags = []
+      setAlert({
+        open: true,
+        message: result?.message || 'Tag updated successfully.',
+        severity: 'success'
+      })
 
-      if (Array.isArray(result.tags)) normalizedTags = result.tags
-      else if (typeof result.tags === 'string') {
-        // try split by comma or newline
-        normalizedTags = result.tags
-          .split(/[,|\n]+/)
-          .map(t => t.trim())
-          .filter(Boolean)
-      } else {
-        normalizedTags = newTagsArray
-      }
+      // Normalize to array for UI display, but it's still just one tag
+      const normalizedTags =
+        typeof result.tags === 'string'
+          ? result.tags
+              .split(/[,|\n]+/)
+              .map(t => t.trim())
+              .filter(Boolean)
+          : [tagPayload]
 
-      // optimistic/local update so table shows new tags immediately
-      setTagsMap(prev => ({ ...prev, [orderId]: normalizedTags }))
 
+          Map(prev => ({ ...prev, [orderId]: normalizedTags }))
       closeTagEditor()
     } catch (err) {
-      console.error('Failed to update tags:', err)
-
-      // show toast/snackbar here if you have one
+      setAlert({
+        open: true,
+        message: err || 'Failed to update tag.',
+        severity: 'error'
+      })
+      console.error('Failed to update tag:', err)
     }
   }
 
@@ -474,13 +493,13 @@ const OrderListTable = ({
         cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city}</Typography>
       },
       {
-        accessorKey: 'Tag',
+        accessorKey: 'tags',
         header: 'Tags',
         cell: ({ row }) => {
-          const originalTags = Array.isArray(row.original.Tag)
-            ? row.original.Tag
-            : row.original.Tag
-              ? [row.original.Tag]
+          const originalTags = Array.isArray(row.original.tags)
+            ? row.original.tags
+            : row.original.tags
+              ? [row.original.tags]
               : []
 
           const displayedTags = tagsMap[row.original.id] ?? originalTags
@@ -744,6 +763,21 @@ const OrderListTable = ({
         onClose={closeTagEditor}
         onSave={handleSaveTags}
       />
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={5000}
+        onClose={() => setAlert(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          variant='filled'
+          severity={alert.severity}
+          onClose={() => setAlert(prev => ({ ...prev, open: false }))}
+          sx={{ width: '100%', fontSize: '1rem', fontWeight: 'bold' }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

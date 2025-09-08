@@ -20,11 +20,17 @@ export const fetchOrders = createAsyncThunk(
       }
 
       const filterParams = {}
-      
+
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
       if (filters.dateTo) filterParams.end_date = filters.dateTo
+      if (filters.status) filterParams.orderStatus = filters.status
+      if (filters.platform) filterParams.platform = filters.platform
+      if (filters.customer) filterParams.search = filters.customer
+      if (filters.order) filterParams.search = filters.order
+
+      // if (filters.order) filterParams.
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -82,9 +88,9 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
       // Use the correct endpoint and format from your Postman example
       const response = await postRequest(`orders/add`, {
         id: orderId,
-        tags: Array.isArray(tags) ? tags.join(', ') : tags,
-        remarks: normalizeToString(remarks !== undefined ? remarks : order?.remarks),
-        comments: normalizeToString(comments !== undefined ? comments : order?.comments)
+        ...(tags !== undefined ? { tags: Array.isArray(tags) ? tags.join(', ') : tags } : {}),
+        ...(remarks !== undefined ? { remarks: normalizeToString(remarks) } : {}),
+        ...(comments !== undefined ? { comments: normalizeToString(comments) } : {})
       })
 
       if (!response.status) {

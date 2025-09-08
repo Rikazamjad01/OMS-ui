@@ -48,7 +48,7 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
       amountMin: '',
       amountMax: '',
       city: '',
-      tag: ''
+      tags: ''
     }
 
     setFilters(emptyFilters)
@@ -146,7 +146,7 @@ const FilterModal = ({ open, onClose, onApply, initialFilters }) => {
           onChange={e => handleChange('amountMax', e.target.value)}
         />
         <CustomTextField label='City' value={filters.city || ''} onChange={e => handleChange('city', e.target.value)} />
-        <CustomTextField label='Tags' value={filters.tag || ''} onChange={e => handleChange('tag', e.target.value)} />
+        <CustomTextField label='Tags' value={filters.tags || ''} onChange={e => handleChange('tags', e.target.value)} />
       </DialogContent>
       <DialogActions className='justify-between p-5'>
         <Button onClick={handleReset} color='error' variant='tonal'>

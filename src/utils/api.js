@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const baseUrl = 'https://ecommerce-platform-backend-production.up.railway.app/api/v1'
+const baseUrl =
+
+  // 'https://ecommerce-platform-backend-production.up.railway.app/api/v1'
+  'http://192.168.18.203:4000/api/v1'
 
 const api = axios.create({
   baseURL: baseUrl,
@@ -15,7 +18,6 @@ export const getRequest = async (endpoint, params = {}) => {
     const response = await axios.get(`${baseUrl}/${endpoint}`, { params })
 
     return response.data
-
   } catch (error) {
     console.error(`Failed to GET ${endpoint}:`, error)
     throw error
@@ -24,17 +26,19 @@ export const getRequest = async (endpoint, params = {}) => {
 
 // Generic POST
 export const postRequest = async (endpoint, body = {}) => {
-
   console.log(body, 'body in postRequest')
 
   try {
     const response = await api.post(endpoint, body)
 
     return response.data
-
   } catch (error) {
-    console.error(`Failed to POST ${endpoint}:`, error)
-    throw error
+    const apiMessage = error?.response?.data?.message || error.message || 'Unknown error'
+
+    console.error(`Failed to POST ${endpoint}:`, apiMessage)
+
+    // throw a clean string instead of whole error object
+    throw new Error(apiMessage)
   }
 }
 
