@@ -15,9 +15,9 @@ import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementCli
 import { getInitials } from '@/utils/getInitials'
 import { findCustomerById } from '@/redux-store/slices/customer'
 
-const CustomerDetails = ({ customerData, customerId, order }) => {
+const CustomerDetails = ({ customerData }) => {
 
-  console.log(order, 'order in CustomerDetails')
+  console.log(customerData, 'customerData in CustomerDetails')
 
   // Vars
   const buttonProps = {
@@ -25,20 +25,19 @@ const CustomerDetails = ({ customerData, customerId, order }) => {
     children: 'Edit Details'
   }
 
-  const customer = useSelector(findCustomerById(customerId))
-
   // Calculate derived values
-  const customerName = `${customerData?.first_name || customer?.first_name || ''} ${customerData?.last_name || customer?.last_name || ''}`.trim()
-  const totalOrders = customerData?.orders_count || customer?.orders_count || 0
-  const totalSpent = parseFloat(customerData?.total_spent || customer?.total_spent || 0)
+  const customerName = `${customerData?.customer?.first_name || ''} ${customerData?.customer?.last_name || ''}`.trim()
+  const customerId = customerData?.customer?.id
+  const totalOrders = customerData?.customer?.orders_count || 0
+  const totalSpent = parseFloat(customerData?.customer?.total_spent || 0)
   const averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0
 
   // Get address information
-  const address = customerData?.addresses?.[0] || customer?.addresses?.[0] || {}
+  const address = customerData?.customer?.addresses?.[0] || {}
   const phone = address?.phone || 'Not available'
-  const country = address?.country || address?.country_name || 'Not available'
+  const country = address?.country || 'Not available'
 
-  const averageBasketValue = order[0]?.line_items?.length / totalOrders || 0
+  const averageBasketValue = customerData?.stats?.average_line_items_size || 0
 
   return (
     <Card>
@@ -102,7 +101,7 @@ const CustomerDetails = ({ customerData, customerId, order }) => {
             </div>
             <div className='flex items-center gap-1'>
               <Typography variant='h6'>Email:</Typography>
-              <Typography>{customerData?.email || 'Not available'}</Typography>
+              <Typography>{customerData?.customer?.email || 'Not available'}</Typography>
             </div>
             <div className='flex items-center gap-1'>
               <Typography variant='h6'>Status:</Typography>
@@ -129,9 +128,9 @@ const CustomerDetails = ({ customerData, customerId, order }) => {
           dialog={EditUserInfo}
           dialogProps={{
             data: {
-              firstName: customerData?.first_name || '',
-              lastName: customerData?.last_name || '',
-              email: customerData?.email || '',
+              firstName: customerData?.customer?.first_name || '',
+              lastName: customerData?.customer?.last_name || '',
+              email: customerData?.customer?.email || '',
               phone: phone,
               country: country,
               address1: address?.address1 || '',

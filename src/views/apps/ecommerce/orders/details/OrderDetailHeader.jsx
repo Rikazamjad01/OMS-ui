@@ -1,25 +1,24 @@
 'use client'
 
 // MUI Imports
-import { useEffect, useRef } from 'react'
 
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Typography from '@mui/material/Typography'
 
 // Component Imports
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 
-import { handleFindOrder, selectSelectedProductIds } from '@/redux-store/slices/order'
+import { selectSelectedProductIds } from '@/redux-store/slices/order'
 
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 export const paymentStatus = {
-  'paid': { text: 'Paid', color: 'success' },
-  'pending': { text: 'Pending', color: 'warning' },
-  'cancelled': { text: 'Cancelled', color: 'secondary' },
-  'failed': { text: 'Failed', color: 'error' }
+  paid: { text: 'Paid', color: 'success' },
+  pending: { text: 'Pending', color: 'warning' },
+  cancelled: { text: 'Cancelled', color: 'secondary' },
+  failed: { text: 'Failed', color: 'error' }
 }
 
 export const statusChipColor = {
@@ -33,30 +32,27 @@ export const statusChipColor = {
   returned: { color: 'error' }
 }
 
-const OrderDetailHeader = ({ order }) => {
-  const { selectedOrders } = useSelector(state => state.orders)
+const OrderDetailHeader = ({ order, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
-  const dispatch = useDispatch()
+
+  if (!order) return null
 
   const canSplitOrder = (() => {
-    if (!selectedOrders?.line_items) return false
+    if (!order.line_items) return false
 
-    const totalProducts = selectedOrders.line_items.length
+    const totalProducts = order.line_items.length
 
-    // User must select at least one product
-    if (selectedProductIds.length < 1) return false
-
+    // User must select at least one product (if you keep a selection mechanism)
+    // If you still track selectedProductIds in Redux, pull it here via useSelector
+    // For now, let's allow splitting if there's more than 1 product or quantity > 1
     if (totalProducts === 1) {
-      // Only 1 product in the order → split allowed if quantity > 1
-      const item = selectedOrders.line_items[0]
+      const item = order.line_items[0]
 
       return item?.quantity > 1
     }
 
-    // Multiple products → split allowed if user selected any
-    return true
+    return totalProducts > 1
   })()
-
 
   // Vars
   const buttonProps = (children, color, variant) => ({
@@ -65,43 +61,27 @@ const OrderDetailHeader = ({ order }) => {
     variant
   })
 
-  const isMounted = useRef(false)
-
-  useEffect(() => {
-    isMounted.current = true
-
-    return () => {
-      isMounted.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (order && isMounted.current) {
-      dispatch(handleFindOrder(order))
-    }
-  }, [order, dispatch])
-
   return (
     <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
       <div className='flex flex-col items-start gap-1'>
         <div className='flex items-center gap-2'>
-          <Typography variant='h5'>{`Order ${order}`}</Typography>    
+          <Typography variant='h5'>{`Order ${id}`}</Typography>
           <Chip
             variant='tonal'
-            label={selectedOrders?.orderStatus || 'Unknown'}
-            color={statusChipColor[selectedOrders?.orderStatus || '']?.color || 'default'}
+            label={order?.orderStatus || 'Unknown'}
+            color={statusChipColor[order?.orderStatus || '']?.color || 'default'}
             size='small'
           />
           <Chip
             variant='tonal'
-            label={paymentStatus[selectedOrders?.financial_status || 'pending']?.text}
-            color={paymentStatus[selectedOrders?.financial_status || 'pending']?.color}
+            label={paymentStatus[order?.financial_status || 'pending']?.text}
+            color={paymentStatus[order?.financial_status || 'pending']?.color}
             size='small'
           />
         </div>
         <Typography>
-          {selectedOrders?.created_at
-            ? new Date(selectedOrders.created_at).toLocaleString('en-US', {
+          {order?.created_at
+            ? new Date(order.created_at).toLocaleString('en-US', {
                 weekday: 'short',
                 month: 'short',
                 day: 'numeric',
@@ -109,8 +89,7 @@ const OrderDetailHeader = ({ order }) => {
                 hour: '2-digit',
                 minute: '2-digit'
               })
-            : 'Date not available'
-          }
+            : 'Date not available'}
         </Typography>
       </div>
       <div className={'flex gap-2'}>
@@ -121,16 +100,15 @@ const OrderDetailHeader = ({ order }) => {
           dialogProps={{ type: 'cancel-order' }}
         />
 
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{
-              ...buttonProps('Split Order', 'success', 'tonal'),
-              disabled: !canSplitOrder
-            }}
-            dialog={ConfirmationDialog}
-            dialogProps={{ type: 'split-order', payload: { orderIds: order, selectedProductIds } }}
-          />
-
+        <OpenDialogOnElementClick
+          element={Button}
+          elementProps={{
+            ...buttonProps('Split Order', 'success', 'tonal'),
+            disabled: !canSplitOrder
+          }}
+          dialog={ConfirmationDialog}
+          dialogProps={{ type: 'split-order', payload: { orderIds: order, selectedProductIds } }}
+        />
       </div>
     </div>
   )

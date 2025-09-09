@@ -94,7 +94,7 @@ const CustomerStatsCard = props => {
           }
 
           {/* Case 2: Fake orders */}
-          {(title === 'Fake Orders') && (
+          {(title === 'Defaulter Status') && (
             <div className="flex flex-col gap-4">
               <Typography variant="body1">
                 Total Fake Orders: <strong>{safely(totalFakeOrders)}</strong>
@@ -113,7 +113,7 @@ const CustomerStatsCard = props => {
           )}
 
           {/* Case 3: Channel orders */}
-          {(shopifyCount > 0 || manualCount > 0 || splitCount > 0) && (
+          {(title === 'Channel Wise Orders') && (
             <Grid container spacing={12}>
               <div className='flex flex-col gap-5'>
                 <Typography variant="body2">

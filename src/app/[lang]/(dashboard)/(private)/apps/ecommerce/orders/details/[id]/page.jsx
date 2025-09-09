@@ -26,7 +26,9 @@ const OrderDetailsPage = ({ params }) => {
   //   redirect('/not-found')
   // }
 
-  return <OrderDetails params={params}/>
+  const { id } = params
+
+  return <OrderDetails id={id} />
 }
 
 export default OrderDetailsPage

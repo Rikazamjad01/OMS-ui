@@ -131,7 +131,6 @@ const OrderTable = ({ data, onSelectionChange }) => {
     enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: newSelectionUpdater => {
-
       // Handle the updater function properly
       const newSelection =
         typeof newSelectionUpdater === 'function' ? newSelectionUpdater(rowSelection) : newSelectionUpdater
@@ -222,79 +221,61 @@ const OrderTable = ({ data, onSelectionChange }) => {
   )
 }
 
-const OrderDetailsCard = ({ orderId }) => {
-  const dispatch = useDispatch()
-  const selectedOrder = useSelector(state => state.orders.selectedOrders)
-  const orders = useSelector(selectOrders)
+const OrderDetailsCard = ({ order }) => {
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedProducts, setSelectedProducts] = useState([])
 
-  // Handle selection changes - now receives both IDs and full product data
+  // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
     setSelectedProductIds(selectedIds)
     setSelectedProducts(selectedProductsData)
-    console.log('Selected Product IDs:', selectedIds)
   }
 
-  // Find the order in Redux store or dispatch action to find it
-  useEffect(() => {
-    if (orderId && !selectedOrder) {
-      dispatch(handleFindOrder(orderId))
-    }
-  }, [orderId, selectedOrder, dispatch])
-
-  // Create a map of product data for easy lookup
+  // Create a product map for quick lookups
   const productMap = useMemo(() => {
-    if (!selectedOrder?.productData) return {}
+    if (!order?.products) return {}
 
-    return selectedOrder.productData.reduce((map, product) => {
+    return order.products.reduce((map, product) => {
       map[product.id] = product
 
       return map
     }, {})
-  }, [selectedOrder])
+  }, [order])
 
-  // Transform line items with product data for the table
+  // Transform line items into table data
   const tableData = useMemo(() => {
-    if (!selectedOrder?.line_items) {
-      return []
-    }
+    if (!order?.line_items) return []
 
-    const transformedData = selectedOrder.line_items.map((lineItem, index) => {
+    return order.line_items.map((lineItem, index) => {
       const product = productMap[lineItem.id] || {}
-      const variant = product.variants?.[0] || {}
 
       const transformedItem = {
-        // Use a combination of approaches for the ID
-        id: product.id || lineItem.id || index, // Fallback to index if both IDs are missing
-        lineItemId: lineItem.id, // Keep line item ID for reference
-        productId: product.id, // Explicit product ID (might be undefined)
+        id: product.id || lineItem.id || index,
+        lineItemId: lineItem.id,
+        productId: product.id,
         title: product.title || lineItem.title || 'Unknown Product',
         vendor: product.vendor || 'N/A',
-        price: Number(product.price) || Number(lineItem.price) || 0,
+        price: Number(product.price) || 0,
         quantity: lineItem.quantity || 0,
-        discountedPrice: Number(selectedOrder?.current_total_discounts) || 0,
-        barCode: variant.barCode || 'N/A',
-        weight: variant.weight || 0,
-        image: product.image || { src: '/images/placeholder.png' }
+        discountedPrice: Number(order.current_total_discounts) || 0,
+        barCode: product.barCode || 'N/A',
+        weight: product.weight || 0,
+        image: product.image
       }
 
       return transformedItem
     })
-
-    return transformedData
-  }, [selectedOrder, productMap])
-
+  }, [order, productMap])
 
   // 💰 Calculations
   const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
-  const shippingFee = Number(selectedOrder?.shipping_lines?.[0]?.price) || 0
-  const taxRate = Number(selectedOrder?.current_total_tax) || 0
+  const shippingFee = Number(order?.shipping_lines?.[0]?.price) || 0
+  const taxRate = Number(order?.current_total_tax) || 0
   const tax = discountedSubtotal * (taxRate / 100)
   const total = subtotal + discountedSubtotal + shippingFee + tax
 
-  if (!selectedOrder) {
+  if (!order) {
     return <div>Loading order details...</div>
   }
 
@@ -303,13 +284,14 @@ const OrderDetailsCard = ({ orderId }) => {
       <CardHeader
         title='Order Details'
         action={
-          <Typography component={Link} color='primary.main' className='font-medium'>
+          <Typography component={Link} href='#' color='primary.main' className='font-medium'>
             Edit
           </Typography>
         }
       />
 
       <OrderTable data={tableData} onSelectionChange={handleSelectionChange} />
+
       <CardContent className='flex justify-end'>
         <div>
           <div className='flex items-center gap-12'>

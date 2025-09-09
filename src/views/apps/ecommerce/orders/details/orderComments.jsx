@@ -27,17 +27,16 @@ const getAvatar = ({ avatar, agentName }) => {
   }
 }
 
-const CommentsAndRemarks = ({ orderData }) => {
+const CommentsAndRemarks = ({ order }) => {
+
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [showRemarkInput, setShowRemarkInput] = useState(false)
 
   const [newComment, setNewComment] = useState('')
   const [newRemark, setNewRemark] = useState('')
 
-  const orderFromStore = useSelector(state => state.orders.selectedOrders)
-
-  const comments = orderFromStore?.comments || []
-  const remarks = orderFromStore?.remarks || []
+  const comments = order?.comments || []
+  const remarks = order?.remarks || []
 
 
   const dispatch = useDispatch()
@@ -46,7 +45,7 @@ const CommentsAndRemarks = ({ orderData }) => {
     if (newComment.trim()) {
       dispatch(
         updateOrderCommentsAndRemarks({
-          orderId: orderData,
+          orderId: order.id,
           comments: newComment.trim(),
           remarks: undefined // Keep existing remarks
         })
@@ -66,7 +65,7 @@ const CommentsAndRemarks = ({ orderData }) => {
     if (newRemark.trim()) {
       dispatch(
         updateOrderCommentsAndRemarks({
-          orderId: orderData,
+          orderId: order.id,
           remarks: newRemark.trim(),
           comments: undefined // Keep existing comments
         })
@@ -92,8 +91,8 @@ const CommentsAndRemarks = ({ orderData }) => {
         <div>
           <Typography variant='h6'>Agent</Typography>
           <div className='flex items-center gap-3 mt-2'>
-            {getAvatar({ avatar: orderData?.avatar, agentName: orderData?.agentName })}
-            <Typography variant='body1'>{orderData?.agentName || 'Unknown Agent'}</Typography>
+            {getAvatar({ avatar: order?.avatar, agentName: order?.agentName })}
+            <Typography variant='body1'>{order?.agentName || 'Unknown Agent'}</Typography>
           </div>
         </div>
 

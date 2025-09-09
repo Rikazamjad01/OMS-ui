@@ -57,7 +57,7 @@ export const paymentStatus = {
 export const orderPlatform = {
   shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
   whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' },
+  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' }
 }
 
 export const statusChipColor = {
@@ -170,12 +170,14 @@ const OrderListTable = ({
   const [rawFilters, setRawFilters] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [openFilter, setOpenFilter] = useState(false)
+  const [loadings, setLoadings] = useState(false)
 
   const [tagModal, setTagModal] = useState({
     open: false,
     orderId: null,
     tags: []
   })
+
 
   const openTagEditor = (orderId, currentTags = []) => {
     const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
@@ -232,7 +234,7 @@ const OrderListTable = ({
         date: order.created_at,
         time: new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         customer: `${order?.first_name || ''} ${order?.last_name || ''}`.trim(),
-        customerId: order?.id,
+        customerId: order?.customer,
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.platform?.toLowerCase() || 'manual', // note: lowercase 'platform'
@@ -286,6 +288,8 @@ const OrderListTable = ({
     }
 
     try {
+      setLoadings(true)
+
       const result = await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
@@ -308,16 +312,23 @@ const OrderListTable = ({
               .filter(Boolean)
           : [tagPayload]
 
+      setTagsMap(prev => ({
+        ...prev,
+        [orderId]: normalizedTags
+      }))
 
-          Map(prev => ({ ...prev, [orderId]: normalizedTags }))
-      closeTagEditor()
+      if (result.status) {
+        closeTagEditor()
+      }
     } catch (err) {
       setAlert({
         open: true,
-        message: err || 'Failed to update tag.',
+        message: err?.message || 'Failed to update tag.',
         severity: 'error'
       })
       console.error('Failed to update tag:', err)
+    } finally {
+      setLoadings(false)
     }
   }
 
@@ -587,7 +598,7 @@ const OrderListTable = ({
     return (
       <Card>
         <CardContent className='flex items-center justify-between'>
-          <Typography color='error'>Failed to fetch orders: {String(error)}</Typography>
+          <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
           <Button variant='contained'>Retry</Button>
         </CardContent>
       </Card>
@@ -762,6 +773,7 @@ const OrderListTable = ({
         initialTags={tagModal.tags}
         onClose={closeTagEditor}
         onSave={handleSaveTags}
+        loading={loadings}
       />
       <Snackbar
         open={alert.open}
@@ -770,6 +782,7 @@ const OrderListTable = ({
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
+          key={alert.message}
           variant='filled'
           severity={alert.severity}
           onClose={() => setAlert(prev => ({ ...prev, open: false }))}

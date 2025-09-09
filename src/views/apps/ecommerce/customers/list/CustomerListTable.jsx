@@ -183,13 +183,13 @@ const CustomerListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
             {/* {row.original?.countryFlag && <img src={row.original.countryFlag} height={22} alt={row.original.country} />} */}
-            <Typography>{row.original?.addresses[0]?.country || 'N/A'}</Typography>
+            <Typography>{row.original?.country || 'N/A'}</Typography>
           </div>
         )
       }),
       columnHelper.accessor('orders', {
         header: 'Orders',
-        cell: ({ row }) => <Typography>{row.original?.orders_count || 0}</Typography>
+        cell: ({ row }) => <Typography>{row.original?.total_Orders || 0}</Typography>
       }),
       columnHelper.accessor('total_spent', {
         header: 'Total Spent',
@@ -207,7 +207,7 @@ const CustomerListTable = () => {
   }
 
   const handleChangeRowsPerPage = event => {
-    const newPerPage = Number(event.target.value); 
+    const newPerPage = Number(event.target.value)
 
     dispatch(setCustomersItemsPerPage(newPerPage))
     dispatch(setCustomersCurrentPage(1))

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
 
-export default function TagEditDialog({ open, initialTags = [], onClose, onSave }) {
+export default function TagEditDialog({ open, initialTags = [], onClose, onSave, loading }) {
   const [tag, setTag] = useState([])
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function TagEditDialog({ open, initialTags = [], onClose, onSave 
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={() => onSave(tag)} variant='contained'>
+        <Button onClick={() => onSave(tag)} variant='contained' disabled={loading}>
           Save
         </Button>
       </DialogActions>

@@ -1,7 +1,4 @@
 'use client'
-import { useEffect, useRef } from 'react'
-
-import { useDispatch, useSelector } from 'react-redux'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -20,9 +17,6 @@ import { getInitials } from '@/utils/getInitials'
 import ShippingAddress from './ShippingAddressCard'
 import BillingAddress from './BillingAddressCard'
 
-// Redux Imports
-
-import { handleOrder } from '@/redux-store/slices/order'
 
 const getAvatar = params => {
   const { avatar, customer } = params
@@ -34,24 +28,7 @@ const getAvatar = params => {
   }
 }
 
-const CustomerDetails = ({ orderData }) => {
-  const dispatch = useDispatch()
-  const { selectedOrders } = useSelector(state => state.orders)
-  const isMounted = useRef(false)
-
-  useEffect(() => {
-    isMounted.current = true
-
-    return () => {
-      isMounted.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (orderData && isMounted.current) {
-      dispatch(handleOrder(orderData))
-    }
-  }, [orderData, dispatch])
+const CustomerDetails = ({ order }) => {
 
   // Vars
   const typographyProps = (children, color, className) => ({
@@ -60,11 +37,11 @@ const CustomerDetails = ({ orderData }) => {
     className
   })
 
-  if (!selectedOrders) {
+  if (!order) {
     return <div>Loading customer details...</div>
   }
 
-  const customer = selectedOrders.customerData
+  const customer = order.customer
   const customerName = `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim()
 
   return (
@@ -94,7 +71,7 @@ const CustomerDetails = ({ orderData }) => {
                       <i className="bx bx-cart" />
                     </CustomAvatar>
                     <Typography variant="body2">
-                      {selectedOrders.totalOrdersByCustomer || 0} Orders
+                      {customer.orders_count || 0} Orders
                     </Typography>
                   </Box>
                 </Grid>
@@ -106,7 +83,7 @@ const CustomerDetails = ({ orderData }) => {
                       <i className="bx bx-check-circle" />
                     </CustomAvatar>
                     <Typography variant="body2">
-                      {selectedOrders.completedOrdersByCustomer || 0} Successful
+                      {customer.completedOrders || 0} Successful
                     </Typography>
                   </Box>
                 </Grid>
@@ -119,7 +96,7 @@ const CustomerDetails = ({ orderData }) => {
                       <i className="bx bx-x-circle" />
                     </CustomAvatar>
                     <Typography variant="body2">
-                      {selectedOrders.cancelledOrdersByCustomer || 0} Cancelled
+                      {customer.cancelledOrders || 0} Cancelled
                     </Typography>
                   </Box>
                 </Grid>
@@ -131,7 +108,7 @@ const CustomerDetails = ({ orderData }) => {
                       <i className="bx bx-time-five" />
                     </CustomAvatar>
                     <Typography variant="body2">
-                      {selectedOrders.pendingOrdersByCustomer || 0} Pending
+                      {customer.pendingOrders || 0} Pending
                     </Typography>
                   </Box>
                 </Grid>
@@ -151,7 +128,7 @@ const CustomerDetails = ({ orderData }) => {
                   data: {
                     firstName: customer?.first_name || '',
                     lastName: customer?.last_name || '',
-                    email: selectedOrders.email || '',
+                    email: order.email || '',
                     phone: customer?.addresses?.[0]?.phone || '',
                     country: customer?.addresses?.[0]?.country || '',
                     city: customer?.addresses?.[0]?.city || '',
@@ -161,7 +138,7 @@ const CustomerDetails = ({ orderData }) => {
                 }}
               />
             </div>
-            <Typography variant='body2'>Email: {selectedOrders.email || 'N/A'}</Typography>
+            <Typography variant='body2'>Email: {order.email || 'N/A'}</Typography>
             <Typography variant='body2'>
               Mobile: {customer?.addresses?.[0]?.phone || 'N/A'}
             </Typography>

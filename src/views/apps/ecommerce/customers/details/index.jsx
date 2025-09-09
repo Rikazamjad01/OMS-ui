@@ -1,5 +1,6 @@
 'use client'
-import { useMemo, useEffect, useState } from 'react'
+
+import { useEffect } from 'react'
 
 import dynamic from 'next/dynamic'
 
@@ -12,7 +13,12 @@ import CustomerLeftOverview from './customer-left-overview'
 import CustomerRight from './customer-right'
 
 // Redux
-import { fetchOrders, selectCustomerById } from '@/redux-store/slices/order'
+import {
+  fetchCustomerById,
+  selectSelectedCustomer,
+  selectSelectedCustomerLoading,
+  selectSelectedCustomerError
+} from '@/redux-store/slices/customer'
 
 // Dynamically import tabs
 const OverViewTab = dynamic(() => import('./customer-right/overview'), {
@@ -21,67 +27,47 @@ const OverViewTab = dynamic(() => import('./customer-right/overview'), {
 })
 
 const CustomerDetails = ({ customerId }) => {
+
+  console.log(customerId, 'customerId in CustomerDetails')
+
   const dispatch = useDispatch()
-  const orders = useSelector(state => state.orders.orders)
-  const loading = useSelector(state => state.orders.loading)
 
-  console.log(orders, 'orders in customer details')
+  const customerData = useSelector(selectSelectedCustomer)
+  const loading = useSelector(selectSelectedCustomerLoading)
+  const error = useSelector(selectSelectedCustomerError)
 
-  // const selectedCustomer = useSelector(state => selectCustomerById(state, customerId))
-
-  const [hasFetched, setHasFetched] = useState(false)
-
-  // Find the order that matches customerId
-  const orderList = useMemo(() => {
-    if (!orders.length) return []
-
-    const filteredOrders = orders.filter(order => order.customerData?.id == customerId)
-
-    return filteredOrders
-  }, [customerId, orders])
-
-  // Extract customerData
-  const customerData = orderList.length > 0 ? orderList[0].customerData : null
-
-  // Fetch orders only once when component mounts
+  // Fetch customer details on mount / customerId change
   useEffect(() => {
-    if (!hasFetched && customerId) {
-      dispatch(
-        fetchOrders({
-          page: 1,
-          limit: 10
-        })
-      )
-      setHasFetched(true)
+    if (customerId) {
+      dispatch(fetchCustomerById(customerId))
     }
-  }, [customerId, dispatch, hasFetched])
+  }, [customerId, dispatch])
 
-  // Memoize tab content
-  const tabContentList = useMemo(
-    () => ({
-      overview: <OverViewTab customerData={customerData} order={orderList} />
-    }),
-    [customerData, orderList]
-  )
+  // Build tab content list from selectedCustomer data
+  const tabContentList = {
+    overview: <OverViewTab customerData={customerData} />
+
+    // You can add more tabs here if needed
+  }
 
   // Handle edge cases
-  if (loading && !hasFetched) return <div>Loading customer details...</div>
   if (!customerId) return <div>Customer ID not found.</div>
-
-  // if (!customerData) return <div>No customer data found for ID: {customerId}.</div>
+  if (loading) return <div>Loading customer details...</div>
+  if (error) return <div>Error: {error}</div>
+  if (!customerData) return <div>No customer data found.</div>
 
   return (
     <Grid container spacing={6}>
       <Grid size={12}>
-        <CustomerDetailsHeader customerData={customerData} customerId={customerId} order={orderList} />
+        <CustomerDetailsHeader customerData={customerData} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 4 }}>
-        <CustomerLeftOverview customerData={customerData} customerId={customerId} order={orderList} />
+        <CustomerLeftOverview customerData={customerData} customerId={customerId} />
       </Grid>
 
       <Grid size={{ xs: 12, md: 8 }}>
-        <CustomerRight orders={orders} tabContentList={tabContentList} />
+        <CustomerRight customerData={customerData} tabContentList={tabContentList} />
       </Grid>
     </Grid>
   )

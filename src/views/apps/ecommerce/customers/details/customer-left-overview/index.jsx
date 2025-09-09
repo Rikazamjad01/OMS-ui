@@ -10,14 +10,14 @@ import OrderListTable from '../customer-right/overview/OrderListTable'
 
 import { getStatisticsData, getEcommerceData } from '@/app/server/actions'
 
-const CustomerLeftOverview = ({ customerId, customerData, order}) => {
+const CustomerLeftOverview = ({ customerData}) => {
 
     // const tableData = await getEcommerceData()
 
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <CustomerDetails customerData={customerData} customerId={customerId} order={order} />
+        <CustomerDetails customerData={customerData}/>
       </Grid>
       <Grid size={{ xs: 12 }}>
         {/* <CustomerPlan /> */}

@@ -92,15 +92,12 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 // Column Definitions
 const columnHelper = createColumnHelper()
 
-const OrderListTable = ({order, customerData }) => {
+const OrderListTable = ({ customerData }) => {
 
-  const customerId = customerData?.id || null
+  const customerId = customerData?.customer?.id || null
 
   // Get last order ID from customer data
-  const lastOrderId = customerData?.last_order_id
-
-  // Lookup last order in Redux store
-  const lastOrder = useSelector(state => selectOrderById(state, lastOrderId))
+  const lastOrderId = customerData?.customer?.last_order_id
 
   // States
   const [rowSelection, setRowSelection] = useState({})
@@ -109,58 +106,33 @@ const OrderListTable = ({order, customerData }) => {
   // Hooks
   const { lang: locale } = useParams()
 
-  // Filter orders by customer ID if provided
-  const filteredOrders = useMemo(() => {
-    if (!order) return []
-
-    if (customerId) {
-      return order.filter(order => order.customer == customerId)
-    }
-
-    return order
-  }, [order, customerId])
-
 
   // Transform orders data to match table format
   const tableData = useMemo(() => {
     let baseData = []
 
-    if (!filteredOrders) return baseData
+    if (!customerData) return baseData
 
-    if (Array.isArray(filteredOrders)) {
-      baseData = filteredOrders.map(order => ({
+    if (Array.isArray(customerData?.customer?.previousOrders)) {
+      baseData = customerData?.customer?.previousOrders.map(order => ({
         id: order.id,
-        order: order.name,
+        order: order.id,
         date: order.created_at,
-        status: order.orderStatus || order.financial_status,
+        status: order.orderStatus,
         spent: order.current_total_price || '0.00',
-        customer: order.customer
       }))
     } else {
       baseData = [{
-        id: filteredOrders?.id,
-        order: filteredOrders?.name,
-        date: filteredOrders?.created_at,
-        status: filteredOrders?.orderStatus || filteredOrders?.financial_status,
-        spent: filteredOrders?.current_total_price || '0.00',
-        customer: filteredOrders?.customer
+        id: customerData?.customer?.previousOrders?.id,
+        order: customerData?.customer?.previousOrders?.id,
+        date: customerData?.customer?.previousOrders?.created_at,
+        status: customerData?.customer?.previousOrders?.orderStatus,
+        spent: customerData?.customer?.previousOrders?.current_total_price || '0.00',
       }]
     }
 
-    // If lastOrder is found, add it
-    if (lastOrder && !baseData.some(o => o.id === lastOrder.id)) {
-      baseData.splice(1, 0, {
-        id: lastOrder.id,
-        order: lastOrder.name,
-        date: lastOrder.created_at,
-        status: lastOrder.orderStatus || lastOrder.financial_status,
-        spent: lastOrder.current_total_price || '0.00',
-        customer: lastOrder.customer
-      })
-    }
-
     return baseData
-  }, [filteredOrders, lastOrder])
+  }, [customerData])
 
 
 

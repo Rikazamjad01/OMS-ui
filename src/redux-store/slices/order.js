@@ -102,13 +102,30 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
         orderId,
         comments: response.data?.comments || '',
         remarks: response.data?.remarks || '',
-        tags: response.data?.tags || ''
+        tags: response.data?.tags || '',
+        status: response?.status
       }
     } catch (error) {
       return rejectWithValue(error.message)
     }
   }
 )
+
+export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (orderId, { rejectWithValue }) => {
+  try {
+    const response = await getRequest(`orders/${orderId}`)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    const order = response.data || {}
+
+    return order
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -220,6 +237,18 @@ const ordersSlice = createSlice({
             state.selectedOrders = updatedOrder
           }
         }
+      })
+      .addCase(fetchOrderById.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchOrderById.fulfilled, (state, action) => {
+        state.loading = false
+        state.selectedOrders = action.payload // store fetched order details
+      })
+      .addCase(fetchOrderById.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
       })
   }
 })
