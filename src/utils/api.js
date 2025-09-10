@@ -70,19 +70,17 @@ export const splitOrder = async (orderId, selectedLineItems) => {
     throw new Error('Order ID is required for splitting')
   }
 
-  console.log(selectedLineItems, 'selectedLineItems in splitOrder')
-
   if (!selectedLineItems || selectedLineItems.length < 1) {
     throw new Error('At least one product must be selected for splitting')
   }
 
-  // Convert selectedLineItems to the format expected by API
-  const lineItems = selectedLineItems.map(id => ({ id }))
-
   console.log(orderId, 'orderId in splitOrder')
 
   return postRequest('orders/split_order', {
-    id: orderId.id,
-    line_items: lineItems
+    id: orderId,
+    line_items: selectedLineItems.map(item => ({
+      id: item.id,
+      quantity: item.quantity
+    }))
   })
 }

@@ -13,6 +13,7 @@ import { selectSelectedProductIds } from '@/redux-store/slices/order'
 
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
+import { selectSelectedProducts } from '@/redux-store/slices/products'
 
 export const paymentStatus = {
   paid: { text: 'Paid', color: 'success' },
@@ -34,6 +35,7 @@ export const statusChipColor = {
 
 const OrderDetailHeader = ({ order, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
+  const selectedProducts = useSelector(selectSelectedProducts)
 
   if (!order) return null
 
@@ -43,7 +45,6 @@ const OrderDetailHeader = ({ order, id }) => {
     const totalProducts = order.line_items.length
 
     // User must select at least one product (if you keep a selection mechanism)
-    // If you still track selectedProductIds in Redux, pull it here via useSelector
     // For now, let's allow splitting if there's more than 1 product or quantity > 1
     if (totalProducts === 1) {
       const item = order.line_items[0]
@@ -107,7 +108,20 @@ const OrderDetailHeader = ({ order, id }) => {
             disabled: !canSplitOrder
           }}
           dialog={ConfirmationDialog}
-          dialogProps={{ type: 'split-order', payload: { orderIds: order, selectedProductIds } }}
+          dialogProps={{
+            type: 'split-order',
+            payload: {
+              orderIds: order.id,
+              selectedLineItems: selectedProductIds.map(id => {
+                const product = order.line_items.find(item => item.id === id)
+
+                return {
+                  id: product.id,
+                  quantity: product.quantity
+                }
+              })
+            }
+          }}
         />
       </div>
     </div>

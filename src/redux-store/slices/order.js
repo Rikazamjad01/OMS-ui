@@ -4,7 +4,7 @@ import { getRequest, postRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
-  async ({ page = 1, limit = 25, search = '', filters = {} }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 25, search = '', filters = {}, force = false  }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
@@ -12,6 +12,7 @@ export const fetchOrders = createAsyncThunk(
 
       // If we're fetching the same page with same filters, skip
       if (
+        !force &&
         currentData.length > 0 &&
         state.orders.pagination.currentPage === page &&
         JSON.stringify(state.orders.lastFilters) === JSON.stringify(filters)
@@ -200,6 +201,8 @@ const ordersSlice = createSlice({
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.loading = false
+
+        console.log(action.payload, 'action.payload');
 
         // Only update if we got new data
         if (action.payload) {

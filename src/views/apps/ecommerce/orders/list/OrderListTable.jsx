@@ -178,7 +178,6 @@ const OrderListTable = ({
     tags: []
   })
 
-
   const openTagEditor = (orderId, currentTags = []) => {
     const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
 
@@ -293,7 +292,7 @@ const OrderListTable = ({
       const result = await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: tagPayload // <-- send as string, exactly like Postman
+          tags: tagPayload
         })
       ).unwrap()
 
@@ -312,10 +311,15 @@ const OrderListTable = ({
               .filter(Boolean)
           : [tagPayload]
 
-      setTagsMap(prev => ({
-        ...prev,
-        [orderId]: normalizedTags
-      }))
+      setTagsMap(prev => {
+        const previousTags = prev[orderId] ?? []
+        const merged = Array.from(new Set([...previousTags, ...normalizedTags]))
+
+        return {
+          ...prev,
+          [orderId]: merged
+        }
+      })
 
       if (result.status) {
         closeTagEditor()
@@ -658,7 +662,13 @@ const OrderListTable = ({
                     console.log('Merge Payload:', { orderIds: selectedIds })
 
                     return { orderIds: selectedIds }
-                  })()
+                  })(),
+                  onSuccess: async () => {
+                    const result = await dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
+
+                    setRowSelection({})
+                    console.log('Merge Orders Success', result)
+                  }
                 }}
               />
             ) : (
@@ -763,7 +773,6 @@ const OrderListTable = ({
           const newLimit = parseInt(e.target.value, 25)
 
           onLimitChange?.(newLimit)
-          onPageChange?.(1)
         }}
         rowsPerPageOptions={[25, 50, 100]}
       />

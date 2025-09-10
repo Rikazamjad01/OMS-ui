@@ -57,7 +57,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
       }
       else if (isSplit) {
         const orderId = payload?.orderIds ?? []
-        const selectedLineItems = payload?.selectedProductIds ?? []
+        const selectedLineItems = payload?.selectedLineItems ?? []
 
         if (!orderId) throw new Error('Order ID is required for splitting.')
         if (selectedLineItems.length == 0) throw new Error('Please select at least 1 product to split.')
@@ -70,7 +70,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
       setResultTitle(null)
       setResultSubtitle(null)
       setSecondDialog(true)
-      onSuccess?.() // optional: parent can refetch
+      onSuccess?.() 
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Something went wrong. Please try again.'
 
