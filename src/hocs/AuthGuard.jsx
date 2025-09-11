@@ -5,7 +5,8 @@ import { getServerSession } from 'next-auth'
 import AuthRedirect from '@/components/AuthRedirect'
 
 export default async function AuthGuard({ children, locale }) {
-  const session = await getServerSession()
+  // const session = await getServerSession()
 
-  return <>{session ? children : <AuthRedirect lang={locale} />}</>
+  // return <>{session ? children : <AuthRedirect lang={locale} />}</>
+  return <>{children}</>
 }
