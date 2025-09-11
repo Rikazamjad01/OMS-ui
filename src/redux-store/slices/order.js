@@ -4,7 +4,7 @@ import { getRequest, postRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
-  async ({ page = 1, limit = 25, search = '', filters = {}, force = false  }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 25, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
@@ -65,6 +65,7 @@ export const fetchOrders = createAsyncThunk(
         total: data.pagination?.total || 0,
         page: data.pagination?.page || page,
         limit: data.pagination?.limit || limit,
+        orderStats: data.pagination,
         filters // Store the filters used for this request
       }
     } catch (error) {
@@ -142,7 +143,8 @@ const ordersSlice = createSlice({
       itemsPerPage: 25,
       total: 0
     },
-    selectedProductIds: []
+    selectedProductIds: [],
+    orderStats: {},
   },
   reducers: {
     setCurrentPage: (state, action) => {
@@ -178,7 +180,17 @@ const ordersSlice = createSlice({
     },
 
     setSelectedProducts: (state, action) => {
-      state.selectedProductIds = action.payload
+      if (action.payload) {
+        state.selectedProductIds = action.payload
+      }
+      else{
+        state.selectedProductIds = []
+      }
+    },
+
+    splitOrderProductSetting: (state, action) => {
+      state.selectedOrders.products = action.payload?.data?.products
+      state.selectedOrders.line_items = action.payload?.data?.line_items
     },
 
     // Add a reset action to clear state when needed
@@ -202,7 +214,7 @@ const ordersSlice = createSlice({
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.loading = false
 
-        console.log(action.payload, 'action.payload');
+        console.log(action.payload, 'action.payload')
 
         // Only update if we got new data
         if (action.payload) {
@@ -213,6 +225,7 @@ const ordersSlice = createSlice({
             total: action.payload.total
           }
           state.lastFilters = action.payload.filters || {}
+          state.orderStats = action.payload.orderStats
         }
       })
       .addCase(fetchOrders.rejected, (state, action) => {
@@ -264,7 +277,8 @@ export const {
   handleFindOrder,
   handleFindCustomer,
   resetOrders,
-  setSelectedProducts
+  setSelectedProducts,
+  splitOrderProductSetting
 } = ordersSlice.actions
 
 export default ordersSlice.reducer

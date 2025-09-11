@@ -12,43 +12,29 @@ import classnames from 'classnames'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
-// Vars
-const data = [
-  {
-    value: 56,
-    title: 'Pending Payment',
-    icon: 'bx-calendar'
-  },
-  {
-    value: 12689,
-    title: 'Completed',
-    icon: 'bx-check-double'
-  },
-  {
-    value: 124,
-    title: 'Refunded',
-    icon: 'bx-wallet'
-  },
-  {
-    value: 32,
-    title: 'Failed',
-    icon: 'bx-error-alt'
-  }
-]
-
-const OrderCard = () => {
-  // Hooks
+const OrderCard = ({ orderStats }) => {
   const isBelowMdScreen = useMediaQuery(theme => theme.breakpoints.down('md'))
   const isBelowSmScreen = useMediaQuery(theme => theme.breakpoints.down('sm'))
+
+  // Map API response to stats array
+  const statsData = [
+    { key: 'total', title: 'Total Orders', icon: 'bx-calendar' },
+    { key: 'completed', title: 'Completed Orders', icon: 'bx-check-double' },
+    { key: 'pending', title: 'Pending Orders', icon: 'bx-wallet' },
+    { key: 'cancelled', title: 'Cancelled Orders', icon: 'bx-error-alt' }
+  ].map(item => ({
+    ...item,
+    value: orderStats?.[item.key] ?? 0
+  }))
 
   return (
     <Card>
       <CardContent>
         <Grid container spacing={6}>
-          {data.map((item, index) => (
+          {statsData.map((item, index) => (
             <Grid
               size={{ xs: 12, sm: 6, md: 3 }}
-              key={index}
+              key={item.key}
               className={classnames({
                 '[&:nth-of-type(odd)>div]:pie-6 [&:nth-of-type(odd)>div]:border-ie':
                   isBelowMdScreen && !isBelowSmScreen,
@@ -64,14 +50,14 @@ const OrderCard = () => {
                   <i className={item.icon} />
                 </CustomAvatar>
               </div>
-              {isBelowMdScreen && !isBelowSmScreen && index < data.length - 2 && (
+              {isBelowMdScreen && !isBelowSmScreen && index < statsData.length - 2 && (
                 <Divider
                   className={classnames('mbs-6', {
                     'mie-6': index % 2 === 0
                   })}
                 />
               )}
-              {isBelowSmScreen && index < data.length - 1 && <Divider className='mbs-6' />}
+              {isBelowSmScreen && index < statsData.length - 1 && <Divider className='mbs-6' />}
             </Grid>
           ))}
         </Grid>
@@ -79,5 +65,6 @@ const OrderCard = () => {
     </Card>
   )
 }
+
 
 export default OrderCard

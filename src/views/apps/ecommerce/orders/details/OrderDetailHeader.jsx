@@ -37,6 +37,8 @@ const OrderDetailHeader = ({ order, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
   const selectedProducts = useSelector(selectSelectedProducts)
 
+  console.log(order, 'orderrrrrrrrrr');
+
   if (!order) return null
 
   const canSplitOrder = (() => {
@@ -105,7 +107,7 @@ const OrderDetailHeader = ({ order, id }) => {
           element={Button}
           elementProps={{
             ...buttonProps('Split Order', 'success', 'tonal'),
-            disabled: !canSplitOrder
+            disabled: !canSplitOrder || selectedProductIds.length === 0
           }}
           dialog={ConfirmationDialog}
           dialogProps={{
@@ -114,10 +116,13 @@ const OrderDetailHeader = ({ order, id }) => {
               orderIds: order.id,
               selectedLineItems: selectedProductIds.map(id => {
                 const product = order.line_items.find(item => item.id === id)
+                const prodName = order?.products.find(item => item.id === id)
 
                 return {
                   id: product.id,
-                  quantity: product.quantity
+                  quantity: product.quantity,
+                  name: prodName.title,
+                  img: prodName.image.src,
                 }
               })
             }

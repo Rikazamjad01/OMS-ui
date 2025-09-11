@@ -23,7 +23,7 @@ import {
   getSortedRowModel,
   getFilteredRowModel
 } from '@tanstack/react-table'
-import { Alert, Snackbar } from '@mui/material'
+import { Alert, Autocomplete, Snackbar, TextField } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -61,15 +61,68 @@ export const orderPlatform = {
 }
 
 export const statusChipColor = {
-  confirmed: { color: 'success' },
-  completed: { color: 'primary' },
-  processing: { color: 'info' },
-  pending: { color: 'warning' },
-  cancelled: { color: 'secondary' },
-  delivered: { color: 'primary' },
-  onWay: { color: 'warning' },
-  returned: { color: 'error' }
+  confirmed: { color: 'success', text: 'Confirmed' },
+  completed: { color: 'primary', text: 'Completed' },
+  processing: { color: 'info', text: 'Processing' },
+  pending: { color: 'warning', text: 'Pending' },
+  cancelled: { color: 'secondary', text: 'Cancelled' },
+  delivered: { color: 'primary', text: 'Delivered' },
+  onWay: { color: 'warning', text: 'On Way' },
+  returned: { color: 'error', text: 'Returned' }
 }
+
+export const pakistanCities = {
+  karachi: { text: 'Karachi', color: 'primary', colorClassName: 'text-primary' },
+  lahore: { text: 'Lahore', color: 'secondary', colorClassName: 'text-secondary' },
+  islamabad: { text: 'Islamabad', color: 'success', colorClassName: 'text-success' },
+  faisalabad: { text: 'Faisalabad', color: 'warning', colorClassName: 'text-warning' },
+  rawalpindi: { text: 'Rawalpindi', color: 'info', colorClassName: 'text-info' },
+  multan: { text: 'Multan', color: 'error', colorClassName: 'text-error' },
+  peshawar: { text: 'Peshawar', color: 'primary', colorClassName: 'text-primary' },
+  quetta: { text: 'Quetta', color: 'secondary', colorClassName: 'text-secondary' },
+  sialkot: { text: 'Sialkot', color: 'success', colorClassName: 'text-success' },
+  gujranwala: { text: 'Gujranwala', color: 'warning', colorClassName: 'text-warning' },
+  hyderabad: { text: 'Hyderabad', color: 'info', colorClassName: 'text-info' },
+  sukkur: { text: 'Sukkur', color: 'error', colorClassName: 'text-error' },
+  bahawalpur: { text: 'Bahawalpur', color: 'primary', colorClassName: 'text-primary' },
+  abbottabad: { text: 'Abbottabad', color: 'secondary', colorClassName: 'text-secondary' },
+  mianwali: { text: 'Mianwali', color: 'success', colorClassName: 'text-success' },
+  jhang: { text: 'Jhang', color: 'warning', colorClassName: 'text-warning' },
+  deraGhaziKhan: { text: 'Dera Ghazi Khan', color: 'info', colorClassName: 'text-info' },
+  larkana: { text: 'Larkana', color: 'error', colorClassName: 'text-error' },
+  swat: { text: 'Swat', color: 'primary', colorClassName: 'text-primary' },
+  gilgit: { text: 'Gilgit', color: 'secondary', colorClassName: 'text-secondary' },
+    kasur: { text: 'Kasur', color: 'success', colorClassName: 'text-success' },
+  sheikhupura: { text: 'Sheikhupura', color: 'warning', colorClassName: 'text-warning' },
+  okara: { text: 'Okara', color: 'info', colorClassName: 'text-info' },
+  hafizabad: { text: 'Hafizabad', color: 'error', colorClassName: 'text-error' },
+  narowal: { text: 'Narowal', color: 'primary', colorClassName: 'text-primary' },
+  khushab: { text: 'Khushab', color: 'secondary', colorClassName: 'text-secondary' },
+  vehari: { text: 'Vehari', color: 'success', colorClassName: 'text-success' },
+  sargodha: { text: 'Sargodha', color: 'warning', colorClassName: 'text-warning' },
+  chiniot: { text: 'Chiniot', color: 'info', colorClassName: 'text-info' },
+  khairpur: { text: 'Khairpur', color: 'error', colorClassName: 'text-error' },
+  nawabshah: { text: 'Nawabshah', color: 'primary', colorClassName: 'text-primary' },
+  mirpurkhas: { text: 'Mirpurkhas', color: 'secondary', colorClassName: 'text-secondary' },
+  gwadar: { text: 'Gwadar', color: 'success', colorClassName: 'text-success' },
+  khuzdar: { text: 'Khuzdar', color: 'warning', colorClassName: 'text-warning' },
+  deraIsmailKhan: { text: 'Dera Ismail Khan', color: 'info', colorClassName: 'text-info' },
+  mardan: { text: 'Mardan', color: 'error', colorClassName: 'text-error' },
+  charsadda: { text: 'Charsadda', color: 'primary', colorClassName: 'text-primary' },
+  kohat: { text: 'Kohat', color: 'secondary', colorClassName: 'text-secondary' },
+  muzaffarabad: { text: 'Muzaffarabad', color: 'success', colorClassName: 'text-success' },
+  skardu: { text: 'Skardu', color: 'warning', colorClassName: 'text-warning' },
+  bannu: { text: 'Bannu', color: 'info', colorClassName: 'text-info' },
+  Nowshera: { text: 'Nowshera', color: 'error', colorClassName: 'text-error' },
+  kandhkot: { text: 'Kandhkot', color: 'primary', colorClassName: 'text-primary' },
+  khanewal: { text: 'Khanewal', color: 'secondary', colorClassName: 'text-secondary' },
+  chitral: { text: 'Chitral', color: 'success', colorClassName: 'text-success' },
+  kotli: { text: 'Kotli', color: 'warning', colorClassName: 'text-warning' },
+  hayderabad: { text: 'Hayderabad', color: 'info', colorClassName: 'text-info' },
+  Rkniwal: { text: 'Rkniwal', color: 'error', colorClassName: 'text-error' },
+  Pattoki: { text: 'Pattoki', color: 'primary', colorClassName: 'text-primary' },
+}
+
 
 const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info']
 
@@ -372,7 +425,7 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'date',
-        header: 'Order Date',
+        header: 'Date',
         filterFn: dateRangeFilterFn,
         cell: ({ row }) => {
           const dateObj = new Date(row.original.date)
@@ -452,7 +505,7 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: 'Order Status',
         cell: ({ row }) => (
           <Chip
             label={row.original.status}
@@ -491,6 +544,13 @@ const OrderListTable = ({
             </div>
           )
         }
+      },
+
+      // column of remarks
+      {
+        accessorKey: 'remarks',
+        header: 'Remarks',
+        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.remarks}</Typography>
       },
       {
         accessorKey: 'Amount',
@@ -566,6 +626,42 @@ const OrderListTable = ({
     ],
     [locale, tagsMap]
   )
+
+  const [filters, setFilters] = useState({
+    paymentMethods: [],
+    paymentStatus: [],
+    orderPlatform: [],
+    orderStatus: [],
+    city: [],
+    tags: []
+  })
+
+  const paymentMethodsArray = Object.keys(paymentMethodsMap).map(key => ({
+    value: key,
+    label: paymentMethodsMap[key].text
+  }))
+
+  const orderPlatformArray = Object.keys(orderPlatform).map(key => ({
+    value: key,
+    label: orderPlatform[key].text
+  }))
+
+  const orderStatusArray = Object.keys(statusChipColor).map(key => ({
+    value: key,
+    label: statusChipColor[key].text
+  }))
+
+  const paymentStatusArray = Object.keys(paymentStatus).map(key => ({
+    value: key,
+    label: paymentStatus[key].text
+  }))
+
+  const citiesArray = Object.keys(pakistanCities).map(key => ({
+    value: key,
+    label: pakistanCities[key].text
+  }))
+
+  console.log(orderStatusArray, 'orderStatusArray')
 
   const table = useReactTable({
     data,
@@ -713,6 +809,93 @@ const OrderListTable = ({
             </Button>
           </div>
         </div>
+      </CardContent>
+
+      <CardContent className='flex items-center justify-between gap-3'>
+        <Autocomplete
+          multiple
+          fullWidth
+          options={paymentMethodsArray}
+          getOptionLabel={option => option.label}
+          value={filters.paymentMethods || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={orderPlatformArray}
+          getOptionLabel={option => option.label}
+          value={filters.orderPlatform || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderPlatform: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={orderStatusArray}
+          getOptionLabel={option => option.label}
+          value={filters.statusChipColor || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, statusChipColor: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={paymentStatusArray}
+          getOptionLabel={option => option.label}
+          value={filters.paymentStatus || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentStatus: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={citiesArray}
+          getOptionLabel={option => option.label}
+          value={filters.city || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistaniCities: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={paymentMethodsArray}
+          getOptionLabel={option => option.label}
+          value={filters.paymentMethods || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />}
+        />
       </CardContent>
 
       <div className='overflow-x-auto'>

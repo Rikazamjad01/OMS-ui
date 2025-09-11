@@ -11,7 +11,7 @@ import { fetchOrders } from '@/redux-store/slices/order' // <-- import it
 
 const OrderList = () => {
   const dispatch = useDispatch()
-  const { orders, loading, error, pagination = {} } = useSelector(state => state.orders)
+  const { orders, loading, error, pagination = {}, orderStats } = useSelector(state => state.orders)
 
   // parent-controlled server params
   const [page, setPage] = useState(1)
@@ -26,7 +26,7 @@ const OrderList = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <OrderCard />
+        <OrderCard orderStats={orderStats} />
       </Grid>
 
       <Grid size={{ xs: 12 }}>
