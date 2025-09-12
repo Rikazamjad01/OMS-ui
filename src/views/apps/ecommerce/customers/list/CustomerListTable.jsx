@@ -84,20 +84,19 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 }
 
 const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...props }) => {
-  // States
   const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
     setValue(initialValue)
   }, [initialValue])
+
   useEffect(() => {
     const timeout = setTimeout(() => {
-      onChange(value)
+      onChange(value) // This should trigger API call
     }, debounce)
 
     return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
+  }, [value, onChange, debounce]) // Fixed dependency array
 
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
@@ -122,8 +121,14 @@ const CustomerListTable = () => {
 
   // Fetch data when pagination changes
   useEffect(() => {
-    dispatch(fetchCustomers({ page: pagination.page, perPage: pagination.perPage }))
-  }, [dispatch, pagination.page, pagination.perPage])
+    dispatch(
+      fetchCustomers({
+        page: pagination.page,
+        perPage: pagination.perPage,
+        search: globalFilter || '' // Add search parameter
+      })
+    )
+  }, [dispatch, pagination.page, pagination.perPage, globalFilter])
 
   const columns = useMemo(
     () => [
@@ -203,7 +208,8 @@ const CustomerListTable = () => {
     const nextPage = newPage + 1
 
     dispatch(setCustomersCurrentPage(nextPage))
-    dispatch(fetchCustomers({ page: nextPage, perPage: pagination.perPage }))
+
+    // dispatch(fetchCustomers({ page: nextPage, perPage: pagination.perPage }))
   }
 
   const handleChangeRowsPerPage = event => {
@@ -211,7 +217,8 @@ const CustomerListTable = () => {
 
     dispatch(setCustomersItemsPerPage(newPerPage))
     dispatch(setCustomersCurrentPage(1))
-    dispatch(fetchCustomers({ page: 1, perPage: newPerPage }))
+
+    // dispatch(fetchCustomers({ page: 1, perPage: newPerPage }))
   }
 
   // Create table only when we have data
@@ -271,7 +278,6 @@ const CustomerListTable = () => {
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
             placeholder='Search'
-            className='max-sm:is-full'
           />
           <div className='flex gap-4 max-sm:flex-col max-sm:is-full'>
             <CustomTextField

@@ -3,8 +3,39 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { getRequest } from '@/utils/api' // adjust path
 
 // Async thunk for fetching customers
-export const fetchCustomers = createAsyncThunk('customers/fetchCustomers', async ({ page, perPage }) => {
-  const response = await getRequest(`customers?page=${page}&limit=${perPage}`)
+export const fetchCustomers = createAsyncThunk('customers/fetchCustomers', async ({ page, perPage, search = '' }, { rejectWithValue }) => {
+
+  try {
+    const params = new URLSearchParams(
+      {
+        page: page.toString(),
+        limit: perPage.toString(),
+        ...(search && { search })
+      }
+    )
+
+    const response = await getRequest(`customers?${params}`)
+
+    console.log(response)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+
+    return {
+        customers: response.customers || [],
+        pagination: {
+          page: response.pagination?.page || page,
+          perPage: response.pagination?.limit || perPage,
+          total: response.pagination?.total || 0
+        }
+      }
+
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+
 
   return response
 })
@@ -63,12 +94,9 @@ const customerSlice = createSlice({
         state.loading = true
       })
       .addCase(fetchCustomers.fulfilled, (state, action) => {
-        state.tableRows = action.payload.customers || []
-        const apiPagination = action.payload.pagination || {}
-
-        state.pagination.total = apiPagination.total ?? 0
-        state.pagination.page = apiPagination.page ?? state.pagination.page
-        state.pagination.perPage = apiPagination.limit ?? state.pagination.perPage
+        state.loading = false
+        state.tableRows = action.payload.customers
+        state.pagination = action.payload.pagination
       })
       .addCase(fetchCustomers.rejected, (state, action) => {
         state.loading = false

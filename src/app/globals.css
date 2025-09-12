@@ -50,6 +50,14 @@ ul:not([class]) {
   padding-inline-start: 40px;
 }
 
+.no-scrollbar{
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /*! Do not remove the following styles */
 /*
   Fix the popout / submenu closing issue when using hover trigger to open the menu and using

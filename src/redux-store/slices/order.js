@@ -30,6 +30,11 @@ export const fetchOrders = createAsyncThunk(
       if (filters.platform) filterParams.platform = filters.platform
       if (filters.customer) filterParams.search = filters.customer
       if (filters.order) filterParams.search = filters.order
+      if (filters.paymentMethod) filterParams.payment_method_names = filters.paymentMethod
+      if (filters.paymentStatus) filterParams.financial_status = filters.paymentStatus
+      if (filters.city) filterParams.city = filters.city
+
+      // if (filters.paymentMethods) filterParams.payment_gateway_names = filters.paymentMethods.join(',')
 
       // if (filters.order) filterParams.
 
@@ -47,6 +52,8 @@ export const fetchOrders = createAsyncThunk(
       }
 
       const data = response.data || {}
+
+      console.log(data, 'data in fetchOrders')
 
       const ordersWithArrays = data.orders.map(order => ({
         ...order,
@@ -144,7 +151,7 @@ const ordersSlice = createSlice({
       total: 0
     },
     selectedProductIds: [],
-    orderStats: {},
+    orderStats: {}
   },
   reducers: {
     setCurrentPage: (state, action) => {
@@ -182,8 +189,7 @@ const ordersSlice = createSlice({
     setSelectedProducts: (state, action) => {
       if (action.payload) {
         state.selectedProductIds = action.payload
-      }
-      else{
+      } else {
         state.selectedProductIds = []
       }
     },
@@ -213,8 +219,6 @@ const ordersSlice = createSlice({
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.loading = false
-
-        console.log(action.payload, 'action.payload')
 
         // Only update if we got new data
         if (action.payload) {

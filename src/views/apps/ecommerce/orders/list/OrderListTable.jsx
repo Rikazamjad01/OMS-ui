@@ -14,6 +14,10 @@ import Chip from '@mui/material/Chip'
 import TablePagination from '@mui/material/TablePagination'
 import MenuItem from '@mui/material/MenuItem'
 
+import { DatePicker, Space } from 'antd'
+
+const { RangePicker } = DatePicker
+
 import classnames from 'classnames'
 
 import {
@@ -23,9 +27,11 @@ import {
   getSortedRowModel,
   getFilteredRowModel
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, Snackbar, TextField } from '@mui/material'
+import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
+
+// import { DateRangePicker } from '@mui/lab'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
@@ -92,7 +98,7 @@ export const pakistanCities = {
   larkana: { text: 'Larkana', color: 'error', colorClassName: 'text-error' },
   swat: { text: 'Swat', color: 'primary', colorClassName: 'text-primary' },
   gilgit: { text: 'Gilgit', color: 'secondary', colorClassName: 'text-secondary' },
-    kasur: { text: 'Kasur', color: 'success', colorClassName: 'text-success' },
+  kasur: { text: 'Kasur', color: 'success', colorClassName: 'text-success' },
   sheikhupura: { text: 'Sheikhupura', color: 'warning', colorClassName: 'text-warning' },
   okara: { text: 'Okara', color: 'info', colorClassName: 'text-info' },
   hafizabad: { text: 'Hafizabad', color: 'error', colorClassName: 'text-error' },
@@ -120,9 +126,8 @@ export const pakistanCities = {
   kotli: { text: 'Kotli', color: 'warning', colorClassName: 'text-warning' },
   hayderabad: { text: 'Hayderabad', color: 'info', colorClassName: 'text-info' },
   Rkniwal: { text: 'Rkniwal', color: 'error', colorClassName: 'text-error' },
-  Pattoki: { text: 'Pattoki', color: 'primary', colorClassName: 'text-primary' },
+  Pattoki: { text: 'Pattoki', color: 'primary', colorClassName: 'text-primary' }
 }
-
 
 const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info']
 
@@ -131,6 +136,42 @@ const getTagColor = tag => {
   const hash = [...tag].reduce((acc, char) => acc + char.charCodeAt(0), 0)
 
   return chipColors[hash % chipColors.length]
+}
+
+const mapFiltersToApiFormat = localFilters => {
+  const apiFilters = {}
+
+  // Amount filters
+  if (localFilters.minAmount) apiFilters.amountMin = localFilters.minAmount
+  if (localFilters.maxAmount) apiFilters.amountMax = localFilters.maxAmount
+
+  if (localFilters.paymentMethods && localFilters.paymentMethods.length > 0) {
+    apiFilters.paymentMethod = localFilters.paymentMethods[0].value
+  }
+
+  if (localFilters.paymentStatus && localFilters.paymentStatus.length > 0) {
+    apiFilters.paymentStatus = localFilters.paymentStatus[0].value
+  }
+
+  // Date filters (you need to add startDate/endDate to your filters state)
+  if (localFilters.startDate) apiFilters.dateFrom = localFilters.startDate
+  if (localFilters.endDate) apiFilters.dateTo = localFilters.endDate
+
+  // Status filters - you need to decide which one to use
+  if (localFilters.orderStatus && localFilters.orderStatus.length > 0) {
+    apiFilters.status = localFilters.orderStatus[0].value
+  }
+
+  // Platform filters
+  if (localFilters.orderPlatform?.length > 0) {
+    apiFilters.platform = localFilters.orderPlatform[0].value // or join them
+  }
+
+  if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
+    apiFilters.city = localFilters.pakistanCities[0].value
+  }
+
+  return apiFilters
 }
 
 const fuzzyFilter = (row, columnId, value, addMeta) => {
@@ -142,11 +183,8 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 }
 
 export const paymentMethodsMap = {
-  cod: { text: 'Cash on Delivery' },
-  paypal: { text: 'PayPal' },
-  card: { text: 'Credit / Debit Card' },
-  wallet: { text: 'Wallet' },
-  other: { text: 'Other' }
+  cod: { text: 'COD' },
+  wallet: { text: 'Wallet' }
 }
 
 export const normalizePaymentMethod = (names = []) => {
@@ -448,6 +486,7 @@ const OrderListTable = ({
       {
         accessorKey: 'customer',
         header: 'Customer Name',
+        meta: { width: '250px' },
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             {getAvatar(row.original)}
@@ -467,7 +506,8 @@ const OrderListTable = ({
       },
       {
         accessorKey: 'payment',
-        header: 'Payment',
+        header: 'Payment Status',
+        meta: { width: '200px' },
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} />
@@ -518,6 +558,7 @@ const OrderListTable = ({
       {
         accessorKey: 'method',
         header: 'Method',
+        meta: { width: '250px' },
         cell: ({ row }) => {
           const m = row.original.method
           const label = row.original.methodLabel
@@ -565,11 +606,13 @@ const OrderListTable = ({
       {
         accessorKey: 'city',
         header: 'City',
+        meta: { width: '180px' },
         cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city}</Typography>
       },
       {
         accessorKey: 'tags',
         header: 'Tags',
+        meta: { width: '250px' },
         cell: ({ row }) => {
           const originalTags = Array.isArray(row.original.tags)
             ? row.original.tags
@@ -633,7 +676,11 @@ const OrderListTable = ({
     orderPlatform: [],
     orderStatus: [],
     city: [],
-    tags: []
+    tags: [],
+    startDate: '',
+    endDate: '',
+    minAmount: '',
+    maxAmount: ''
   })
 
   const paymentMethodsArray = Object.keys(paymentMethodsMap).map(key => ({
@@ -661,7 +708,10 @@ const OrderListTable = ({
     label: pakistanCities[key].text
   }))
 
-  console.log(orderStatusArray, 'orderStatusArray')
+  const tagsArray = Object.keys(tagsMap).map(key => ({
+    value: key,
+    label: tagsMap[key].text
+  }))
 
   const table = useReactTable({
     data,
@@ -694,6 +744,19 @@ const OrderListTable = ({
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
   const selectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
 
+  const emptyFilters = {
+    startDate: '',
+    endDate: '',
+    minAmount: '',
+    maxAmount: '',
+    paymentMethods: [],
+    orderPlatform: [],
+    statusChipColor: [],
+    paymentStatus: [],
+    tagsMap: [],
+    pakistanCities: []
+  }
+
   if (error) {
     return (
       <Card>
@@ -707,11 +770,24 @@ const OrderListTable = ({
 
   return (
     <Card>
-      <CardContent className='flex justify-between max-sm:flex-col sm:items-center gap-4'>
-        <div className='flex gap-4'>
-          <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+      <CardContent className='flex flex-wrap justify-between gap-4'>
+        <div className='flex flex-wrap gap-4'>
+          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
-          </Button>
+          </Button> */}
+
+          <RangePicker
+            status='success'
+            onChange={dates => {
+              if (dates && dates.length === 2) {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: dates[0].format('YYYY-MM-DD'),
+                  endDate: dates[1].format('YYYY-MM-DD')
+                }))
+              }
+            }}
+          />
 
           <DebouncedInput
             value={globalFilter ?? ''}
@@ -726,7 +802,7 @@ const OrderListTable = ({
             placeholder='Search Order'
           />
 
-          <FilterModal
+          {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -742,10 +818,11 @@ const OrderListTable = ({
               onPageChange?.(1)
               setOpenFilter(false)
             }}
-          />
+          /> */}
+          {/* <DateRangePicker /> */}
         </div>
 
-        <div className='flex gap-4'>
+        <div className='flex gap-4 flex-wrap'>
           <div className='flex gap-4'>
             {selectedCount >= 2 ? (
               <OpenDialogOnElementClick
@@ -811,7 +888,7 @@ const OrderListTable = ({
         </div>
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3'>
+      <CardContent className='flex items-center justify-between gap-3 '>
         <Autocomplete
           multiple
           fullWidth
@@ -824,7 +901,9 @@ const OrderListTable = ({
               <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
             ))
           }
-          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />}
+          renderInput={params => (
+            <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />
+          )}
         />
         <Autocomplete
           multiple
@@ -838,21 +917,25 @@ const OrderListTable = ({
               <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
             ))
           }
-          renderInput={params => <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />}
+          renderInput={params => (
+            <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />
+          )}
         />
         <Autocomplete
           multiple
           fullWidth
           options={orderStatusArray}
           getOptionLabel={option => option.label}
-          value={filters.statusChipColor || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, statusChipColor: newValue }))}
+          value={filters.orderStatus || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => (
               <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
             ))
           }
-          renderInput={params => <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />}
+          renderInput={params => (
+            <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
+          )}
         />
         <Autocomplete
           multiple
@@ -866,15 +949,78 @@ const OrderListTable = ({
               <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
             ))
           }
-          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />}
+          renderInput={params => (
+            <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />
+          )}
+        />
+      </CardContent>
+
+      <CardContent className='flex items-center justify-between gap-3'>
+        <TextField
+          fullWidth
+          size='medium'
+          label='Amount Range'
+
+          // placeholder='Min - Max'
+          // value={filters.minAmount && filters.maxAmount ? `${filters.minAmount} - ${filters.maxAmount}` : ''}
+          // onChange={() => {}} // prevent React warning
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position='start'>
+                <input
+                  type='number'
+                  placeholder='Min'
+                  value={filters.minAmount || ''}
+                  onChange={e => setFilters(prev => ({ ...prev, minAmount: e.target.value }))}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    width: '60px',
+                    textAlign: 'right',
+                    background: 'transparent'
+                  }}
+                />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position='end'>
+                <input
+                  type='number'
+                  placeholder='Max'
+                  value={filters.maxAmount || ''}
+                  onChange={e => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    width: '60px',
+                    background: 'transparent'
+                  }}
+                />
+              </InputAdornment>
+            )
+          }}
+        />
+        <Autocomplete
+          multiple
+          fullWidth
+          options={tagsArray}
+          getOptionLabel={option => option.label}
+          value={filters.tagsMap || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip key={option.value || index} {...getTagProps({ index })} variant='outlined' label={option.label} />
+            ))
+          }
+          renderInput={params => <TextField {...params} fullWidth placeholder='Tags' label='Tags' size='medium' />}
         />
         <Autocomplete
           multiple
           fullWidth
           options={citiesArray}
           getOptionLabel={option => option.label}
-          value={filters.city || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistaniCities: newValue }))}
+          value={filters.pakistanCities || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistanCities: newValue }))}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => (
               <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
@@ -882,20 +1028,34 @@ const OrderListTable = ({
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}
         />
-        <Autocomplete
-          multiple
-          fullWidth
-          options={paymentMethodsArray}
-          getOptionLabel={option => option.label}
-          value={filters.paymentMethods || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
-          }
-          renderInput={params => <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />}
-        />
+        <DialogActions className='justify-between px-1 py-0'>
+          <div className='flex'>
+            <Button
+              onClick={() => {
+                setFilters(emptyFilters)
+                dispatch(fetchOrders({ page: 1, limit: 25, filters: emptyFilters }))
+                onFiltersChange?.(emptyFilters)
+                onPageChange?.(1)
+              }}
+              color='error'
+              variant='tonal'
+            >
+              Reset Filters
+            </Button>
+            <Button
+              onClick={() => {
+                const apiFilters = mapFiltersToApiFormat(filters)
+
+                dispatch(fetchOrders({ page: 1, limit: 25, filters: apiFilters }))
+                onFiltersChange?.(apiFilters)
+                onPageChange?.(1)
+              }}
+              variant='contained'
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </DialogActions>
       </CardContent>
 
       <div className='overflow-x-auto'>
@@ -908,6 +1068,10 @@ const OrderListTable = ({
                     key={h.id}
                     onClick={h.column.getToggleSortingHandler()}
                     className={classnames({ 'cursor-pointer select-none': h.column.getCanSort() })}
+                    style={{
+                      width: h.column.columnDef.meta?.width || 'auto',
+                      maxWidth: h.column.columnDef.meta?.width || 'none'
+                    }}
                   >
                     {flexRender(h.column.columnDef.header, h.getContext())}
                     {{
@@ -931,7 +1095,19 @@ const OrderListTable = ({
               table.getRowModel().rows.map(row => (
                 <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    <td
+                      key={cell.id}
+                      className='no-scrollbar'
+                      style={{
+                        width: cell.column.columnDef.meta?.width || 'auto',
+                        maxWidth: cell.column.columnDef.meta?.width || 'none',
+                        overflow: 'scroll',
+                        textOverflow: 'text-wrap',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
                   ))}
                 </tr>
               ))
