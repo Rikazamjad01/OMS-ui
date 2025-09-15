@@ -1,9 +1,8 @@
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid2'
-import CardContent from '@mui/material/CardContent'
 import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
@@ -20,13 +19,37 @@ const productStockObj = {
   'Out of Stock': false
 }
 
-const TableFilters = ({ setData, productData }) => {
-  // Modal open/close state
+const mapFiltersToApi = uiFilters => {
+  const apiFilters = {}
+
+  if (uiFilters.id) apiFilters.id = uiFilters.id
+  if (uiFilters.productName) apiFilters.title = uiFilters.productName
+  if (uiFilters.category) apiFilters.vendor = uiFilters.category
+
+  if (uiFilters.stock) apiFilters.stock = productStockObj[uiFilters.stock]
+
+  if (uiFilters.sku) apiFilters.sku = uiFilters.sku
+  if (uiFilters.price) apiFilters.price = uiFilters.price
+  if (uiFilters.qty) apiFilters.inventory_quantity = uiFilters.qty
+
+  if (uiFilters.status) {
+    const statusMap = {
+      Published: 'active',
+      Inactive: 'archived',
+      Scheduled: 'draft'
+    }
+
+    apiFilters.status = statusMap[uiFilters.status] || uiFilters.status
+  }
+
+  return apiFilters
+}
+
+const TableFilters = ({ onApplyFilters, onResetFilters }) => {
   const [open, setOpen] = useState(false)
 
-  // Filter states
   const [filters, setFilters] = useState({
-    productID: '',
+    id: '',
     productName: '',
     category: '',
     stock: '',
@@ -36,32 +59,13 @@ const TableFilters = ({ setData, productData }) => {
     status: ''
   })
 
-  // Apply filter logic
-  useEffect(() => {
-    const filteredData = productData?.filter(product => {
-      if (filters.productID && product.productID !== filters.productID) return false
-      if (filters.productName && !product.productName.toLowerCase().includes(filters.productName.toLowerCase())) return false
-      if (filters.category && product.category !== filters.category) return false
-      if (filters.stock && product.stock !== productStockObj[filters.stock]) return false
-      if (filters.sku && !product.sku.toLowerCase().includes(filters.sku.toLowerCase())) return false
-      if (filters.price && product.price !== Number(filters.price)) return false
-      if (filters.qty && product.qty !== Number(filters.qty)) return false
-      if (filters.status && product.status !== filters.status) return false
-
-      return true
-    })
-
-    setData(filteredData ?? [])
-  }, [filters, productData, setData])
-
-  // Handlers
   const handleChange = field => e => {
     setFilters(prev => ({ ...prev, [field]: e.target.value }))
   }
 
   const handleReset = () => {
     setFilters({
-      productID: '',
+      id: '',
       productName: '',
       category: '',
       stock: '',
@@ -70,37 +74,32 @@ const TableFilters = ({ setData, productData }) => {
       qty: '',
       status: ''
     })
+
+    if (onResetFilters) {
+      onResetFilters()
+    }
+
+    // Close modal
     setOpen(false)
   }
 
   return (
     <div>
-      {/* Filter Button */}
-      <Button
-        variant="outlined"
-        startIcon={<i className="bx-filter" />}
-        onClick={() => setOpen(true)}
-      >
+      <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpen(true)}>
         Filter
       </Button>
 
-      {/* Filter Modal */}
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth='sm' fullWidth>
         <DialogTitle>Filter Products</DialogTitle>
         <DialogContent>
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <CustomTextField
-                fullWidth
-                label="Product ID"
-                value={filters.productID}
-                onChange={handleChange('productID')}
-              />
+              <CustomTextField fullWidth label='Product ID' value={filters.id} onChange={handleChange('id')} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <CustomTextField
                 fullWidth
-                label="Product Name"
+                label='Product Name'
                 value={filters.productName}
                 onChange={handleChange('productName')}
               />
@@ -109,77 +108,67 @@ const TableFilters = ({ setData, productData }) => {
               <CustomTextField
                 select
                 fullWidth
-                label="Category"
+                label='Category'
                 value={filters.category}
                 onChange={handleChange('category')}
               >
-                <MenuItem value="">All Categories</MenuItem>
-                <MenuItem value="Accessories">Accessories</MenuItem>
-                <MenuItem value="Home Decor">Home Decor</MenuItem>
-                <MenuItem value="Electronics">Electronics</MenuItem>
-                <MenuItem value="Shoes">Shoes</MenuItem>
-                <MenuItem value="Office">Office</MenuItem>
-                <MenuItem value="Games">Games</MenuItem>
+                <MenuItem value=''>All Categories</MenuItem>
+                <MenuItem value='Accessories'>General Oils</MenuItem>
+                <MenuItem value='Home Decor'>Meditation Oils</MenuItem>
               </CustomTextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <CustomTextField
-                select
-                fullWidth
-                label="Stock"
-                value={filters.stock}
-                onChange={handleChange('stock')}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="In Stock">In Stock</MenuItem>
-                <MenuItem value="Out of Stock">Out of Stock</MenuItem>
+              <CustomTextField select fullWidth label='Stock' value={filters.stock} onChange={handleChange('stock')}>
+                <MenuItem value=''>All</MenuItem>
+                <MenuItem value='True'>In Stock</MenuItem>
+                <MenuItem value='False'>Out of Stock</MenuItem>
               </CustomTextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <CustomTextField
-                fullWidth
-                label="SKU"
-                value={filters.sku}
-                onChange={handleChange('sku')}
-              />
+              <CustomTextField fullWidth label='SKU' value={filters.sku} onChange={handleChange('sku')} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <CustomTextField
                 fullWidth
-                label="Price"
-                type="number"
+                label='Price'
+                type='number'
                 value={filters.price}
                 onChange={handleChange('price')}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <CustomTextField
-                fullWidth
-                label="QTY"
-                type="number"
-                value={filters.qty}
-                onChange={handleChange('qty')}
-              />
+              <CustomTextField fullWidth label='QTY' type='number' value={filters.qty} onChange={handleChange('qty')} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <CustomTextField
-                select
-                fullWidth
-                label="Status"
-                value={filters.status}
-                onChange={handleChange('status')}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="Scheduled">Scheduled</MenuItem>
-                <MenuItem value="Published">Published</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
+              <CustomTextField select fullWidth label='Status' value={filters.status} onChange={handleChange('status')}>
+                <MenuItem value=''>All</MenuItem>
+                <MenuItem value='Active'>Active</MenuItem>
+                <MenuItem value='Scheduled'>Scheduled</MenuItem>
+                <MenuItem value='Inactive'>Inactive</MenuItem>
               </CustomTextField>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleReset} color="secondary">Cancel</Button>
-          <Button onClick={() => setOpen(false)} variant="contained">Apply</Button>
+        <DialogActions className='flex items-center justify-between'>
+          <Button onClick={handleReset} color='error' variant='tonal'>
+            Reset
+          </Button>
+          <div>
+            <Button onClick={handleReset} color='secondary' variant='tonal'>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const apiFilters = mapFiltersToApi(filters)
+
+                onApplyFilters(apiFilters)
+                setOpen(false)
+              }}
+              variant='contained'
+            >
+              Apply
+            </Button>
+          </div>
         </DialogActions>
       </Dialog>
     </div>

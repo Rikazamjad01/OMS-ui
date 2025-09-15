@@ -33,6 +33,8 @@ import { rankItem } from '@tanstack/match-sorter-utils'
 
 // import { DateRangePicker } from '@mui/lab'
 
+import dayjs from 'dayjs'
+
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
 import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination } from '@/redux-store/slices/order'
@@ -51,6 +53,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Styles
 import tableStyles from '@core/styles/table.module.css'
+import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -239,7 +242,7 @@ const OrderListTable = ({
   orderData = [],
   loading = false,
   error = null,
-  page = 1,
+  page = initialPage = 1,
   limit = 25,
   total = 0,
   onPageChange,
@@ -249,10 +252,16 @@ const OrderListTable = ({
 }) => {
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
+  const pagination = useSelector(selectPagination)
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
 
-  // const pagination = useSelector(selectPagination)
+  const [activePage, setActivePage] = useState(page);
+
+  useEffect(() => {
+    setActivePage(page);
+  }, [page]);
+
   const [tagsMap, setTagsMap] = useState({})
 
   // Local UI state
@@ -625,7 +634,7 @@ const OrderListTable = ({
 
           return (
             <div
-              className='flex gap-2 w-48 flex-wrap cursor-pointer'
+              className='space-x-2 cursor-pointer'
               onClick={() => openTagEditor(row.original.id, displayedTags)}
               role='button'
               tabIndex={0}
@@ -713,7 +722,7 @@ const OrderListTable = ({
     label: tagsMap[key].text
   }))
 
-  const table = useReactTable({
+    const table = useReactTable({
     data,
     columns,
     state: { rowSelection, globalFilter, columnFilters },
@@ -731,13 +740,21 @@ const OrderListTable = ({
     manualPagination: true,
     pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     onPaginationChange: updater => {
-      const current = { pageIndex: Math.max(0, (page || 1) - 1), pageSize: limit || 25 }
+      // --- MODIFIED: Use activePage instead of the 'page' prop ---
+      const current = { pageIndex: Math.max(0, (activePage || 1) - 1), pageSize: limit || 25 }
       const next = typeof updater === 'function' ? updater(current) : updater
       const nextPage = (next.pageIndex ?? current.pageIndex) + 1
       const nextSize = next.pageSize ?? current.pageSize
 
-      if (nextPage !== page) onPageChange?.(nextPage)
-      if (nextSize !== limit) onLimitChange?.(nextSize)
+      // --- MODIFIED: Compare against activePage and update local state + dispatch ---
+      if (nextPage !== activePage) {
+        setActivePage(nextPage); // Update local state immediately for UI responsiveness
+        onPageChange?.(nextPage); // Tell parent to fetch data for this new page
+      }
+
+      if (nextSize !== limit) {
+        onLimitChange?.(nextSize);
+      }
     }
   })
 
@@ -778,12 +795,19 @@ const OrderListTable = ({
 
           <RangePicker
             status='success'
+            value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
             onChange={dates => {
               if (dates && dates.length === 2) {
                 setFilters(prev => ({
                   ...prev,
                   startDate: dates[0].format('YYYY-MM-DD'),
                   endDate: dates[1].format('YYYY-MM-DD')
+                }))
+              } else {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: '',
+                  endDate: ''
                 }))
               }
             }}
@@ -872,7 +896,8 @@ const OrderListTable = ({
                 const newLimit = Number(e.target.value)
 
                 onLimitChange?.(newLimit)
-                onPageChange?.(1)
+
+                // onPageChange?.(1)
               }}
               className='max-sm:is-full sm:is-[80px]'
             >
@@ -956,49 +981,16 @@ const OrderListTable = ({
       </CardContent>
 
       <CardContent className='flex items-center justify-between gap-3'>
-        <TextField
-          fullWidth
-          size='medium'
-          label='Amount Range'
-
-          // placeholder='Min - Max'
-          // value={filters.minAmount && filters.maxAmount ? `${filters.minAmount} - ${filters.maxAmount}` : ''}
-          // onChange={() => {}} // prevent React warning
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position='start'>
-                <input
-                  type='number'
-                  placeholder='Min'
-                  value={filters.minAmount || ''}
-                  onChange={e => setFilters(prev => ({ ...prev, minAmount: e.target.value }))}
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    width: '60px',
-                    textAlign: 'right',
-                    background: 'transparent'
-                  }}
-                />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position='end'>
-                <input
-                  type='number'
-                  placeholder='Max'
-                  value={filters.maxAmount || ''}
-                  onChange={e => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    width: '60px',
-                    background: 'transparent'
-                  }}
-                />
-              </InputAdornment>
-            )
-          }}
+        <AmountRangePicker
+          min={filters.minAmount}
+          max={filters.maxAmount}
+          onChange={([min, max]) =>
+            setFilters(prev => ({
+              ...prev,
+              minAmount: min || '',
+              maxAmount: max || ''
+            }))
+          }
         />
         <Autocomplete
           multiple
@@ -1035,7 +1027,8 @@ const OrderListTable = ({
                 setFilters(emptyFilters)
                 dispatch(fetchOrders({ page: 1, limit: 25, filters: emptyFilters }))
                 onFiltersChange?.(emptyFilters)
-                onPageChange?.(1)
+
+                // onPageChange?.(1)
               }}
               color='error'
               variant='tonal'
@@ -1048,6 +1041,7 @@ const OrderListTable = ({
 
                 dispatch(fetchOrders({ page: 1, limit: 25, filters: apiFilters }))
                 onFiltersChange?.(apiFilters)
+
                 onPageChange?.(1)
               }}
               variant='contained'
@@ -1125,8 +1119,16 @@ const OrderListTable = ({
       <TablePagination
         component='div'
         count={total || 0}
-        page={(page || 1) - 1}
-        onPageChange={(_e, newPage) => onPageChange?.(newPage + 1)}
+
+        // --- MODIFIED: Use activePage ---
+        page={(activePage || 1) - 1} // Convert 1-based to 0-based for MUI
+        onPageChange={(_e, newPage) => {
+          // --- MODIFIED: Calculate new page and update local state + dispatch ---
+          const nextPage = newPage + 1; // Convert 0-based back to 1-based
+
+          setActivePage(nextPage);
+          onPageChange?.(nextPage);
+        }}
         rowsPerPage={limit}
         onRowsPerPageChange={e => {
           const newLimit = parseInt(e.target.value, 25)

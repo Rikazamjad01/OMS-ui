@@ -41,6 +41,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { Dialog, DialogActions, DialogContent } from '@mui/material'
 
 import {
+  setCurrentPage,
   fetchProducts,
   selectProducts,
   selectProductsLoading,
@@ -113,10 +114,12 @@ const ProductListTable = () => {
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState([])
-  const [filteredData, setFilteredData] = useState([])
+
+  // const [filteredData, setFilteredData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewSrc, setPreviewSrc] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
     dispatch(fetchProducts({ page: pagination.currentPage, limit: pagination.itemsPerPage }))
@@ -125,7 +128,8 @@ const ProductListTable = () => {
   useEffect(() => {
     if (products) {
       setData(products)
-      setFilteredData(products)
+
+      // setFilteredData(products)
     }
   }, [products])
 
@@ -260,7 +264,7 @@ const ProductListTable = () => {
       })
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, filteredData]
+    [data]
   )
 
   const table = useReactTable({
@@ -297,7 +301,26 @@ const ProductListTable = () => {
       <Card>
         <div className='flex items-center justify-between flex-wrap gap-4 p-6'>
           <div className='flex gap-4'>
-            <TableFilters setData={setFilteredData} productData={products} />
+            <TableFilters
+              onApplyFilters={filters => {
+                dispatch(setCurrentPage(1)) // Reset to page 1 when filtering
+                dispatch(
+                  fetchProducts({
+                    page: 1,
+                    limit: pagination.itemsPerPage,
+                    filters 
+                  })
+                )
+              }}
+              onResetFilters={() => {
+                dispatch(setCurrentPage(1))
+                dispatch(fetchProducts({
+                  page: 1,
+                  limit: pagination.itemsPerPage,
+                  filters: {}
+                }))
+              }}
+            />
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
@@ -367,18 +390,13 @@ const ProductListTable = () => {
               </tbody>
             ) : (
               <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
+                {table.getRowModel().rows.map(row => (
+                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             )}
           </table>

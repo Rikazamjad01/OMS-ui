@@ -116,6 +116,9 @@ const CustomerListTable = () => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
 
+  console.log('Current tableRows:', tableRows)
+  console.log('Current pagination:', pagination)
+
   // Hooks
   const { lang: locale } = useParams()
 
@@ -154,7 +157,7 @@ const CustomerListTable = () => {
           />
         )
       },
-      columnHelper.accessor('name', {
+      columnHelper.accessor('full_name', {
         header: 'Customers',
         cell: ({ row }) => {
           const firstName = row.original?.first_name?.trim() || ''
@@ -198,7 +201,7 @@ const CustomerListTable = () => {
       }),
       columnHelper.accessor('total_spent', {
         header: 'Total Spent',
-        cell: ({ row }) => <Typography variant='h6'>${(row.original?.total_spent || 0).toLocaleString()}</Typography>
+        cell: ({ row }) => <Typography variant='h6'>PKR {(row.original?.total_spent || 0).toLocaleString()}</Typography>
       })
     ],
     [locale]
