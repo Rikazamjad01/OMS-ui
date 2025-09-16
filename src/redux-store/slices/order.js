@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 
-import { getRequest, postRequest } from '@/utils/api'
+import { getRequest, postRequest, apiRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
@@ -53,7 +53,8 @@ export const fetchOrders = createAsyncThunk(
 
       const data = response.data || {}
 
-      console.log(data, 'data in fetchOrders')
+      console.log('Backend pagination response:', data.pagination)
+      console.log('Requested page:', page)
 
       const ordersWithArrays = data.orders.map(order => ({
         ...order,
@@ -135,6 +136,30 @@ export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (o
     return rejectWithValue(error.message)
   }
 })
+
+export const updateOrdersStatusThunk = createAsyncThunk(
+  'orders/updateStatus',
+  async ({ orderIds, status }, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest('PATCH', `orders/status`, {
+        orderIds,
+        status
+      })
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      return {
+        orderIds,
+        status,
+        message: response.message
+      }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -220,13 +245,12 @@ const ordersSlice = createSlice({
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.loading = false
 
-        // Only update if we got new data
         if (action.payload) {
           state.orders = action.payload.orders
           state.pagination = {
-            currentPage: action.payload.page,
-            itemsPerPage: action.payload.limit,
-            total: action.payload.total
+            currentPage: action.meta.arg.page, // Use the requested page, not backend response
+            itemsPerPage: action.meta.arg.limit, // Use the requested limit
+            total: action.payload.total // Backend should return correct total
           }
           state.lastFilters = action.payload.filters || {}
           state.orderStats = action.payload.orderStats
@@ -269,6 +293,22 @@ const ordersSlice = createSlice({
       .addCase(fetchOrderById.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
+      })
+      .addCase(updateOrdersStatusThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(updateOrdersStatusThunk.fulfilled, (state, action) => {
+        state.loading = false
+
+        // Update the orders in state with new status
+        const { orderIds, status } = action.payload
+
+        state.orders = state.orders.map(order => (orderIds.includes(order.id) ? { ...order, status: status } : order))
+      })
+      .addCase(updateOrdersStatusThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
       })
   }
 })

@@ -2,9 +2,9 @@ import axios from 'axios'
 
 const baseUrl =
 
-  // 'https://ecommerce-platform-backend-production.up.railway.app/api/v1'
+  'https://ecommerce-platform-backend-production.up.railway.app/api/v1'
 
-  'http://192.168.18.203:4000/api/v1'
+  // 'http://192.168.18.203:4000/api/v1'
 
 const api = axios.create({
   baseURL: baseUrl,
@@ -83,4 +83,27 @@ export const splitOrder = async (orderId, selectedLineItems) => {
       quantity: item.splitQuantity
     }))
   })
+}
+
+export const apiRequest = async (url, options = {}) => {
+  const { method = 'GET', data, headers = {}, ...rest } = options
+
+  const config = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+
+      // Add your default headers here
+      ...headers
+    },
+    ...rest
+  }
+
+  if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+    config.body = JSON.stringify(data)
+  }
+
+  const response = await fetch(`${baseUrl}/${url}`, config)
+
+  return response.json()
 }

@@ -28,19 +28,15 @@ export const fetchProducts = createAsyncThunk(
 
       const response = await getRequest(`products?${params}`)
 
-      console.log(response, 'response in fetchProducts')
-
       if (!response.status) {
         return rejectWithValue(response.message)
       }
 
-      const data = response || {}
-
       return {
-        products: data.products || [],
-        total: data.pagination?.total || 0,
-        page: data.pagination?.page || page,
-        limit: data.pagination?.limit || limit,
+        products: response.products || [],
+        total: response.pagination?.total || 0,
+        page: response.pagination?.page || page,
+        limit: response.pagination?.limit || limit,
         filters
       }
     } catch (error) {

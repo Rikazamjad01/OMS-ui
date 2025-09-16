@@ -111,6 +111,8 @@ const ProductListTable = () => {
   const loading = useSelector(selectProductsLoading)
   const pagination = useSelector(selectProductsPagination)
 
+  console.log(pagination, 'pagination')
+
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState([])
@@ -308,17 +310,19 @@ const ProductListTable = () => {
                   fetchProducts({
                     page: 1,
                     limit: pagination.itemsPerPage,
-                    filters 
+                    filters
                   })
                 )
               }}
               onResetFilters={() => {
                 dispatch(setCurrentPage(1))
-                dispatch(fetchProducts({
-                  page: 1,
-                  limit: pagination.itemsPerPage,
-                  filters: {}
-                }))
+                dispatch(
+                  fetchProducts({
+                    page: 1,
+                    limit: pagination.itemsPerPage,
+                    filters: {}
+                  })
+                )
               }}
             />
             <DebouncedInput
@@ -403,11 +407,18 @@ const ProductListTable = () => {
         </div>
         <TablePagination
           component={() => <TablePaginationComponent table={table} />}
-          count={table.getFilteredRowModel().rows.length}
+          count={pagination.total}
           rowsPerPage={table.getState().pagination.pageSize}
           page={table.getState().pagination.pageIndex}
           onPageChange={(_, page) => {
             table.setPageIndex(page)
+            dispatch(setCurrentPage(page + 1)) // keep Redux in sync
+            dispatch(
+              fetchProducts({
+                page: page + 1,
+                limit: table.getState().pagination.pageSize
+              })
+            )
           }}
         />
         <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth='md'>

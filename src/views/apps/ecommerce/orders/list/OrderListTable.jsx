@@ -12,7 +12,6 @@ import Typography from '@mui/material/Typography'
 import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import TablePagination from '@mui/material/TablePagination'
-import MenuItem from '@mui/material/MenuItem'
 
 import { DatePicker, Space } from 'antd'
 
@@ -27,7 +26,7 @@ import {
   getSortedRowModel,
   getFilteredRowModel
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField } from '@mui/material'
+import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -37,7 +36,7 @@ import dayjs from 'dayjs'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
-import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination } from '@/redux-store/slices/order'
+import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination, updateOrdersStatusThunk } from '@/redux-store/slices/order'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -54,6 +53,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 // Styles
 import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
+import StatusCell from '@/components/statusCell/StatusCell'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -79,6 +79,11 @@ export const statusChipColor = {
   onWay: { color: 'warning', text: 'On Way' },
   returned: { color: 'error', text: 'Returned' }
 }
+
+export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
+  value: key,
+  label: statusChipColor[key].text
+}))
 
 export const pakistanCities = {
   karachi: { text: 'Karachi', color: 'primary', colorClassName: 'text-primary' },
@@ -242,7 +247,7 @@ const OrderListTable = ({
   orderData = [],
   loading = false,
   error = null,
-  page = initialPage = 1,
+  page = (initialPage = 1),
   limit = 25,
   total = 0,
   onPageChange,
@@ -255,21 +260,15 @@ const OrderListTable = ({
   const pagination = useSelector(selectPagination)
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
-
-  const [activePage, setActivePage] = useState(page);
-
-  useEffect(() => {
-    setActivePage(page);
-  }, [page]);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
+  const statusMenuOpen = Boolean(statusMenuAnchor)
 
   const [tagsMap, setTagsMap] = useState({})
 
   // Local UI state
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [rawFilters, setRawFilters] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
-  const [openFilter, setOpenFilter] = useState(false)
   const [loadings, setLoadings] = useState(false)
 
   const [tagModal, setTagModal] = useState({
@@ -285,6 +284,58 @@ const OrderListTable = ({
   }
 
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
+
+  const updateOrdersStatus = async (orderIds, newStatus) => {
+    try {
+      // Ensure orderIds is always an array
+      const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds]
+
+      const result = await dispatch(
+        updateOrdersStatusThunk({
+          orderIds: idsArray,
+          status: newStatus
+        })
+      ).unwrap()
+
+      // Success message
+      const count = idsArray.length
+
+      const message =
+        result.message ||
+        `Status updated to "${statusChipColor[newStatus]?.text}" for ${count} order${count > 1 ? 's' : ''}`
+
+      setAlert({
+        open: true,
+        message,
+        severity: 'success'
+      })
+
+      // Clean up UI state only if it was a bulk operation
+      if (selectedIds.length > 0) {
+        setStatusMenuAnchor(null)
+        setRowSelection({})
+      }
+
+      // Refresh data
+      dispatch(fetchOrders({ page, limit, force: true }))
+    } catch (error) {
+      // Clean up UI state only if it was a bulk operation
+      if (selectedIds.length > 0) {
+        setStatusMenuAnchor(null)
+        setRowSelection({})
+      }
+
+      setAlert({
+        open: true,
+        message: error.message || error || 'Failed to update order status',
+        severity: 'error'
+      })
+    }
+  }
+
+  const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
+  const handleBulkStatusChange = (newStatus) => updateOrdersStatus(selectedIds, newStatus)
+
 
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
@@ -339,6 +390,7 @@ const OrderListTable = ({
         platform: order.platform?.toLowerCase() || 'manual', // note: lowercase 'platform'
         status: order.orderStatus,
         method: normalizePaymentMethod(names),
+        remarks: order.remarks,
         methodLabel: names[0] || 'Unknown',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
@@ -555,14 +607,7 @@ const OrderListTable = ({
       {
         accessorKey: 'status',
         header: 'Order Status',
-        cell: ({ row }) => (
-          <Chip
-            label={row.original.status}
-            color={statusChipColor[row.original.status]?.color || 'primary'}
-            variant='tonal'
-            size='small'
-          />
-        )
+        cell: props => <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
       },
       {
         accessorKey: 'method',
@@ -633,24 +678,35 @@ const OrderListTable = ({
           const hasTags = displayedTags && displayedTags.length > 0
 
           return (
-            <div
-              className='space-x-2 cursor-pointer'
-              onClick={() => openTagEditor(row.original.id, displayedTags)}
-              role='button'
-              tabIndex={0}
-              onKeyDown={e => {
-                if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
-              }}
-            >
-              {hasTags ? (
-                displayedTags.map((tag, i) => (
-                  <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
-                ))
-              ) : (
-                <Typography variant='body2' color='text.secondary'>
-                  -
-                </Typography>
-              )}
+            <div className='flex flex-col gap-1'>
+              {/* First row: Tags */}
+              <div
+                className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
+                onClick={() => openTagEditor(row.original.id, displayedTags)}
+                role='button'
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
+                }}
+              >
+                {hasTags ? (
+                  displayedTags.map((tag, i) => (
+                    <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
+                  ))
+                ) : (
+                  <> </>
+                )}
+              </div>
+
+              {/* Second row: "+" button */}
+              <div>
+                <Chip
+                  label='+ Add Tag'
+                  variant='outlined'
+                  size='small'
+                  onClick={() => openTagEditor(row.original.id, displayedTags)}
+                />
+              </div>
             </div>
           )
         }
@@ -702,11 +758,6 @@ const OrderListTable = ({
     label: orderPlatform[key].text
   }))
 
-  const orderStatusArray = Object.keys(statusChipColor).map(key => ({
-    value: key,
-    label: statusChipColor[key].text
-  }))
-
   const paymentStatusArray = Object.keys(paymentStatus).map(key => ({
     value: key,
     label: paymentStatus[key].text
@@ -722,7 +773,7 @@ const OrderListTable = ({
     label: tagsMap[key].text
   }))
 
-    const table = useReactTable({
+  const table = useReactTable({
     data,
     columns,
     state: { rowSelection, globalFilter, columnFilters },
@@ -740,20 +791,17 @@ const OrderListTable = ({
     manualPagination: true,
     pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     onPaginationChange: updater => {
-      // --- MODIFIED: Use activePage instead of the 'page' prop ---
-      const current = { pageIndex: Math.max(0, (activePage || 1) - 1), pageSize: limit || 25 }
+      const current = { pageIndex: Math.max(0, page - 1), pageSize: limit || 25 }
       const next = typeof updater === 'function' ? updater(current) : updater
       const nextPage = (next.pageIndex ?? current.pageIndex) + 1
       const nextSize = next.pageSize ?? current.pageSize
 
-      // --- MODIFIED: Compare against activePage and update local state + dispatch ---
-      if (nextPage !== activePage) {
-        setActivePage(nextPage); // Update local state immediately for UI responsiveness
-        onPageChange?.(nextPage); // Tell parent to fetch data for this new page
+      if (nextPage !== page) {
+        onPageChange?.(nextPage)
       }
 
       if (nextSize !== limit) {
-        onLimitChange?.(nextSize);
+        onLimitChange?.(nextSize)
       }
     }
   })
@@ -848,6 +896,34 @@ const OrderListTable = ({
 
         <div className='flex gap-4 flex-wrap'>
           <div className='flex gap-4'>
+            {/* Add the Change Status button - only shows when orders are selected */}
+            {selectedCount >= 1 && (
+              <>
+                <Button
+                  color='info'
+                  variant='tonal'
+                  startIcon={<i className='bx-edit' />}
+                  onClick={event => setStatusMenuAnchor(event.currentTarget)}
+                >
+                  Change Status ({selectedCount})
+                </Button>
+
+                {/* Status Change Menu */}
+                <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
+                  {orderStatusArray.map(status => (
+                    <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                      <Chip
+                        label={status.label}
+                        color={statusChipColor[status.value].color}
+                        variant='tonal'
+                        size='small'
+                      />
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            )}
+
             {selectedCount >= 2 ? (
               <OpenDialogOnElementClick
                 element={Button}
@@ -861,7 +937,7 @@ const OrderListTable = ({
                     return { orderIds: selectedIds }
                   })(),
                   onSuccess: async () => {
-                    const result = await dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
+                    const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
 
                     setRowSelection({})
                     console.log('Merge Orders Success', result)
@@ -892,12 +968,12 @@ const OrderListTable = ({
             <CustomTextField
               select
               value={limit}
-              onChange={e => {
+              onChange={async e => {
                 const newLimit = Number(e.target.value)
 
+                console.log('newLimit', newLimit)
                 onLimitChange?.(newLimit)
-
-                // onPageChange?.(1)
+                await dispatch(fetchOrders({ limit: newLimit, force: true }))
               }}
               className='max-sm:is-full sm:is-[80px]'
             >
@@ -1025,7 +1101,7 @@ const OrderListTable = ({
             <Button
               onClick={() => {
                 setFilters(emptyFilters)
-                dispatch(fetchOrders({ page: 1, limit: 25, filters: emptyFilters }))
+                dispatch(fetchOrders({ page: 1, limit, filters: emptyFilters }))
                 onFiltersChange?.(emptyFilters)
 
                 // onPageChange?.(1)
@@ -1039,7 +1115,7 @@ const OrderListTable = ({
               onClick={() => {
                 const apiFilters = mapFiltersToApiFormat(filters)
 
-                dispatch(fetchOrders({ page: 1, limit: 25, filters: apiFilters }))
+                dispatch(fetchOrders({ page: 1, limit, filters: apiFilters }))
                 onFiltersChange?.(apiFilters)
 
                 onPageChange?.(1)
@@ -1118,22 +1194,19 @@ const OrderListTable = ({
 
       <TablePagination
         component='div'
-        count={total || 0}
-
-        // --- MODIFIED: Use activePage ---
-        page={(activePage || 1) - 1} // Convert 1-based to 0-based for MUI
+        count={total} // Use the total prop from parent, not pagination.total
+        page={page - 1} // Use the page prop directly, not activePage
         onPageChange={(_e, newPage) => {
-          // --- MODIFIED: Calculate new page and update local state + dispatch ---
-          const nextPage = newPage + 1; // Convert 0-based back to 1-based
+          const nextPage = newPage + 1
 
-          setActivePage(nextPage);
-          onPageChange?.(nextPage);
+          console.log('Pagination click - newPage:', nextPage)
+          onPageChange?.(nextPage) // This will call parent's setPage
         }}
         rowsPerPage={limit}
         onRowsPerPageChange={e => {
-          const newLimit = parseInt(e.target.value, 25)
+          const newLimit = Number(e.target.value)
 
-          onLimitChange?.(newLimit)
+          onLimitChange?.(newLimit) // Parent resets page to 1 and updates limit
         }}
         rowsPerPageOptions={[25, 50, 100]}
       />
@@ -1147,16 +1220,14 @@ const OrderListTable = ({
       />
       <Snackbar
         open={alert.open}
-        autoHideDuration={5000}
-        onClose={() => setAlert(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        autoHideDuration={6000}
+        onClose={() => setAlert({ ...alert, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
-          key={alert.message}
-          variant='filled'
+          onClose={() => setAlert({ ...alert, open: false })}
           severity={alert.severity}
-          onClose={() => setAlert(prev => ({ ...prev, open: false }))}
-          sx={{ width: '100%', fontSize: '1rem', fontWeight: 'bold' }}
+          variant="filled"
         >
           {alert.message}
         </Alert>
