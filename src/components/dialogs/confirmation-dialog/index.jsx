@@ -19,7 +19,7 @@ import classnames from 'classnames'
 import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
-import { splitOrderProductSetting } from '@/redux-store/slices/order'
+import { fetchOrderById, splitOrderProductSetting } from '@/redux-store/slices/order'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
@@ -88,14 +88,15 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           splitQuantity: quantities[item.id]
         }))
 
-        if (itemsWithQuantities.some(i => !i.splitQuantity || i.splitQuantity < 1)) {
+        if (itemsWithQuantities?.some(i => !i.splitQuantity || i.splitQuantity < 1)) {
           throw new Error('Please set valid quantities for all items.')
         }
 
         const response = await splitOrder(orderId, itemsWithQuantities)
 
         if (response.status) {
-          dispatch(splitOrderProductSetting(response))
+          // dispatch(splitOrderProductSetting(enrichedResponse))
+          dispatch(fetchOrderById(orderId))
         }
       }
 
@@ -263,7 +264,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
               <div className='flex flex-col gap-4 mt-4'>
                 {payload.selectedLineItems.map(item => (
                   <div
-                    key={item.id}
+                    key={item.id ?? `line-${index}`}
                     className='flex flex-col justify-between items-center border rounded-lg px-4 py-2 shadow-sm'
                   >
                     <div className='text-center mb-4'>
@@ -333,7 +334,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
       <Dialog open={secondDialog} onClose={handleSecondDialogClose} closeAfterTransition={false}>
         <DialogContent className='flex items-center flex-col text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
           <i
-            className={classnames('text-[88px] mbe-6', {
+            className={classnames('text-[88px]', {
               'bx-check-circle': userInput,
               'text-success': userInput,
               'bx-x-circle': !userInput,
@@ -345,11 +346,11 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           </Typography>
           <Typography color='text.primary'>{resultSubtitle ?? getResultSubtitle()}</Typography>
         </DialogContent>
-        <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
+        {/* <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
           <Button variant='contained' color='success' onClick={handleSecondDialogClose}>
             Ok
           </Button>
-        </DialogActions>
+        </DialogActions> */}
       </Dialog>
     </>
   )

@@ -17,7 +17,7 @@ import OrderDetails from '@views/apps/ecommerce/orders/details'
 
   return res.json()
 } */
-const OrderDetailsPage = ({ params }) => {
+const OrderDetailsPage = async ({ params }) => {
   // const data = await getEcommerceData()
 
   // const filteredData = data?.orderData.filter(item => item.order === params.order)[0]
@@ -26,7 +26,7 @@ const OrderDetailsPage = ({ params }) => {
   //   redirect('/not-found')
   // }
 
-  const { id } = params
+  const { id } = await params
 
   return <OrderDetails id={id} />
 }

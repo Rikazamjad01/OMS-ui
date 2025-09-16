@@ -37,7 +37,7 @@ const OrderDetailHeader = ({ order, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
   const selectedProducts = useSelector(selectSelectedProducts)
 
-  console.log(order, 'orderrrrrrrrrr');
+  console.log(order, 'orderrrrrrrrrr')
 
   if (!order) return null
 
@@ -114,15 +114,15 @@ const OrderDetailHeader = ({ order, id }) => {
             type: 'split-order',
             payload: {
               orderIds: order.id,
-              selectedLineItems: selectedProductIds.map(id => {
-                const product = order.line_items.find(item => item.id === id)
-                const prodName = order?.products.find(item => item.id === id)
+              selectedLineItems: selectedProductIds?.map(id => {
+                const product = order?.line_items?.find(item => item.id === id)
+                const prodName = order?.products?.find(item => item.id === id) || {}
 
                 return {
-                  id: product.id,
-                  quantity: product.quantity,
-                  name: prodName.title,
-                  img: prodName.image.src,
+                  id: product?.id,
+                  quantity: product?.quantity,
+                  name: prodName?.title,
+                  img: prodName?.image?.src
                 }
               })
             }
