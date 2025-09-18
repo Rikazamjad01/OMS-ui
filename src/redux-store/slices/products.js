@@ -11,13 +11,13 @@ export const fetchProducts = createAsyncThunk(
       const currentData = state.products.products
 
       // Optional optimization: skip if same page + same filters already loaded
-      if (
-        currentData.length > 0 &&
-        state.products.pagination.currentPage === page &&
-        JSON.stringify(state.products.lastFilters) === JSON.stringify(filters)
-      ) {
-        return null
-      }
+      // if (
+      //   currentData.length > 0 &&
+      //   state.products.pagination.currentPage === page &&
+      //   JSON.stringify(state.products.lastFilters) === JSON.stringify(filters)
+      // ) {
+      //   return null
+      // }
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -28,6 +28,8 @@ export const fetchProducts = createAsyncThunk(
 
       const response = await getRequest(`products?${params}`)
 
+      // console.log(response, 'response')
+
       if (!response.status) {
         return rejectWithValue(response.message)
       }
@@ -35,8 +37,8 @@ export const fetchProducts = createAsyncThunk(
       return {
         products: response.products || [],
         total: response.pagination?.total || 0,
-        page: response.pagination?.page || page,
-        limit: response.pagination?.limit || limit,
+        page: response.pagination?.page,
+        limit: response.pagination?.limit,
         filters
       }
     } catch (error) {
@@ -53,8 +55,8 @@ const productsSlice = createSlice({
     error: null,
     lastFilters: {},
     pagination: {
-      currentPage: 1,
-      itemsPerPage: 25,
+      page: 1,
+      perPage: 25,
       total: 0
     },
     selectedProducts: [], // For multi-select
@@ -62,10 +64,10 @@ const productsSlice = createSlice({
   },
   reducers: {
     setCurrentPage: (state, action) => {
-      state.pagination.currentPage = action.payload
+      state.pagination.page = action.payload
     },
     setItemsPerPage: (state, action) => {
-      state.pagination.itemsPerPage = action.payload
+      state.pagination.perPage = action.payload
     },
     setSelectedProducts: (state, action) => {
       state.selectedProducts = action.payload
@@ -81,8 +83,8 @@ const productsSlice = createSlice({
       state.selectedProducts = []
       state.selectedProductDetails = null
       state.pagination = {
-        currentPage: 1,
-        itemsPerPage: 25,
+        page: 1,
+        perPage: 25,
         total: 0
       }
     }
@@ -95,16 +97,22 @@ const productsSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false
-
-        if (action.payload) {
-          state.products = action.payload.products
-          state.pagination = {
-            currentPage: action.payload.page,
-            itemsPerPage: action.payload.limit,
-            total: action.payload.total
-          }
-          state.lastFilters = action.payload.filters || {}
+        state.products = action.payload.products
+        state.pagination = {
+          page: action.payload.page,
+          perPage: action.payload.limit,
+          total: action.payload.total
         }
+
+        // if (action.payload) {
+        //   state.products = action.payload.products
+        //   state.pagination = {
+        //     page: action.payload.page,
+        //     perPage: action.payload.limit,
+        //     total: action.payload.total
+        //   }
+        //   state.lastFilters = action.payload.filters || {}
+        // }
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false

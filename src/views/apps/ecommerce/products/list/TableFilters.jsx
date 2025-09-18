@@ -34,9 +34,9 @@ const mapFiltersToApi = uiFilters => {
 
   if (uiFilters.status) {
     const statusMap = {
-      Published: 'active',
-      Inactive: 'archived',
-      Scheduled: 'draft'
+      active: 'active',
+      Inactive: 'inactive',
+      draft: 'draft'
     }
 
     apiFilters.status = statusMap[uiFilters.status] || uiFilters.status
@@ -143,8 +143,8 @@ const TableFilters = ({ onApplyFilters, onResetFilters }) => {
               <CustomTextField select fullWidth label='Status' value={filters.status} onChange={handleChange('status')}>
                 <MenuItem value=''>All</MenuItem>
                 <MenuItem value='Active'>Active</MenuItem>
-                <MenuItem value='Scheduled'>Scheduled</MenuItem>
                 <MenuItem value='Inactive'>Inactive</MenuItem>
+                <MenuItem value='Draft'>Draft</MenuItem>
               </CustomTextField>
             </Grid>
           </Grid>

@@ -111,13 +111,12 @@ const CustomerListTable = () => {
   const tableRows = useSelector(selectCustomersTableRows)
   const pagination = useSelector(selectCustomersPagination)
 
+  console.log(pagination.page, 'pagination')
+
   // States
   const [customerUserOpen, setCustomerUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-
-  console.log('Current tableRows:', tableRows)
-  console.log('Current pagination:', pagination)
 
   // Hooks
   const { lang: locale } = useParams()
@@ -355,8 +354,8 @@ const CustomerListTable = () => {
           </table>
         </div>
 
-        <TablePagination
-          component='div'
+        <TablePaginationComponent
+          table={table}
           count={pagination?.total || 0}
           rowsPerPage={pagination?.perPage || 25}
           page={pagination?.page ? pagination.page - 1 : 0}

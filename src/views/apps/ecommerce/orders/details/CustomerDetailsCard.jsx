@@ -83,7 +83,7 @@ const CustomerDetails = ({ order }) => {
                       <i className="bx bx-check-circle" />
                     </CustomAvatar>
                     <Typography variant="body2">
-                      {customer.completedOrders || 0} Successful
+                      {customer.confirmedOrders || 0} Successful
                     </Typography>
                   </Box>
                 </Grid>

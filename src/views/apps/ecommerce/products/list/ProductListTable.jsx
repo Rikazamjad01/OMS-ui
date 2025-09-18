@@ -45,7 +45,8 @@ import {
   fetchProducts,
   selectProducts,
   selectProductsLoading,
-  selectProductsPagination
+  selectProductsPagination,
+  setItemsPerPage
 } from '@/redux-store/slices/products'
 
 // Component Imports
@@ -116,6 +117,7 @@ const ProductListTable = () => {
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   // const [filteredData, setFilteredData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -124,8 +126,14 @@ const ProductListTable = () => {
   const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchProducts({ page: pagination.currentPage, limit: pagination.itemsPerPage }))
-  }, [dispatch, pagination.currentPage, pagination.itemsPerPage])
+    dispatch(
+      fetchProducts({
+        page: pagination.page,
+        limit: pagination.perPage,
+        search: searchQuery,
+      })
+    )
+  }, [dispatch, pagination.perPage, searchQuery])
 
   useEffect(() => {
     if (products) {
@@ -134,6 +142,17 @@ const ProductListTable = () => {
       // setFilteredData(products)
     }
   }, [products])
+
+
+
+  const handleChangePage = (event, newPage) => {
+    console.log(newPage, 'newPage')
+    const nextPage = newPage + 1
+
+    dispatch(setCurrentPage(nextPage))
+    dispatch(fetchProducts({ page: nextPage, limit: pagination.perPage }))
+
+  }
 
   // Hooks
   const { lang: locale } = useParams()
@@ -272,30 +291,23 @@ const ProductListTable = () => {
   const table = useReactTable({
     data: data || [],
     columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
     state: {
       rowSelection,
-      globalFilter
+      globalFilter,
     },
-    initialState: {
-      pagination: {
-        pageSize: 25
-      }
-    },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
-    globalFilterFn: fuzzyFilter,
+    enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter,
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    manualPagination: true,
+    getCoreRowModel: getCoreRowModel(),
+
+    // getPaginationRowModel: getPaginationRowModel()
   })
 
   return (
@@ -309,7 +321,7 @@ const ProductListTable = () => {
                 dispatch(
                   fetchProducts({
                     page: 1,
-                    limit: pagination.itemsPerPage,
+                    limit: pagination.perPage,
                     filters
                   })
                 )
@@ -319,23 +331,42 @@ const ProductListTable = () => {
                 dispatch(
                   fetchProducts({
                     page: 1,
-                    limit: pagination.itemsPerPage,
+                    limit: pagination.perPage,
                     filters: {}
                   })
                 )
               }}
             />
             <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
+              value={searchQuery}
+              onChange={value => {
+                setSearchQuery(value) // Update local state
+                // Reset to page 1 when searching
+                dispatch(setCurrentPage(1))
+
+                // Trigger API call with search
+                dispatch(
+                  fetchProducts({
+                    page: 1,
+                    limit: pagination.perPage,
+                    search: value,
+                    filters: {} // optional: keep or merge existing filters
+                  })
+                )
+              }}
               placeholder='Search Product'
             />
           </div>
           <div className='flex sm:items-center flex-wrap max-sm:flex-col max-sm:is-full gap-4'>
             <CustomTextField
               select
-              value={table.getState().pagination.pageSize}
-              onChange={e => table.setPageSize(Number(e.target.value))}
+              value={pagination.perPage}
+              onChange={e => {
+                const newSize = Number(e.target.value)
+
+                dispatch(setItemsPerPage(newSize))
+                dispatch(setCurrentPage(1)) // reset to first page
+              }}
               className='flex-auto is-full sm:is-[70px]'
             >
               <MenuItem value='25'>25</MenuItem>
@@ -405,20 +436,17 @@ const ProductListTable = () => {
             )}
           </table>
         </div>
-        <TablePagination
-          component={() => <TablePaginationComponent table={table} />}
+        <TablePaginationComponent
+          table={table}
           count={pagination.total}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-            dispatch(setCurrentPage(page + 1)) // keep Redux in sync
-            dispatch(
-              fetchProducts({
-                page: page + 1,
-                limit: table.getState().pagination.pageSize
-              })
-            )
+          rowsPerPage={pagination.perPage}
+          page={pagination?.page ? pagination.page - 1 : 0}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={event => {
+            const newLimit = parseInt(event.target.value, 10)
+
+            dispatch(setItemsPerPage(newLimit))
+            dispatch(setCurrentPage(1)) // Reset to first page when changing page size
           }}
         />
         <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth='md'>

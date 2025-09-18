@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { variant } from 'valibot'
 
 const baseUrl =
 
@@ -80,7 +81,8 @@ export const splitOrder = async (orderId, selectedLineItems) => {
     id: orderId,
     line_items: selectedLineItems.map(item => ({
       id: item.id,
-      quantity: item.splitQuantity
+      quantity: item.splitQuantity,
+      variant_id: item?.prodVarientId
     }))
   })
 }

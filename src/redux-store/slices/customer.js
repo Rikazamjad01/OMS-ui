@@ -16,8 +16,6 @@ export const fetchCustomers = createAsyncThunk('customers/fetchCustomers', async
 
     const response = await getRequest(`customers?${params}`)
 
-    console.log(response)
-
     if (!response.status) {
       return rejectWithValue(response.message)
     }

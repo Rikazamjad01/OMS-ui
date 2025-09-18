@@ -11,7 +11,6 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
-import TablePagination from '@mui/material/TablePagination'
 
 import { DatePicker, Space } from 'antd'
 
@@ -20,11 +19,15 @@ const { RangePicker } = DatePicker
 import classnames from 'classnames'
 
 import {
+  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  getFilteredRowModel
+  getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFacetedMinMaxValues,
 } from '@tanstack/react-table'
 import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
 
@@ -54,6 +57,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
+import TablePaginationComponent from '@/components/TablePaginationComponent'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -247,9 +251,8 @@ const OrderListTable = ({
   orderData = [],
   loading = false,
   error = null,
-  page = (initialPage = 1),
-  limit = 25,
-  total = 0,
+  page,
+  limit,
   onPageChange,
   onLimitChange,
   onSearchChange,
@@ -258,6 +261,8 @@ const OrderListTable = ({
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
   const pagination = useSelector(selectPagination)
+
+  console.log(pagination, 'pagination')
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
@@ -777,6 +782,7 @@ const OrderListTable = ({
     data,
     columns,
     state: { rowSelection, globalFilter, columnFilters },
+    enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
     filterFns: {
@@ -786,24 +792,28 @@ const OrderListTable = ({
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
     globalFilterFn: fuzzyFilter,
     manualPagination: true,
-    pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
-    onPaginationChange: updater => {
-      const current = { pageIndex: Math.max(0, page - 1), pageSize: limit || 25 }
-      const next = typeof updater === 'function' ? updater(current) : updater
-      const nextPage = (next.pageIndex ?? current.pageIndex) + 1
-      const nextSize = next.pageSize ?? current.pageSize
 
-      if (nextPage !== page) {
-        onPageChange?.(nextPage)
-      }
+    // pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
+    // onPaginationChange: updater => {
+    //   const current = { pageIndex: Math.max(0, page - 1), pageSize: limit || 25 }
+    //   const next = typeof updater === 'function' ? updater(current) : updater
+    //   const nextPage = (next.pageIndex ?? current.pageIndex) + 1
+    //   const nextSize = next.pageSize ?? current.pageSize
 
-      if (nextSize !== limit) {
-        onLimitChange?.(nextSize)
-      }
-    }
+    //   if (nextPage !== page) {
+    //     onPageChange?.(nextPage)
+    //   }
+
+    //   if (nextSize !== limit) {
+    //     onLimitChange?.(nextSize)
+    //   }
+    // }
   })
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
@@ -1058,6 +1068,7 @@ const OrderListTable = ({
 
       <CardContent className='flex items-center justify-between gap-3'>
         <AmountRangePicker
+          style={{ border: '1px solid #00000'}}
           min={filters.minAmount}
           max={filters.maxAmount}
           onChange={([min, max]) =>
@@ -1192,22 +1203,17 @@ const OrderListTable = ({
         </table>
       </div>
 
-      <TablePagination
-        component='div'
-        count={total} // Use the total prop from parent, not pagination.total
-        page={page - 1} // Use the page prop directly, not activePage
+      <TablePaginationComponent
+
+        // component='div'
+        table={table}
+        count={pagination.total} // Use the total prop from parent, not pagination.total
+        page={pagination?.currentPage - 1} // Use the page prop directly, not activePage
         onPageChange={(_e, newPage) => {
-          const nextPage = newPage + 1
-
-          console.log('Pagination click - newPage:', nextPage)
-          onPageChange?.(nextPage) // This will call parent's setPage
+          onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={limit}
-        onRowsPerPageChange={e => {
-          const newLimit = Number(e.target.value)
-
-          onLimitChange?.(newLimit) // Parent resets page to 1 and updates limit
-        }}
+        rowsPerPage={pagination.itemsPerPage}
+        onRowsPerPageChange={e => onLimitChange(Number(e.target.value))}
         rowsPerPageOptions={[25, 50, 100]}
       />
 

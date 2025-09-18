@@ -141,9 +141,14 @@ export const updateOrdersStatusThunk = createAsyncThunk(
   'orders/updateStatus',
   async ({ orderIds, status }, { rejectWithValue }) => {
     try {
-      const response = await apiRequest('PATCH', `orders/status`, {
-        orderIds,
-        status
+      const response = await apiRequest(`orders/status/${status}`, {
+        method: 'PATCH',
+        data: {
+          id: orderIds || [],
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
 
       if (!response.status) {
