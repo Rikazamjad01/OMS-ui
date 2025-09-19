@@ -115,7 +115,10 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }),
       columnHelper.accessor('weight', {
         header: 'Weight',
-        cell: ({ row }) => <Typography>{`${row.original.weight} grams`}</Typography>
+        cell: ({ row }) =>
+        <Typography>
+          {`${row.original.weight} ${row.original.weight_unit}`}
+        </Typography>
       })
     ],
     []
@@ -249,6 +252,8 @@ const OrderDetailsCard = ({ order }) => {
     return order.line_items.map((lineItem, index) => {
       const product = productMap[lineItem.id] || {}
 
+      console.log(product, 'product')
+
       const transformedItem = {
         id: product.id || lineItem.id || index,
         lineItemId: lineItem.id,
@@ -259,7 +264,8 @@ const OrderDetailsCard = ({ order }) => {
         quantity: lineItem.quantity || 0,
         discountedPrice: Number(order.current_total_discounts) || 0,
         barCode: product.barCode || 'N/A',
-        weight: product.weight || 0,
+        weight: product?.selected_variant?.weight || 0,
+        weight_unit: product?.selected_variant?.weight_unit ?? '',
         image: product.image
       }
 

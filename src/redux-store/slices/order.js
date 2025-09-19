@@ -53,9 +53,6 @@ export const fetchOrders = createAsyncThunk(
 
       const data = response.data || {}
 
-      console.log('Backend pagination response:', data.pagination)
-      console.log('Requested page:', page)
-
       const ordersWithArrays = data.orders.map(order => ({
         ...order,
         comments:
@@ -144,7 +141,7 @@ export const updateOrdersStatusThunk = createAsyncThunk(
       const response = await apiRequest(`orders/status/${status}`, {
         method: 'PATCH',
         data: {
-          id: orderIds || [],
+          id: orderIds || []
         },
         headers: {
           'Content-Type': 'application/json'
@@ -157,7 +154,7 @@ export const updateOrdersStatusThunk = createAsyncThunk(
 
       return {
         orderIds,
-        status,
+        status: response.status,
         message: response.message
       }
     } catch (error) {
@@ -300,16 +297,20 @@ const ordersSlice = createSlice({
         state.error = action.payload
       })
       .addCase(updateOrdersStatusThunk.pending, state => {
-        state.loading = true
+        // state.loading = false
         state.error = null
       })
       .addCase(updateOrdersStatusThunk.fulfilled, (state, action) => {
         state.loading = false
-
-        // Update the orders in state with new status
         const { orderIds, status } = action.payload
 
-        state.orders = state.orders.map(order => (orderIds.includes(order.id) ? { ...order, status: status } : order))
+        state.orders = state.orders.map(order =>
+          orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
+        )
+
+        if (state.selectedOrders && orderIds.map(String).includes(String(state.selectedOrders.id))) {
+          state.selectedOrders = { ...state.selectedOrders, status }
+        }
       })
       .addCase(updateOrdersStatusThunk.rejected, (state, action) => {
         state.loading = false

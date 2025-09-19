@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useParams, useRouter } from 'next/navigation'
 
@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 
-import { selectSelectedProductIds, updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import { fetchOrderById, selectSelectedProductIds, updateOrdersStatusThunk } from '@/redux-store/slices/order'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import { selectSelectedProducts } from '@/redux-store/slices/products'
@@ -35,16 +35,17 @@ export const statusChipColor = {
   returned: { color: 'error' }
 }
 
-const OrderDetailHeader = ({ order, id }) => {
+const OrderDetailHeader = ({ order: initialOrder, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
-  const selectedProducts = useSelector(selectSelectedProducts)
-  const [redirectAfterSnackbar, setRedirectAfterSnackbar] = useState(false)
-
   const dispatch = useDispatch()
+  const { lang: locale } = useParams()
+  const router = useRouter()
+
+  const [order, setOrder] = useState(initialOrder) // 👈 local state copy
 
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
+    message: 'Hello everyonwedfad',
     severity: 'success'
   })
 
@@ -52,36 +53,39 @@ const OrderDetailHeader = ({ order, id }) => {
 
   const canSplitOrder = (() => {
     if (!order.line_items) return false
-    const totalProducts = order.line_items.length
 
-    if (totalProducts === 1) {
-      const item = order.line_items[0]
-
-      return item?.quantity > 1
+    if (order.line_items.length === 1) {
+      return order.line_items[0]?.quantity > 1
     }
 
-    return totalProducts > 1
+    return order.line_items.length > 1
   })()
 
   const handleCancelOrder = async () => {
     try {
-      const result = await dispatch(
+      const response = await dispatch(
         updateOrdersStatusThunk({
           orderIds: [order.id],
           status: 'cancelled'
         })
       ).unwrap()
 
-      console.log('Cancel order result:', result)
+      if(response.status){
 
-      setSnackbar({
-        open: true,
-        message: 'Order cancelled successfully',
-        severity: 'success'
-      })
-      setRedirectAfterSnackbar(true)
+        setOrder(prev => ({ ...prev, orderStatus: 'cancelled' }))
+
+        setSnackbar({
+          open: true,
+          message: 'Order cancelled successfully',
+          severity: 'success'
+        })
+      }
+
+      dispatch(fetchOrderById(id))
+
+      // dispatch(fetchOrders({ page: pagination.page, limit: pagination.limit }))
     } catch (err) {
-      console.error('Cancel failed:', err)
+      // console.error('Cancel failed:', err)
       setSnackbar({
         open: true,
         message: 'Failed to cancel order: ' + (err.message || 'Unknown error'),
@@ -92,11 +96,6 @@ const OrderDetailHeader = ({ order, id }) => {
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }))
-
-    // Redirect after snackbar is closed if the cancellation was successful
-    if (redirectAfterSnackbar) {
-      router.push(`/${locale}/apps/ecommerce/orders/list`)
-    }
   }
 
   return (
@@ -131,10 +130,14 @@ const OrderDetailHeader = ({ order, id }) => {
               : 'Date not available'}
           </Typography>
         </div>
+
         <div className={'flex gap-2'}>
-          <Button color='error' variant='tonal' onClick={handleCancelOrder}>
-            Cancel Order
-          </Button>
+          {/* 👇 Hide Cancel Order button if already cancelled */}
+          {order?.orderStatus !== 'cancelled' && (
+            <Button color='error' variant='tonal' onClick={handleCancelOrder}>
+              Cancel Order
+            </Button>
+          )}
 
           <OpenDialogOnElementClick
             element={Button}
@@ -152,14 +155,13 @@ const OrderDetailHeader = ({ order, id }) => {
                 selectedLineItems: selectedProductIds?.map(id => {
                   const product = order?.line_items?.find(item => item.id === id)
                   const prodName = order?.products?.find(item => item.id === id) || {}
-                  const prodVarientId = order?.line_items?.find(item => item.id === id)?.variant_id
 
                   return {
                     id: product?.id,
                     quantity: product?.quantity,
                     name: prodName?.title,
                     img: prodName?.image?.src,
-                    prodVarientId: prodVarientId
+                    prodVarientId: product?.variant_id
                   }
                 })
               }
@@ -170,10 +172,10 @@ const OrderDetailHeader = ({ order, id }) => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={5000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        sx={{ zIndex: 9999 }} // Add this to ensure it's on top
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ zIndex: 9999 }}
       >
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant='filled' sx={{ width: '100%' }}>
           {snackbar.message}

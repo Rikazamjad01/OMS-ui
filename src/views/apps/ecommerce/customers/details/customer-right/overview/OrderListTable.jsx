@@ -94,10 +94,8 @@ const columnHelper = createColumnHelper()
 
 const OrderListTable = ({ customerData }) => {
 
-  const customerId = customerData?.customer?.id || null
-
-  // Get last order ID from customer data
-  const lastOrderId = customerData?.customer?.last_order_id
+  // const customerId = customerData?.customer?.id || null
+  // const lastOrderId = customerData?.customer?.last_order_id
 
   // States
   const [rowSelection, setRowSelection] = useState({})
@@ -295,8 +293,8 @@ const OrderListTable = ({ customerData }) => {
           )}
         </table>
       </div>
-      <TablePagination
-        component={() => <TablePaginationComponent table={table} />}
+      <TablePaginationComponent
+        table={table}
         count={table.getFilteredRowModel().rows.length}
         rowsPerPage={table.getState().pagination.pageSize}
         page={table.getState().pagination.pageIndex}

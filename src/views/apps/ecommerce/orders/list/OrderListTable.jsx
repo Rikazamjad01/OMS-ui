@@ -262,8 +262,6 @@ const OrderListTable = ({
   const dispatch = useDispatch()
   const pagination = useSelector(selectPagination)
 
-  console.log(pagination, 'pagination')
-
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
@@ -438,7 +436,7 @@ const OrderListTable = ({
     if (!orderId) return
 
     if (!tagPayload) {
-      console.warn('No tag to update, skipping request.')
+      // console.warn('No tag to update, skipping request.')
 
       return
     }
@@ -487,7 +485,8 @@ const OrderListTable = ({
         message: err?.message || 'Failed to update tag.',
         severity: 'error'
       })
-      console.error('Failed to update tag:', err)
+
+      // console.error('Failed to update tag:', err)
     } finally {
       setLoadings(false)
     }
@@ -942,7 +941,7 @@ const OrderListTable = ({
                 dialogProps={{
                   type: 'merge-orders',
                   payload: (() => {
-                    console.log('Merge Payload:', { orderIds: selectedIds })
+                    // console.log('Merge Payload:', { orderIds: selectedIds })
 
                     return { orderIds: selectedIds }
                   })(),
@@ -950,7 +949,8 @@ const OrderListTable = ({
                     const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
 
                     setRowSelection({})
-                    console.log('Merge Orders Success', result)
+
+                    // console.log('Merge Orders Success', result)
                   }
                 }}
               />
@@ -981,7 +981,7 @@ const OrderListTable = ({
               onChange={async e => {
                 const newLimit = Number(e.target.value)
 
-                console.log('newLimit', newLimit)
+                // console.log('newLimit', newLimit)
                 onLimitChange?.(newLimit)
                 await dispatch(fetchOrders({ limit: newLimit, force: true }))
               }}

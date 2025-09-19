@@ -21,6 +21,8 @@ const OrderDetails = ({ id }) => {
   const error = useSelector(selectOrdersError)
   const order = useSelector((state) => state.orders.selectedOrders)
 
+  // console.log(order, 'orders')
+
   useEffect(() => {
     if (id) {
       dispatch(fetchOrderById(id))

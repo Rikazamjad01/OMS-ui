@@ -13,11 +13,9 @@ const OrderList = () => {
   const dispatch = useDispatch()
   const { orders, loading, error, pagination, orderStats } = useSelector(state => state.orders)
 
-  console.log(pagination, 'pagination')
-
   // parent-controlled server params
   const [page, setPage] = useState(1)
-  
+
   // const [limit, setLimit] = useState(25)
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({})
