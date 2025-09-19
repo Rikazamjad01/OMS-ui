@@ -39,12 +39,12 @@ const CustomerDetailHeader = ({ customerData }) => {
         <Typography variant='h4'>{`Customer ID #${customerData?.customer?.id}`}</Typography>
         <Typography>Member since: {joinDate}</Typography>
       </div>
-      <OpenDialogOnElementClick
+      {/* <OpenDialogOnElementClick
         element={Button}
         elementProps={buttonProps('Delete Customer', 'error', 'tonal')}
         dialog={ConfirmationDialog}
         dialogProps={{ type: 'delete-customer' }}
-      />
+      /> */}
     </div>
   )
 }

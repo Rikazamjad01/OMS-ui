@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 import { useSelector } from 'react-redux'
 
 // MUI Imports
@@ -16,7 +18,6 @@ import { getInitials } from '@/utils/getInitials'
 import { findCustomerById } from '@/redux-store/slices/customer'
 
 const CustomerDetails = ({ customerData }) => {
-
   console.log(customerData, 'customerData in CustomerDetails')
 
   // Vars
@@ -45,7 +46,8 @@ const CustomerDetails = ({ customerData }) => {
         <div className='flex flex-col justify-self-center items-center gap-6'>
           <div className='flex flex-col items-center gap-4'>
             <CustomAvatar variant='rounded' alt='Customer Avatar' size={120}>
-              {getInitials(customerName)}
+              {/* {getInitials(customerName)} */}
+              <Image src={'https://res.cloudinary.com/dxxymlo0o/image/upload/v1758289042/default_it2w5u.png'} width={100} height={100} alt='default profile'/>
             </CustomAvatar>
             <div className='flex flex-col items-center text-center'>
               <Typography variant='h5'>{customerName || 'customer name not available'}</Typography>
@@ -145,6 +147,5 @@ const CustomerDetails = ({ customerData }) => {
     </Card>
   )
 }
-
 
 export default CustomerDetails

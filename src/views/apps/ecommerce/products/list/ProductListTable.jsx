@@ -367,7 +367,7 @@ const ProductListTable = () => {
                 dispatch(setItemsPerPage(newSize))
                 dispatch(setCurrentPage(1)) // reset to first page
               }}
-              className='flex-auto is-full sm:is-[70px]'
+              className='flex-auto is-full sm:is-[80px]'
             >
               <MenuItem value='25'>25</MenuItem>
               <MenuItem value='50'>50</MenuItem>
