@@ -325,8 +325,9 @@ const OrderListTable = ({
       }
 
       // Refresh data
-      // dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
-      dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
+      dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
+      
+      // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
       if (selectedIds.length > 0) {
@@ -870,16 +871,16 @@ const OrderListTable = ({
     pakistanCities: []
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className='flex items-center justify-between'>
-          <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
-          <Button variant='contained'>Retry</Button>
-        </CardContent>
-      </Card>
-    )
-  }
+  // if (error) {
+  //   return (
+  //     <Card>
+  //       <CardContent className='flex items-center justify-between'>
+  //         <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
+  //         <Button variant='contained'>Retry</Button>
+  //       </CardContent>
+  //     </Card>
+  //   )
+  // }
 
   return (
     <Card>
