@@ -34,6 +34,10 @@ import Link from '@components/Link'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 import { handleOrder, handleFindOrder, selectOrders, setSelectedProducts } from '@/redux-store/slices/order'
+import EditOrderModal from './EditOrderModal'
+import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
+
+import EditOrderDialog from '@components/dialogs/edit-order-dialog'
 
 // 💰 Price formatter for PKR
 const formatPrice = amount => {
@@ -86,7 +90,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
           <div className='flex items-center gap-3'>
             <img
               src={row.original.image?.src || '/images/placeholder.png'}
-              alt={row.original.title}
+              alt={""}
               height={34}
               className='rounded'
             />
@@ -115,10 +119,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }),
       columnHelper.accessor('weight', {
         header: 'Weight',
-        cell: ({ row }) =>
-        <Typography>
-          {`${row.original.weight} ${row.original.weight_unit}`}
-        </Typography>
+        cell: ({ row }) => <Typography>{`${row.original.weight} ${row.original.weight_unit}`}</Typography>
       })
     ],
     []
@@ -227,6 +228,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
 const OrderDetailsCard = ({ order }) => {
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedProducts, setSelectedProducts] = useState([])
+  const [openEditModal, setOpenEditModal] = useState(false)
+
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
@@ -251,8 +254,6 @@ const OrderDetailsCard = ({ order }) => {
 
     return order.line_items.map((lineItem, index) => {
       const product = productMap[lineItem.id] || {}
-
-      console.log(product, 'product')
 
       const transformedItem = {
         id: product.id || lineItem.id || index,
@@ -285,14 +286,30 @@ const OrderDetailsCard = ({ order }) => {
     return <div>Loading order details...</div>
   }
 
+  const orderProducts = order.products
+
+  console.log(orderProducts, 'orderData in OrderDetailsCard')
+
+  const typographyProps = (children, color, className) => ({
+    children,
+    color,
+    className
+  })
+
   return (
     <Card>
       <CardHeader
         title='Order Details'
         action={
-          <Typography component={Link} href='#' color='primary.main' className='font-medium'>
-            Edit
-          </Typography>
+          <OpenDialogOnElementClick
+            element={Typography}
+            elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
+            dialog={EditOrderDialog}
+            dialogProps={{
+              order,
+              products: orderProducts, // Pass transformed products here
+            }}
+          />
         }
       />
 
@@ -332,6 +349,13 @@ const OrderDetailsCard = ({ order }) => {
           </div>
         </div>
       </CardContent>
+
+      <EditOrderModal
+        open={openEditModal}
+        onClose={() => setOpenEditModal(false)}
+        order={order}
+
+      />
     </Card>
   )
 }

@@ -163,6 +163,38 @@ export const updateOrdersStatusThunk = createAsyncThunk(
   }
 )
 
+export const updateOrderProducts = createAsyncThunk(
+  'orders/updateOrderProducts',
+  async ({ orderId, products }, { rejectWithValue }) => {
+
+    try {
+      const line_items = products.map(p => ({
+        id: p.id,
+        quantity: p.quantity || 1,
+        variant_id: p.variant?.id || p.id 
+      }))
+
+      console.log(line_items, 'line_items')
+
+      const response = await apiRequest('orders', {
+        method: 'PATCH',
+        data: { id: orderId, line_items },
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      return { orderId, updatedOrder: response.data }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 const ordersSlice = createSlice({
   name: 'orders',
   initialState: {
@@ -313,6 +345,30 @@ const ordersSlice = createSlice({
         }
       })
       .addCase(updateOrdersStatusThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(updateOrderProducts.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(updateOrderProducts.fulfilled, (state, action) => {
+        state.loading = false
+        const { orderId, updatedOrder } = action.payload
+
+        // Update the main orders array
+        const index = state.orders.findIndex(o => o.id === orderId)
+
+        if (index !== -1) {
+          state.orders[index] = updatedOrder
+        }
+
+        // Update selectedOrders if open
+        if (state.selectedOrders?.id === orderId) {
+          state.selectedOrders = updatedOrder
+        }
+      })
+      .addCase(updateOrderProducts.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })
