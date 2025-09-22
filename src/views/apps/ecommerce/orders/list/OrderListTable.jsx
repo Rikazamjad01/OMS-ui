@@ -27,7 +27,7 @@ import {
   getFilteredRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  getFacetedMinMaxValues,
+  getFacetedMinMaxValues
 } from '@tanstack/react-table'
 import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
 
@@ -39,7 +39,12 @@ import dayjs from 'dayjs'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
-import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination, updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import {
+  fetchOrders,
+  updateOrderCommentsAndRemarks,
+  selectPagination,
+  updateOrdersStatusThunk
+} from '@/redux-store/slices/order'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -320,7 +325,9 @@ const OrderListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchOrders({ page, limit, force: true }))
+      dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
+      
+      // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
       if (selectedIds.length > 0) {
@@ -337,8 +344,7 @@ const OrderListTable = ({
   }
 
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
-  const handleBulkStatusChange = (newStatus) => updateOrdersStatus(selectedIds, newStatus)
-
+  const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
 
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
@@ -522,7 +528,7 @@ const OrderListTable = ({
             href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
             color='primary.main'
           >
-            #{row.original.orderNumber}
+            #{row.original.orderNumber || '—'}
           </Typography>
         )
       },
@@ -543,7 +549,7 @@ const OrderListTable = ({
           return (
             <Typography component='div'>
               <div>{monthDateYear}</div>
-              <div>{`${dayName}, ${row.original.time}`}</div>
+              <div>{`${dayName}, ${row.original.time || '—'}`}</div>
             </Typography>
           )
         }
@@ -564,7 +570,7 @@ const OrderListTable = ({
               >
                 {row.original.customer || '—'}
               </Typography>
-              <Typography variant='body2'>{row.original.email}</Typography>
+              <Typography variant='body2'>{row.original.email || '—'}</Typography>
             </div>
           </div>
         )
@@ -644,12 +650,46 @@ const OrderListTable = ({
           )
         }
       },
-
-      // column of remarks
       {
         accessorKey: 'remarks',
         header: 'Remarks',
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.remarks}</Typography>
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const remarks = row.original.remarks;
+
+          // normalize remarks (string → array of strings)
+          const remarkList = typeof remarks === 'string'
+            ? remarks
+                .split(',')
+                .map(r => r.trim())
+                .filter(Boolean)
+            : Array.isArray(remarks)
+              ? remarks.filter(Boolean)
+              : [];
+
+          const hasRemarks = remarkList.length > 0;
+
+          return (
+            <div className="flex flex-col gap-1">
+              {/* First row: Remarks */}
+              <div className="flex gap-2 overflow-scroll no-scrollbar cursor-pointer">
+                {hasRemarks ? (
+                  remarkList.map((remark, i) => (
+                    <Chip
+                      key={i}
+                      label={remark}
+                      variant="tonal"
+                      size="small"
+                      color={getTagColor(remark)}
+                    />
+                  ))
+                ) : (
+                  '--'
+                )}
+              </div>
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'Amount',
@@ -657,7 +697,7 @@ const OrderListTable = ({
         filterFn: amountRangeFilterFn,
         cell: ({ row }) => (
           <Typography className='font-medium text-gray-800'>
-            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount)}
+            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
           </Typography>
         )
       },
@@ -665,7 +705,7 @@ const OrderListTable = ({
         accessorKey: 'city',
         header: 'City',
         meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city}</Typography>
+        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
       },
       {
         accessorKey: 'tags',
@@ -796,7 +836,7 @@ const OrderListTable = ({
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
     globalFilterFn: fuzzyFilter,
-    manualPagination: true,
+    manualPagination: true
 
     // pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     // onPaginationChange: updater => {
@@ -831,21 +871,20 @@ const OrderListTable = ({
     pakistanCities: []
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className='flex items-center justify-between'>
-          <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
-          <Button variant='contained'>Retry</Button>
-        </CardContent>
-      </Card>
-    )
-  }
+  // if (error) {
+  //   return (
+  //     <Card>
+  //       <CardContent className='flex items-center justify-between'>
+  //         <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
+  //         <Button variant='contained'>Retry</Button>
+  //       </CardContent>
+  //     </Card>
+  //   )
+  // }
 
   return (
     <Card>
-      <CardContent className='flex flex-wrap justify-between gap-4'>
-        <div className='flex flex-wrap gap-4'>
+      <CardContent className='grid grid-cols-[0.6fr_0.6fr_0.4fr_0.4fr_0.4fr_0.3fr] gap-4'>
           {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
@@ -901,20 +940,19 @@ const OrderListTable = ({
             }}
           /> */}
           {/* <DateRangePicker /> */}
-        </div>
 
-        <div className='flex gap-4 flex-wrap'>
-          <div className='flex gap-4'>
+
+
             {/* Add the Change Status button - only shows when orders are selected */}
             {selectedCount >= 1 && (
               <>
                 <Button
                   color='info'
                   variant='tonal'
-                  startIcon={<i className='bx-edit' />}
                   onClick={event => setStatusMenuAnchor(event.currentTarget)}
+                  size='small'
                 >
-                  Change Status ({selectedCount})
+                  Change Status
                 </Button>
 
                 {/* Status Change Menu */}
@@ -955,7 +993,7 @@ const OrderListTable = ({
                 }}
               />
             ) : (
-              <Button color='secondary' variant='tonal' disabled>
+              <Button color='secondary' variant='tonal' disabled size='small'>
                 Merge orders
               </Button>
             )}
@@ -966,13 +1004,14 @@ const OrderListTable = ({
                 elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
                 dialog={ConfirmationDialog}
                 dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
+
               />
             ) : (
-              <Button color='primary' variant='tonal' disabled>
+              <Button color='primary' variant='tonal' disabled size='small'>
                 Duplicate Order
               </Button>
             )}
-          </div>
+
 
           <div className='flex max-sm:flex-col sm:items-center gap-4'>
             <CustomTextField
@@ -996,10 +1035,10 @@ const OrderListTable = ({
               Export
             </Button>
           </div>
-        </div>
+
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3 '>
+      <CardContent className='grid grid-cols-4 gap-3 '>
         <Autocomplete
           multiple
           fullWidth
@@ -1008,9 +1047,18 @@ const OrderListTable = ({
           value={filters.paymentMethods || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />
@@ -1024,9 +1072,18 @@ const OrderListTable = ({
           value={filters.orderPlatform || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderPlatform: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />
@@ -1040,9 +1097,18 @@ const OrderListTable = ({
           value={filters.orderStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
@@ -1056,9 +1122,18 @@ const OrderListTable = ({
           value={filters.paymentStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />
@@ -1066,9 +1141,9 @@ const OrderListTable = ({
         />
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3'>
+      <CardContent className='grid grid-cols-4 gap-3'>
         <AmountRangePicker
-          style={{ border: '1px solid #00000'}}
+          style={{ border: '1px solid #00000' }}
           min={filters.minAmount}
           max={filters.maxAmount}
           onChange={([min, max]) =>
@@ -1087,9 +1162,18 @@ const OrderListTable = ({
           value={filters.tagsMap || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value || index} {...getTagProps({ index })} variant='outlined' label={option.label} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='Tags' label='Tags' size='medium' />}
         />
@@ -1101,9 +1185,18 @@ const OrderListTable = ({
           value={filters.pakistanCities || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistanCities: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}
         />
@@ -1204,8 +1297,6 @@ const OrderListTable = ({
       </div>
 
       <TablePaginationComponent
-
-        // component='div'
         table={table}
         count={pagination.total} // Use the total prop from parent, not pagination.total
         page={pagination?.currentPage - 1} // Use the page prop directly, not activePage
@@ -1230,11 +1321,7 @@ const OrderListTable = ({
         onClose={() => setAlert({ ...alert, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setAlert({ ...alert, open: false })}
-          severity={alert.severity}
-          variant="filled"
-        >
+        <Alert onClose={() => setAlert({ ...alert, open: false })} severity={alert.severity} variant='filled'>
           {alert.message}
         </Alert>
       </Snackbar>
