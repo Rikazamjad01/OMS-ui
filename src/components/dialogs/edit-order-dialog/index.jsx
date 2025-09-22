@@ -21,7 +21,7 @@ import { Add, Remove } from '@mui/icons-material'
 
 // Redux
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { updateOrderProducts } from '@/redux-store/slices/order'
+import { fetchOrderById, updateOrderProducts } from '@/redux-store/slices/order'
 
 // Component Imports
 import DialogCloseButton from '../DialogCloseButton'
@@ -88,6 +88,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
     dispatch(updateOrderProducts({ orderId: order.id, products }))
       .unwrap()
       .then(() => {
+        dispatch(fetchOrderById(order.id))
         setSnackbar({ open: true, message: 'Order updated successfully!', severity: 'success' })
         setOpen(false)
       })

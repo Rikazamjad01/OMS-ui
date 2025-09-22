@@ -295,33 +295,33 @@ const ordersSlice = createSlice({
         state.error = action.payload
       })
       .addCase(updateOrderCommentsAndRemarks.fulfilled, (state, action) => {
-        state.selectedOrders.comments = action.payload
+        // state.selectedOrders.comments = action.payload
 
-        // const { orderId, comments, remarks, tags } = action.payload
-        // const orderIndex = state.orders.findIndex(order => order.id === orderId)
+        const { orderId, comments, remarks, tags } = action.payload
+        const orderIndex = state.orders.findIndex(order => order.id === orderId)
 
-        // if (orderIndex !== -1) {
-        //   const existingOrder = state.orders[orderIndex]
+        if (orderIndex !== -1) {
+          const existingOrder = state.orders[orderIndex]
 
-        //   const updatedOrder = {
-        //     ...existingOrder,
-        //     comments: [
-        //       ...(existingOrder.comments || []),
-        //       ...(typeof comments === 'string' ? comments.split('\n').filter(c => c.trim()) : comments || [])
-        //     ],
-        //     remarks: [
-        //       ...(existingOrder.remarks || []),
-        //       ...(typeof remarks === 'string' ? remarks.split('\n').filter(r => r.trim()) : remarks || [])
-        //     ],
-        //     tags: Array.isArray(tags) ? tags.join(', ') : tags || existingOrder.tags || ''
-        //   }
+          const updatedOrder = {
+            ...existingOrder,
+            comments: [
+              ...(existingOrder.comments || []),
+              ...(typeof comments === 'string' ? comments.split('\n').filter(c => c.trim()) : comments || [])
+            ],
+            remarks: [
+              ...(existingOrder.remarks || []),
+              ...(typeof remarks === 'string' ? remarks.split('\n').filter(r => r.trim()) : remarks || [])
+            ],
+            tags: Array.isArray(tags) ? tags.join(', ') : tags || existingOrder.tags || ''
+          }
 
-        //   state.orders[orderIndex] = updatedOrder
+          state.orders[orderIndex] = updatedOrder
 
-        //   if (state.selectedOrders?.id === orderId) {
-        //     state.selectedOrders = updatedOrder
-        //   }
-        // }
+          if (state.selectedOrders?.id === orderId) {
+            state.selectedOrders = updatedOrder
+          }
+        }
       })
       .addCase(fetchOrderById.pending, state => {
         state.loading = true

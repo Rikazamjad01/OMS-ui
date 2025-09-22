@@ -21,6 +21,8 @@ const OrderDetails = ({ id }) => {
   const error = useSelector(selectOrdersError)
   const order = useSelector((state) => state.orders.selectedOrders)
 
+  console.log(order, 'order details')
+
   // console.log(order, 'orders')
 
   useEffect(() => {
