@@ -105,13 +105,14 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
       }
 
       // Return the updated order data
-      return {
-        orderId,
-        comments: response.data?.comments || '',
-        remarks: response.data?.remarks || '',
-        tags: response.data?.tags || '',
-        status: response?.status
-      }
+      // return {
+      //   orderId,
+      //   comments: response.data?.comments || '',
+      //   remarks: response.data?.remarks || '',
+      //   tags: response.data?.tags || '',
+      //   status: response?.status
+      // }
+      return response.data?.comments || ''
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -166,12 +167,11 @@ export const updateOrdersStatusThunk = createAsyncThunk(
 export const updateOrderProducts = createAsyncThunk(
   'orders/updateOrderProducts',
   async ({ orderId, products }, { rejectWithValue }) => {
-
     try {
       const line_items = products.map(p => ({
         id: p.id,
         quantity: p.quantity || 1,
-        variant_id: p.variant?.id || p.id 
+        variant_id: p.variant?.id || p.id
       }))
 
       console.log(line_items, 'line_items')
@@ -295,26 +295,33 @@ const ordersSlice = createSlice({
         state.error = action.payload
       })
       .addCase(updateOrderCommentsAndRemarks.fulfilled, (state, action) => {
-        const { orderId, comments, remarks, tags } = action.payload
-        const orderIndex = state.orders.findIndex(order => order.id === orderId)
+        state.selectedOrders.comments = action.payload
 
-        if (orderIndex !== -1) {
-          // Update the order with new data
-          const updatedOrder = {
-            ...state.orders[orderIndex],
-            comments: typeof comments === 'string' ? comments.split('\n') : comments,
-            remarks: typeof remarks === 'string' ? remarks.split('\n') : remarks,
-            tags: Array.isArray(tags)
-              ? tags.join(', ') // convert array → "urgent, paid"
-              : tags || order?.tags || ''
-          }
+        // const { orderId, comments, remarks, tags } = action.payload
+        // const orderIndex = state.orders.findIndex(order => order.id === orderId)
 
-          state.orders[orderIndex] = updatedOrder
+        // if (orderIndex !== -1) {
+        //   const existingOrder = state.orders[orderIndex]
 
-          if (state.selectedOrders?.id === orderId) {
-            state.selectedOrders = updatedOrder
-          }
-        }
+        //   const updatedOrder = {
+        //     ...existingOrder,
+        //     comments: [
+        //       ...(existingOrder.comments || []),
+        //       ...(typeof comments === 'string' ? comments.split('\n').filter(c => c.trim()) : comments || [])
+        //     ],
+        //     remarks: [
+        //       ...(existingOrder.remarks || []),
+        //       ...(typeof remarks === 'string' ? remarks.split('\n').filter(r => r.trim()) : remarks || [])
+        //     ],
+        //     tags: Array.isArray(tags) ? tags.join(', ') : tags || existingOrder.tags || ''
+        //   }
+
+        //   state.orders[orderIndex] = updatedOrder
+
+        //   if (state.selectedOrders?.id === orderId) {
+        //     state.selectedOrders = updatedOrder
+        //   }
+        // }
       })
       .addCase(fetchOrderById.pending, state => {
         state.loading = true

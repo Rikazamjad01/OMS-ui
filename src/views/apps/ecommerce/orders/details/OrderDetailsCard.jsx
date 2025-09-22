@@ -64,6 +64,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const [globalFilter, setGlobalFilter] = useState('')
   const dispatch = useDispatch()
 
+  console.log(data, 'data in OrderTable')
+
   const columns = useMemo(
     () => [
       {
@@ -230,6 +232,8 @@ const OrderDetailsCard = ({ order }) => {
   const [selectedProducts, setSelectedProducts] = useState([])
   const [openEditModal, setOpenEditModal] = useState(false)
 
+  console.log(order, 'order in OrderDetailsCard')
+
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
@@ -303,7 +307,7 @@ const OrderDetailsCard = ({ order }) => {
         action={
           <OpenDialogOnElementClick
             element={Typography}
-            elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
+            elementProps={typographyProps('Upsell & Edit', 'primary', 'cursor-pointer font-medium')}
             dialog={EditOrderDialog}
             dialogProps={{
               order,
