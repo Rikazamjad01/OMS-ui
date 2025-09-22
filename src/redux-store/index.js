@@ -9,7 +9,7 @@ import emailReducer from '@/redux-store/slices/email'
 import ordersReducer from '@/redux-store/slices/order'
 import customerReducer from '@/redux-store/slices/customer'
 import productsReducer from '@/redux-store/slices/products'
-
+import bookingReducer from '@/redux-store/slices/bookingSlice'
 
 export const store = configureStore({
   reducer: {
@@ -19,7 +19,8 @@ export const store = configureStore({
     emailReducer,
     orders: ordersReducer,
     customers: customerReducer,
-    products: productsReducer
+    products: productsReducer,
+    booking: bookingReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })
