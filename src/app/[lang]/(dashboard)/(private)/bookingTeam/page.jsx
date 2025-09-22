@@ -1,8 +1,10 @@
+import BookingOrder from '@/components/BookingOrder'
+
 const bookedOrdersList = () => {
   return (
-      <>
-        <h1>Booked Order List</h1>
-      </>
+    <>
+      <BookingOrder />
+    </>
   )
 }
 
