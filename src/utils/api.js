@@ -1,4 +1,5 @@
 import axios from 'axios'
+import Cookies from 'js-cookie'
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
@@ -10,32 +11,97 @@ const api = axios.create({
 })
 
 // Generic GET with optional params
-export const getRequest = async (endpoint, params = {}) => {
-  try {
-    const response = await axios.get(`${baseUrl}/${endpoint}`, { params })
 
-    return response.data
+const getHeaders = () => {
+  const token = Cookies.get('token')
+  // console.log("Token from cookies:", token);
+  const headers = {
+    authorization: ''
+  }
+  if (token) {
+    headers.authorization = `Bearer ${token}`
+  }
+  return headers
+}
+
+const handleError = error => {
+  console.log(error, 'error..........')
+  // Fix: error is unknown, so we need to safely check status
+  if (typeof error === 'object' && error !== null && 'status' in error && error.status === 401) {
+    Cookies.remove('token')
+    Cookies.remove('username')
+    Cookies.remove('role')
+    Cookies.remove('email')
+    Cookies.remove('user')
+  }
+  if (axios.isAxiosError(error)) {
+    const message =
+      error.response?.data?.errors?.[0] || error.response?.data?.error || error.message || 'Something went wrong.'
+
+    console.error('Axios Error:', message, error.response?.data)
+    throw new Error(message) // Still throw for catching
+  } else {
+    console.error('Unexpected Error:', error)
+    throw new Error('Unexpected error occurred.')
+  }
+}
+
+export const getRequest = async endPoint => {
+  try {
+    const headers = getHeaders()
+    const response = await axios.get(baseUrl + endPoint, { headers })
+    if (response.status === 401) {
+      Cookies.remove('token')
+      Cookies.remove('username')
+      Cookies.remove('role')
+      Cookies.remove('email')
+      Cookies.remove('user')
+    }
+    if (response.status >= 200 && response.status < 300) {
+      // console.log(response.data);
+      return response.data
+    }
+
+    throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
   } catch (error) {
-    console.error(`Failed to GET ${endpoint}:`, error)
+    handleError(error)
+
     throw error
   }
 }
 
-// Generic POST
-export const postRequest = async (endpoint, body = {}) => {
-  console.log(body, 'body in postRequest')
-
+export const postRequest = async (endPoint, data, method = 'post') => {
   try {
-    const response = await api.post(endpoint, body)
+    let response
+    const headers = getHeaders()
+    console.log(data, 'headers in postRequest')
+    // Check if data is FormData and set appropriate headers
+    if (data instanceof FormData) {
+      // Don't set Content-Type for FormData, let the browser set it with boundary
+      delete headers['Content-Type']
+    }
 
-    return response.data
+    if (method === 'delete') {
+      response = await axios.delete(`${baseUrl}${endPoint}`, {
+        headers: headers,
+        data: data
+      })
+    } else {
+      response = await axios[method](`${baseUrl}${endPoint}`, data, {
+        headers: headers
+      })
+    }
+
+    if (response.status >= 200 && response.status < 300) {
+      console.log('post request whole response.', response)
+      return response.data
+    } else {
+      console.log(response, 'response in postRequest')
+      throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
+    }
   } catch (error) {
-    const apiMessage = error?.response?.data?.message || error.message || 'Unknown error'
-
-    console.error(`Failed to POST ${endpoint}:`, apiMessage)
-
-    // throw a clean string instead of whole error object
-    throw new Error(apiMessage)
+    handleError(error)
+    throw error
   }
 }
 
@@ -100,7 +166,7 @@ export const apiRequest = async (url, options = {}) => {
     config.body = JSON.stringify(data)
   }
 
-  const response = await fetch(`${baseUrl}/${url}`, config)
+  const response = await fetch(`${baseUrl}${url}`, config)
 
   return response.json()
 }
