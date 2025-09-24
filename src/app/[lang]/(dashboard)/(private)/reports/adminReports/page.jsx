@@ -26,6 +26,8 @@ import {
 import { DatePicker, Space } from 'antd'
 import dayjs from 'dayjs'
 
+import DownloadDialog from '../downloadDialogue/page'
+
 const { RangePicker } = DatePicker
 
 const reportTabs = [
@@ -42,6 +44,7 @@ export default function AdminReportsPage() {
   const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({ search: '' })
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
 
   useEffect(() => {
     if (!selectedTab) return
@@ -79,27 +82,27 @@ export default function AdminReportsPage() {
           {
             accessorKey: 'total',
             header: 'Total',
-            cell: ({ getValue }) => <Chip label={getValue()} color='success' size='small' />
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='primary' size='small' />
           },
           {
             accessorKey: 'confirmed',
             header: 'Confirmed',
-            cell: ({ getValue }) => <Chip label={getValue()} color='success' size='small' />
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='success' size='small' />
           },
           {
             accessorKey: 'assigned',
             header: 'Assigned',
-            cell: ({ getValue }) => <Chip label={getValue()} color='info' size='small' />
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='info' size='small' />
           },
           {
             accessorKey: 'noPick',
             header: 'No Pick',
-            cell: ({ getValue }) => <Chip label={getValue()} color='warning' size='small' />
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='warning' size='small' />
           },
           {
             accessorKey: 'cancelled',
             header: 'Cancelled',
-            cell: ({ getValue }) => <Chip label={getValue()} color='error' size='small' />
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='error' size='small' />
           },
           {
             accessorKey: 'progress',
@@ -327,6 +330,30 @@ export default function AdminReportsPage() {
           </Typography>
         )}
       </Box>
+      {selectedTab ? (
+        <div className='p-4 flex justify-end'>
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => setDownloadDialogOpen(true)} // <-- open modal
+          >
+            Download Report
+          </Button>
+        </div>
+      ) : null}
+
+      <DownloadDialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        onConfirm={format => {
+          console.log('User selected format:', format)
+
+          // 🔽 Here you implement actual export logic:
+          // - CSV: convert JSON to CSV
+          // - PDF: use jsPDF or pdfmake
+          // - Excel: use SheetJS (xlsx)
+        }}
+      />
     </Card>
   )
 }

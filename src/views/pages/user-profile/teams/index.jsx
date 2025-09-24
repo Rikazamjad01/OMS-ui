@@ -14,6 +14,8 @@ import OptionMenu from '@core/components/option-menu'
 import Link from '@components/Link'
 
 const Teams = ({ data }) => {
+  console.log(data, 'data in teams')
+  
   return (
     <Grid container spacing={6}>
       {data &&

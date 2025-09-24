@@ -107,17 +107,22 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         }
       } else if (isDownloadLoadSheet) {
         onSuccess?.(payload) // Call site can trigger the actual download
+
         return
       } else if (isCancelAwb) {
         onSuccess?.(payload) // Let caller dispatch cancel and handle UI
+
         return
       } else if (isGenerateAwb) {
         const ids = payload?.orderIds ?? []
+
         if (ids.length === 0) throw new Error('Please select at least 1 order.')
         const result = await dispatch(generateAirwayBill({ orderIds: ids })).unwrap()
         const successes = result?.successes ?? result?.data?.successes ?? []
         const failures = result?.failures ?? result?.data?.failures ?? []
+
         setAwbResult({ successes, failures })
+
         if ((failures?.length || 0) > 0) {
           setUserInput(false)
           setResultTitle('Some AWBs Failed')
@@ -131,6 +136,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           setResultTitle('AWB Generated')
           setResultSubtitle(`${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}.`)
         }
+
         // Refresh bookings list
         dispatch(fetchBookingOrder({ page: 1, limit: 25, force: true }))
       }

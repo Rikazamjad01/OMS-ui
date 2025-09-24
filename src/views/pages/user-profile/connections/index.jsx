@@ -14,6 +14,8 @@ import CustomIconButton from '@core/components/mui/IconButton'
 
 const Connections = ({ data }) => {
 
+  console.log(data, 'data in connections')
+
   if (!Array.isArray(data)) {
     data = [data]
   }
