@@ -29,7 +29,8 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
+import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem } from '@mui/material'
+import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -40,19 +41,21 @@ import dayjs from 'dayjs'
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
 import {
+  cancelAwb,
+  courierAssignment,
+  downloadLoadSheet,
   fetchBookingOrder,
+  fetchBookingOrders,
   // updateOrderCommentsAndRemarks,
-  selectPagination
+  selectBookingOrdersPagination
   // updateOrdersStatusThunk
 } from '@/redux-store/slices/bookingSlice'
-// import { selectBookingOrdersPagination } from '@/redux-store/slices/booking'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
 import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
-import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
-import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
+import EditCourierInfo from '@components/dialogs/edit-courier-info'
 // import FilterModal from '../filterModal/page'
 
 // Utils
@@ -64,7 +67,8 @@ import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
-import { selectBookingOrdersPagination } from '@/redux-store/slices/bookingSlice'
+import { postRequest } from '@/utils/api'
+import ConfirmationDialog from '../dialogs/confirmation-dialog'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -74,10 +78,19 @@ export const paymentStatus = {
   failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
 }
 
-export const orderPlatform = {
-  shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
-  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' }
+// export const orderPlatform = {
+//   shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
+//   whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
+//   split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' }
+// }
+
+export const courierPlatforms = {
+  none: { text: 'None', color: 'default', colorClassName: 'text-default' },
+  leopard: { text: 'Leopards', color: 'success', colorClassName: 'text-success' },
+  daewoo: { text: 'Daewoo', color: 'secondary', colorClassName: 'text-secondary' },
+  postEx: { text: 'PostEx', color: 'warning', colorClassName: 'text-warning' },
+  mp: { text: 'M&P', color: 'error', colorClassName: 'text-error' },
+  tcs: { text: 'TCS', color: 'primary', colorClassName: 'text-primary' }
 }
 
 export const statusChipColor = {
@@ -182,8 +195,8 @@ const mapFiltersToApiFormat = localFilters => {
   }
 
   // Platform filters
-  if (localFilters.orderPlatform?.length > 0) {
-    apiFilters.platform = localFilters.orderPlatform[0].value // or join them
+  if (localFilters.courierPlatforms?.length > 0) {
+    apiFilters.courierPlatforms = localFilters.courierPlatforms.map(item => item.value) // or join them
   }
 
   if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
@@ -209,7 +222,7 @@ export const paymentMethodsMap = {
 export const normalizePaymentMethod = (names = []) => {
   const label = (names[0] || '').toLowerCase()
 
-  if (label.includes('cod') || label.includes('cash on delivery')) return 'cod'
+  if (label.includes('cod') || label.includes('cash on delivery (cod)')) return 'cod'
   if (label.includes('paypal')) return 'paypal'
   if (label.includes('mastercard') || label.includes('visa') || label.includes('card')) return 'card'
   if (label.includes('wallet')) return 'wallet'
@@ -260,6 +273,7 @@ const BookingListTable = ({
   error = null,
   page,
   limit,
+  total,
   onPageChange,
   onLimitChange,
   onSearchChange,
@@ -270,8 +284,7 @@ const BookingListTable = ({
   const pagination = useSelector(selectBookingOrdersPagination)
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
-  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
-  const statusMenuOpen = Boolean(statusMenuAnchor)
+  const [editCourierData, setEditCourierData] = useState({ open: false, courier: null, remarks: '' })
 
   const [tagsMap, setTagsMap] = useState({})
 
@@ -301,7 +314,7 @@ const BookingListTable = ({
       const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds]
 
       const result = await dispatch(
-        updateOrdersStatusThunk({
+        updateBookingOrdersStatusThunk({
           orderIds: idsArray,
           status: newStatus
         })
@@ -327,7 +340,9 @@ const BookingListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchBookingOrder({ page, limit, force: true }))
+      dispatch(fetchBookingOrder({ page: pagination.currentPage, limit, force: true }))
+
+      // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
       if (selectedIds.length > 0) {
@@ -376,7 +391,12 @@ const BookingListTable = ({
         : order.payment_gateway_names
           ? [order.payment_gateway_names]
           : []
-
+      let shortFormNames = names.map(name => {
+        if (name === 'Cash on Delivery (COD)') {
+          return 'cod'
+        }
+        return name
+      })
       const parsedTags =
         typeof order.tags === 'string'
           ? order.tags
@@ -398,9 +418,11 @@ const BookingListTable = ({
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.courier?.name || 'none', // note: lowercase 'platform'
         status: order.orderStatus,
-        method: normalizePaymentMethod(names),
+        awb: order.courier?.awbLink || '',
+        method: normalizePaymentMethod(shortFormNames),
         remarks: order.remarks,
         methodLabel: names[0] || 'Unknown',
+        trackNumber: order.courier?.trackNumber || '',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
         tags: parsedTags
@@ -528,7 +550,7 @@ const BookingListTable = ({
             href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
             color='primary.main'
           >
-            #{row.original.orderNumber}
+            #{row.original.orderNumber || '—'}
           </Typography>
         )
       },
@@ -549,7 +571,7 @@ const BookingListTable = ({
           return (
             <Typography component='div'>
               <div>{monthDateYear}</div>
-              <div>{`${dayName}, ${row.original.time}`}</div>
+              <div>{`${dayName}, ${row.original.time || '—'}`}</div>
             </Typography>
           )
         }
@@ -570,7 +592,7 @@ const BookingListTable = ({
               >
                 {row.original.customer || '—'}
               </Typography>
-              <Typography variant='body2'>{row.original.email}</Typography>
+              <Typography variant='body2'>{row.original.email || '—'}</Typography>
             </div>
           </div>
         )
@@ -581,7 +603,7 @@ const BookingListTable = ({
         meta: { width: '200px' },
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
-            <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} />
+            {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
               color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium'
@@ -592,10 +614,10 @@ const BookingListTable = ({
         )
       },
       {
-        accessorKey: 'platform', // fixed: lowercase
+        accessorKey: 'courier', // fixed: lowercase
         header: 'Courier',
         cell: ({ row }) => {
-          const platformInfo = orderPlatform[row.original.platform] ?? {
+          const platformInfo = courierPlatforms[row.original.platform] ?? {
             text: row.original.platform || 'Unknown',
             color: 'default',
             colorClassName: 'text-secondary'
@@ -603,12 +625,12 @@ const BookingListTable = ({
 
           return (
             <div className='flex items-center gap-1'>
-              <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} />
+              {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-                color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
+                color={`${courierPlatforms[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
-                {orderPlatform[row.original.platform]?.text || row.original.platform || 'Unknown'}
+                {courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown'}
               </Typography>
             </div>
           )
@@ -638,40 +660,51 @@ const BookingListTable = ({
                     ? 'bx-wallet'
                     : 'bx-purchase-tag-alt'
 
-          const rightText = m === 'card' ? row.original.methodNumber || label : label
+          // const rightText = m === 'card' ? row.original.methodNumber || label : label
 
           return (
             <div className='flex items-center gap-2'>
               <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
                 <i className={`${iconClass} text-[18px]`} />
               </div>
-              <Typography className='font-medium'>{rightText}</Typography>
+              <Typography className='font-medium'>{m.toUpperCase()}</Typography>
             </div>
           )
         }
       },
-
-      // column of remarks
       {
         accessorKey: 'remarks',
         header: 'Remarks',
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.remarks}</Typography>
-      },
-      {
-        accessorKey: 'Amount',
-        header: 'Amount',
-        filterFn: amountRangeFilterFn,
-        cell: ({ row }) => (
-          <Typography className='font-medium text-gray-800'>
-            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount)}
-          </Typography>
-        )
-      },
-      {
-        accessorKey: 'city',
-        header: 'City',
-        meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city}</Typography>
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const remarks = row.original.remarks
+
+          // normalize remarks (string → array of strings)
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
+
+          const hasRemarks = remarkList.length > 0
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: Remarks */}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                    ))
+                  : '--'}
+              </div>
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'tags',
@@ -721,6 +754,70 @@ const BookingListTable = ({
           )
         }
       },
+
+      {
+        accessorKey: 'city',
+        header: 'City',
+        meta: { width: '180px' },
+        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
+      },
+      {
+        accessorKey: 'Amount',
+        header: 'Amount',
+        filterFn: amountRangeFilterFn,
+        cell: ({ row }) => (
+          <Typography className='font-medium text-gray-800'>
+            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
+          </Typography>
+        )
+      },
+      {
+        accessorKey: 'awb',
+        header: 'Airway Bill',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          if (row.original.awb) {
+            return (
+              <div className='flex flex-col gap-1'>
+                <OpenDialogOnElementClick
+                  element={Chip}
+                  elementProps={{ label: 'Cancel', variant: 'outlined', size: 'small', className: 'cursor-pointer' }}
+                  dialog={ConfirmationDialog}
+                  dialogProps={{
+                    type: 'cancel-awb',
+                    payload: { trackNumbers: [row.original.trackNumber] },
+                    onSuccess: async ({ trackNumbers }) => {
+                      try {
+                        const res = await dispatch(cancelAwb({ trackNumber: trackNumbers })).unwrap()
+                        setAlert({ open: true, message: res?.message || 'AWB cancelled', severity: 'success' })
+                        await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                      } catch (e) {
+                        setAlert({ open: true, message: e?.message || 'Failed to cancel AWB', severity: 'error' })
+                      }
+                    }
+                  }}
+                />
+                <Chip
+                  label='View'
+                  variant='outlined'
+                  size='small'
+                  onClick={() => window.open(row.original.awb, '_blank')}
+                />
+              </div>
+            )
+          }
+          return (
+            <div className='flex flex-col gap-1'>
+              <OpenDialogOnElementClick
+                element={Chip}
+                elementProps={{ label: 'Create', variant: 'outlined', size: 'small', className: 'cursor-pointer' }}
+                dialog={ConfirmationDialog}
+                dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: [row.original.id] } }}
+              />
+            </div>
+          )
+        }
+      },
       {
         id: 'action',
         header: 'Action',
@@ -748,7 +845,7 @@ const BookingListTable = ({
   const [filters, setFilters] = useState({
     paymentMethods: [],
     paymentStatus: [],
-    orderPlatform: [],
+    courierPlatforms: [],
     orderStatus: [],
     city: [],
     tags: [],
@@ -763,9 +860,9 @@ const BookingListTable = ({
     label: paymentMethodsMap[key].text
   }))
 
-  const orderPlatformArray = Object.keys(orderPlatform).map(key => ({
+  const courierPlatformsArray = Object.keys(courierPlatforms).map(key => ({
     value: key,
-    label: orderPlatform[key].text
+    label: courierPlatforms[key].text
   }))
 
   const paymentStatusArray = Object.keys(paymentStatus).map(key => ({
@@ -830,33 +927,32 @@ const BookingListTable = ({
     minAmount: '',
     maxAmount: '',
     paymentMethods: [],
-    orderPlatform: [],
+    courierPlatforms: [],
     statusChipColor: [],
     paymentStatus: [],
     tagsMap: [],
     pakistanCities: []
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className='flex items-center justify-between'>
-          <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
-          <Button variant='contained'>Retry</Button>
-        </CardContent>
-      </Card>
-    )
-  }
-
+  // if (error) {
+  //   return (
+  //     <Card>
+  //       <CardContent className='flex items-center justify-between'>
+  //         <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
+  //         <Button variant='contained'>Retry</Button>
+  //       </CardContent>
+  //     </Card>
+  //   )
+  // }
+  console.log('selectedIds', rowSelection)
   return (
     <Card>
-      <CardContent className='flex flex-wrap justify-between gap-4'>
-        <div className='flex flex-wrap gap-4'>
-          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+      <CardContent className='grid grid-cols-[0.6fr_0.6fr_0.4fr_0.4fr_0.4fr_0.3fr] gap-4'>
+        {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
-          {/* 
-          <RangePicker
+
+        {/* <RangePicker
             status='success'
             value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
             onChange={dates => {
@@ -876,20 +972,20 @@ const BookingListTable = ({
             }}
           /> */}
 
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={val => {
-              setGlobalFilter(String(val))
-              onSearchChange?.(val) // Add this line
-            }}
-            onEnter={val => {
-              setGlobalFilter(val)
-              onSearchChange?.(val)
-            }}
-            placeholder='Search Order'
-          />
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onChange={val => {
+            setGlobalFilter(String(val))
+            onSearchChange?.(val) // Add this line
+          }}
+          onEnter={val => {
+            setGlobalFilter(val)
+            onSearchChange?.(val)
+          }}
+          placeholder='Search Order'
+        />
 
-          {/* <FilterModal
+        {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -906,106 +1002,158 @@ const BookingListTable = ({
               setOpenFilter(false)
             }}
           /> */}
-          {/* <DateRangePicker /> */}
-        </div>
+        {/* <DateRangePicker /> */}
 
-        <div className='flex gap-4 flex-wrap'>
-          <div className='flex gap-4'>
-            {/* Add the Change Status button - only shows when orders are selected */}
-            {selectedCount >= 1 && (
-              <>
-                <Button
-                  color='info'
-                  variant='tonal'
-                  startIcon={<i className='bx-edit' />}
-                  onClick={event => setStatusMenuAnchor(event.currentTarget)}
-                >
-                  Change Status ({selectedCount})
-                </Button>
+        {/* Add the Change Status button - only shows when orders are selected */}
+        {selectedCount >= 1 && (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
+            dialog={EditCourierInfo}
+            dialogProps={{
+              data: (() => {
+                const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+                const inferCourierKey = name => {
+                  if (!name) return 'none'
+                  const n = String(name).toLowerCase()
+                  if (n.includes('leopard')) return 'leopard'
+                  if (n.includes('daewoo')) return 'daewoo'
+                  if (n.includes('post')) return 'postEx'
+                  if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                  if (n.includes('tcs')) return 'tcs'
+                  return 'none'
+                }
+                const defaultCourier = inferCourierKey(firstSelected?.platform)
 
-                {/* Status Change Menu */}
-                <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
-                  {orderStatusArray.map(status => (
-                    <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
-                      <Chip
-                        label={status.label}
-                        color={statusChipColor[status.value].color}
-                        variant='tonal'
-                        size='small'
-                      />
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
-            )}
-
-            {selectedCount >= 2 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{
-                  type: 'merge-orders',
-                  payload: (() => {
-                    // console.log('Merge Payload:', { orderIds: selectedIds })
-
-                    return { orderIds: selectedIds }
-                  })(),
-                  onSuccess: async () => {
-                    const result = await dispatch(fetchBookingOrder({ page: 1, limit, force: true }))
-
-                    setRowSelection({})
-
-                    // console.log('Merge Orders Success', result)
+                return {
+                  orderIds: selectedIds,
+                  courier: defaultCourier,
+                  reason: ''
+                }
+              })(),
+              onSubmit: async (payload, controls) => {
+                try {
+                  const courierApiMap = {
+                    none: 'None',
+                    leopard: 'Leopard',
+                    daewoo: 'Daewoo',
+                    postEx: 'PostEx',
+                    mp: 'M&P',
+                    tcs: 'TCS'
                   }
-                }}
-              />
-            ) : (
-              <Button color='secondary' variant='tonal' disabled>
-                Merge orders
-              </Button>
-            )}
+                  const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                  const body = {
+                    orderId: freshSelectedIds.map(id => String(id)),
+                    courier: courierApiMap[payload.courier] || payload.courier,
+                    reason: payload.reason
+                  }
+                  const res = await dispatch(courierAssignment(body)).unwrap()
+                  setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                  controls?.close()
+                  controls?.reset()
+                  setRowSelection({})
+                  await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                } catch (err) {
+                  setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                } finally {
+                  controls?.done?.()
+                }
+              }
+            }}
+          />
+        )}
 
-            {selectedCount >= 1 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
-              />
-            ) : (
-              <Button color='primary' variant='tonal' disabled>
-                Duplicate Order
-              </Button>
-            )}
-          </div>
+        {selectedCount >= 1 && (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
+            dialog={ConfirmationDialog}
+            dialogProps={{
+              type: 'download-load-sheet',
+              payload: { orderIds: selectedIds },
+              onSuccess: async ({ orderIds }) => {
+                try {
+                  const res = await dispatch(downloadLoadSheet({ orderIds })).unwrap()
+                  const data = res?.data || res
+                  const base64 = data?.base64
+                  const filename = data?.filename || 'loadsheet.pdf'
+                  const mimeType = data?.mimeType || 'application/pdf'
 
-          <div className='flex max-sm:flex-col sm:items-center gap-4'>
-            <CustomTextField
-              select
-              value={limit}
-              onChange={async e => {
-                const newLimit = Number(e.target.value)
+                  if (base64) {
+                    const link = document.createElement('a')
+                    link.href = `data:${mimeType};base64,${base64}`
+                    link.download = filename
+                    document.body.appendChild(link)
+                    link.click()
+                    link.remove()
+                  }
+                } catch (e) {
+                  console.error('Failed to download load sheet', e)
+                }
+              }
+            }}
+          />
+        )}
+        {/* {selectedCount >= 2 ? (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
+            dialog={ConfirmationDialog}
+            dialogProps={{
+              type: 'merge-orders',
+              payload: (() => {
+                // console.log('Merge Payload:', { orderIds: selectedIds })
 
-                // console.log('newLimit', newLimit)
-                onLimitChange?.(newLimit)
-                await dispatch(fetchBookingOrder({ limit: newLimit, force: true }))
-              }}
-              className='max-sm:is-full sm:is-[80px]'
-            >
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-              <MenuItem value={100}>100</MenuItem>
-            </CustomTextField>
+                return { orderIds: selectedIds }
+              })(),
+              onSuccess: async () => {
+                const result = await dispatch(fetchBookingOrder({ page: 1, limit, force: true }))
 
-            <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
-              Export
-            </Button>
-          </div>
+                setRowSelection({})
+
+                // console.log('Merge Orders Success', result)
+              }
+            }}
+          />
+        ) : (
+          <Button color='secondary' variant='tonal' disabled size='small'>
+            Merge orders
+          </Button>
+        )} */}
+
+        {selectedCount >= 1 && (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
+            dialog={ConfirmationDialog}
+            dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
+          />
+        )}
+
+        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+          <CustomTextField
+            select
+            value={limit}
+            onChange={async e => {
+              const newLimit = Number(e.target.value)
+
+              // console.log('newLimit', newLimit)
+              onLimitChange?.(newLimit)
+            }}
+            className='max-sm:is-full sm:is-[80px]'
+          >
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+          </CustomTextField>
+
+          <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
+            Export
+          </Button>
         </div>
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3 '>
+      <CardContent className='grid grid-cols-4 gap-3 '>
         <Autocomplete
           multiple
           fullWidth
@@ -1014,9 +1162,18 @@ const BookingListTable = ({
           value={filters.paymentMethods || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />
@@ -1025,17 +1182,26 @@ const BookingListTable = ({
         <Autocomplete
           multiple
           fullWidth
-          options={orderPlatformArray}
+          options={courierPlatformsArray}
           getOptionLabel={option => option.label}
-          value={filters.orderPlatform || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderPlatform: newValue }))}
+          value={filters.courierPlatforms || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, courierPlatforms: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
-            <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />
+            <TextField {...params} fullWidth placeholder='Courier' label='Courier' size='medium' />
           )}
         />
         <Autocomplete
@@ -1046,9 +1212,18 @@ const BookingListTable = ({
           value={filters.orderStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
@@ -1062,9 +1237,18 @@ const BookingListTable = ({
           value={filters.paymentStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />
@@ -1072,7 +1256,7 @@ const BookingListTable = ({
         />
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3'>
+      <CardContent className='grid grid-cols-4 gap-3'>
         <AmountRangePicker
           style={{ border: '1px solid #00000' }}
           min={filters.minAmount}
@@ -1093,9 +1277,18 @@ const BookingListTable = ({
           value={filters.tagsMap || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value || index} {...getTagProps({ index })} variant='outlined' label={option.label} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='Tags' label='Tags' size='medium' />}
         />
@@ -1107,9 +1300,18 @@ const BookingListTable = ({
           value={filters.pakistanCities || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistanCities: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}
         />
@@ -1208,16 +1410,14 @@ const BookingListTable = ({
           </tbody>
         </table>
       </div>
-
       <TablePaginationComponent
-        // component='div'
         table={table}
-        count={pagination.total} // Use the total prop from parent, not pagination.total
-        page={pagination?.currentPage - 1} // Use the page prop directly, not activePage
+        count={pagination.total || 0} // Use the total prop from parent, not pagination.total
+        page={pagination?.currentPage - 1 || 0} // Use the page prop directly, not activePage
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={pagination.itemsPerPage}
+        rowsPerPage={pagination.itemsPerPage || limit} // Use the limit prop directly, not pagination.itemsPerPage
         onRowsPerPageChange={e => onLimitChange(Number(e.target.value))}
         rowsPerPageOptions={[25, 50, 100]}
       />

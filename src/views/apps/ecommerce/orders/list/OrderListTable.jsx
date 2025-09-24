@@ -326,7 +326,7 @@ const OrderListTable = ({
 
       // Refresh data
       dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
-      
+
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
@@ -655,41 +655,34 @@ const OrderListTable = ({
         header: 'Remarks',
         meta: { width: '250px' },
         cell: ({ row }) => {
-          const remarks = row.original.remarks;
+          const remarks = row.original.remarks
 
           // normalize remarks (string → array of strings)
-          const remarkList = typeof remarks === 'string'
-            ? remarks
-                .split(',')
-                .map(r => r.trim())
-                .filter(Boolean)
-            : Array.isArray(remarks)
-              ? remarks.filter(Boolean)
-              : [];
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
 
-          const hasRemarks = remarkList.length > 0;
+          const hasRemarks = remarkList.length > 0
 
           return (
-            <div className="flex flex-col gap-1">
+            <div className='flex flex-col gap-1'>
               {/* First row: Remarks */}
-              <div className="flex gap-2 overflow-scroll no-scrollbar cursor-pointer">
-                {hasRemarks ? (
-                  remarkList.map((remark, i) => (
-                    <Chip
-                      key={i}
-                      label={remark}
-                      variant="tonal"
-                      size="small"
-                      color={getTagColor(remark)}
-                    />
-                  ))
-                ) : (
-                  '--'
-                )}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                    ))
+                  : '--'}
               </div>
             </div>
-          );
-        },
+          )
+        }
       },
       {
         accessorKey: 'Amount',
@@ -885,44 +878,44 @@ const OrderListTable = ({
   return (
     <Card>
       <CardContent className='grid grid-cols-[0.6fr_0.6fr_0.4fr_0.4fr_0.4fr_0.3fr] gap-4'>
-          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+        {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
 
-          <RangePicker
-            status='success'
-            value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
-            onChange={dates => {
-              if (dates && dates.length === 2) {
-                setFilters(prev => ({
-                  ...prev,
-                  startDate: dates[0].format('YYYY-MM-DD'),
-                  endDate: dates[1].format('YYYY-MM-DD')
-                }))
-              } else {
-                setFilters(prev => ({
-                  ...prev,
-                  startDate: '',
-                  endDate: ''
-                }))
-              }
-            }}
-          />
+        <RangePicker
+          status='success'
+          value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
+          onChange={dates => {
+            if (dates && dates.length === 2) {
+              setFilters(prev => ({
+                ...prev,
+                startDate: dates[0].format('YYYY-MM-DD'),
+                endDate: dates[1].format('YYYY-MM-DD')
+              }))
+            } else {
+              setFilters(prev => ({
+                ...prev,
+                startDate: '',
+                endDate: ''
+              }))
+            }
+          }}
+        />
 
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={val => {
-              setGlobalFilter(String(val))
-              onSearchChange?.(val) // Add this line
-            }}
-            onEnter={val => {
-              setGlobalFilter(val)
-              onSearchChange?.(val)
-            }}
-            placeholder='Search Order'
-          />
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onChange={val => {
+            setGlobalFilter(String(val))
+            onSearchChange?.(val) // Add this line
+          }}
+          onEnter={val => {
+            setGlobalFilter(val)
+            onSearchChange?.(val)
+          }}
+          placeholder='Search Order'
+        />
 
-          {/* <FilterModal
+        {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -939,103 +932,93 @@ const OrderListTable = ({
               setOpenFilter(false)
             }}
           /> */}
-          {/* <DateRangePicker /> */}
+        {/* <DateRangePicker /> */}
 
-
-
-            {/* Add the Change Status button - only shows when orders are selected */}
-            {selectedCount >= 1 && (
-              <>
-                <Button
-                  color='info'
-                  variant='tonal'
-                  onClick={event => setStatusMenuAnchor(event.currentTarget)}
-                  size='small'
-                >
-                  Change Status
-                </Button>
-
-                {/* Status Change Menu */}
-                <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
-                  {orderStatusArray.map(status => (
-                    <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
-                      <Chip
-                        label={status.label}
-                        color={statusChipColor[status.value].color}
-                        variant='tonal'
-                        size='small'
-                      />
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
-            )}
-
-            {selectedCount >= 2 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{
-                  type: 'merge-orders',
-                  payload: (() => {
-                    // console.log('Merge Payload:', { orderIds: selectedIds })
-
-                    return { orderIds: selectedIds }
-                  })(),
-                  onSuccess: async () => {
-                    const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
-
-                    setRowSelection({})
-
-                    // console.log('Merge Orders Success', result)
-                  }
-                }}
-              />
-            ) : (
-              <Button color='secondary' variant='tonal' disabled size='small'>
-                Merge orders
-              </Button>
-            )}
-
-            {selectedCount >= 1 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
-
-              />
-            ) : (
-              <Button color='primary' variant='tonal' disabled size='small'>
-                Duplicate Order
-              </Button>
-            )}
-
-
-          <div className='flex max-sm:flex-col sm:items-center gap-4'>
-            <CustomTextField
-              select
-              value={limit}
-              onChange={async e => {
-                const newLimit = Number(e.target.value)
-
-                // console.log('newLimit', newLimit)
-                onLimitChange?.(newLimit)
-                await dispatch(fetchOrders({ limit: newLimit, force: true }))
-              }}
-              className='max-sm:is-full sm:is-[80px]'
+        {/* Add the Change Status button - only shows when orders are selected */}
+        {selectedCount >= 1 && (
+          <>
+            <Button
+              color='info'
+              variant='tonal'
+              onClick={event => setStatusMenuAnchor(event.currentTarget)}
+              size='small'
             >
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-              <MenuItem value={100}>100</MenuItem>
-            </CustomTextField>
-
-            <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
-              Export
+              Change Status
             </Button>
-          </div>
 
+            {/* Status Change Menu */}
+            <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
+              {orderStatusArray.map(status => (
+                <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                  <Chip label={status.label} color={statusChipColor[status.value].color} variant='tonal' size='small' />
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        )}
+
+        {selectedCount >= 2 ? (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
+            dialog={ConfirmationDialog}
+            dialogProps={{
+              type: 'merge-orders',
+              payload: (() => {
+                // console.log('Merge Payload:', { orderIds: selectedIds })
+
+                return { orderIds: selectedIds }
+              })(),
+              onSuccess: async () => {
+                const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
+
+                setRowSelection({})
+
+                // console.log('Merge Orders Success', result)
+              }
+            }}
+          />
+        ) : (
+          <Button color='secondary' variant='tonal' disabled size='small'>
+            Merge orders
+          </Button>
+        )}
+
+        {selectedCount >= 1 ? (
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
+            dialog={ConfirmationDialog}
+            dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
+          />
+        ) : (
+          <Button color='primary' variant='tonal' disabled size='small'>
+            Duplicate Order
+          </Button>
+        )}
+
+        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+          <CustomTextField
+            select
+            value={limit}
+            onChange={async e => {
+              const newLimit = Number(e.target.value)
+
+              // console.log('newLimit', newLimit)
+              onLimitChange?.(newLimit)
+              await dispatch(fetchOrders({ limit: newLimit, force: true }))
+            }}
+            className='max-sm:is-full sm:is-[80px]'
+          >
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+          </CustomTextField>
+
+          <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
+            Export
+          </Button>
+        </div>
       </CardContent>
 
       <CardContent className='grid grid-cols-4 gap-3 '>
