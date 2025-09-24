@@ -5,22 +5,52 @@ import Grid from '@mui/material/Grid2'
 import AboutOverview from './AboutOverview'
 import ActivityTimeline from './ActivityTimeline'
 import ConnectionsTeams from './ConnectionsTeams'
-import ProjectsTable from './ProjectsTables'
+import UserListCards from '@/views/apps/user/list/UserListCards'
+import ListCards from './listCards'
+
+// import ProjectsTable from './ProjectsTables'
 
 const ProfileTab = ({ data }) => {
+
+const mapUserDataToOverview = data => {
+  return {
+    about: [
+      { property: 'First Name', value: data.firstName, icon: 'tabler-user' },
+      { property: 'Last Name', value: data.lastName, icon: 'tabler-user' },
+      { property: 'Country', value: 'Pakistan', icon: 'tabler-map-pin' },
+      { property: 'Role', value: data.role?.name, icon: 'tabler-briefcase' },
+      { property: 'Department', value: (data.department?.name.toUpperCase()), icon: 'tabler-building' }
+    ],
+    contacts: [
+      { property: 'Email', value: data.email, icon: 'tabler-mail' },
+      { property: 'Verified', value: data.isVerified ? 'Yes' : 'No', icon: 'tabler-check' }
+    ],
+    description: [
+      { property: 'Department Description', value: data.department?.description },
+      { property: 'Role Description', value: data.role?.description }
+    ],
+    overview: [
+      { property: 'Created At', value: new Date(data.createdAt).toLocaleString() },
+      { property: 'Updated At', value: new Date(data.updatedAt).toLocaleString() },
+      { property: 'Password Must Change', value: data.passwordMustChange ? 'Yes' : 'No' }
+    ]
+  }
+}
+
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12, md: 5, lg: 4 }}>
-        <AboutOverview data={data} />
+        <AboutOverview data={mapUserDataToOverview(data)} />
       </Grid>
       <Grid size={{ xs: 12, md: 7, lg: 8 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12 }}>
-            <ActivityTimeline />
+            {/* <ActivityTimeline /> */}
+            <ListCards />
           </Grid>
-          <ConnectionsTeams connections={data?.connections} teamsTech={data?.teamsTech} />
+          {/* <ConnectionsTeams connections={data?.connections} teamsTech={data?.teamsTech} /> */}
           <Grid size={{ xs: 12 }}>
-            <ProjectsTable projectTable={data?.projectTable} />
+          {/* <ProjectsTable projectTable={data?.projectTable} /> */}
           </Grid>
         </Grid>
       </Grid>

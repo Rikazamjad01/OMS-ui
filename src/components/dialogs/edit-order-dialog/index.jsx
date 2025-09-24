@@ -172,7 +172,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
 
             {/* Product Selector List */}
             {showProductSelector && (
-              <Grid size={{ xs: 12 }} className='mt-4'>
+              <Grid size={{ xs: 12 }} className='mt-4 h-60 overflow-y-scroll no-scrollbar'>
                 {loading ? (
                   <Typography>Loading products...</Typography>
                 ) : (
@@ -186,8 +186,8 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                         <div className='flex gap-2'>
                           <div className='w-10 h-10'>
                             <Image
-                              src={product.image?.src || null}
-                              alt={product.title || 'Product'}
+                              src={product.image?.src || '/productPlaceholder.png'}
+                              alt={ 'Product'}
                               width={50}
                               height={50}
                               className='w-full h-full object-cover'

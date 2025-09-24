@@ -13,6 +13,11 @@ import Link from '@components/Link'
 import CustomIconButton from '@core/components/mui/IconButton'
 
 const Connections = ({ data }) => {
+
+  if (!Array.isArray(data)) {
+    data = [data]
+  }
+
   return (
     <Grid container spacing={6}>
       {data &&
@@ -39,13 +44,13 @@ const Connections = ({ data }) => {
                     <Typography variant='h5'>{item.name}</Typography>
                     <Typography>{item.designation}</Typography>
                   </div>
-                  <div className='flex items-center gap-4'>
+                  {/* <div className='flex items-center gap-4'>
                     {item.chips.map((chip, index) => (
                       <Link key={index}>
                         <Chip variant='tonal' label={chip.title} color={chip.color} size='small' />
                       </Link>
                     ))}
-                  </div>
+                  </div> */}
                   <div className='flex is-full items-center justify-around flex-wrap'>
                     <div className='flex items-center flex-col'>
                       <Typography variant='h5'>{item.projects}</Typography>
