@@ -163,11 +163,11 @@ const mapFiltersToApiFormat = localFilters => {
   if (localFilters.maxAmount) apiFilters.amountMax = localFilters.maxAmount
 
   if (localFilters.paymentMethods && localFilters.paymentMethods.length > 0) {
-    apiFilters.paymentMethod = localFilters.paymentMethods[0].value
+    apiFilters.paymentMethod = localFilters.paymentMethods.map(pm => pm.value).join(',')
   }
 
   if (localFilters.paymentStatus && localFilters.paymentStatus.length > 0) {
-    apiFilters.paymentStatus = localFilters.paymentStatus[0].value
+    apiFilters.paymentStatus = localFilters.paymentStatus.map(ps => ps.value).join(',')
   }
 
   // Date filters (you need to add startDate/endDate to your filters state)
@@ -176,16 +176,16 @@ const mapFiltersToApiFormat = localFilters => {
 
   // Status filters - you need to decide which one to use
   if (localFilters.orderStatus && localFilters.orderStatus.length > 0) {
-    apiFilters.status = localFilters.orderStatus[0].value
+    apiFilters.status = localFilters.orderStatus.map(st => st.value).join(',')
   }
 
   // Platform filters
   if (localFilters.orderPlatform?.length > 0) {
-    apiFilters.platform = localFilters.orderPlatform[0].value // or join them
+    apiFilters.platform = localFilters.orderPlatform.map(p => p.value).join(',') // or join them
   }
 
   if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
-    apiFilters.city = localFilters.pakistanCities[0].value
+    apiFilters.city = localFilters.pakistanCities.map(c => c.value).join(',')
   }
 
   return apiFilters
@@ -638,14 +638,14 @@ const OrderListTable = ({
                     ? 'bx-wallet'
                     : 'bx-purchase-tag-alt'
 
-          const rightText = m === 'card' ? row.original.methodNumber || label : label
+          // const rightText = m === 'card' ? row.original.methodNumber || label : label
 
           return (
             <div className='flex items-center gap-2'>
               <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
                 <i className={`${iconClass} text-[18px]`} />
               </div>
-              <Typography className='font-medium'>{rightText}</Typography>
+              <Typography className='font-medium'>{m}</Typography>
             </div>
           )
         }
@@ -698,7 +698,25 @@ const OrderListTable = ({
         accessorKey: 'city',
         header: 'City',
         meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
+        cell: ({ row }) => {
+          const city = row.original.city
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: current city value */}
+              <Typography className='font-medium text-gray-800'>{city}</Typography>
+
+              {/* Second row: "+ Add City" button */}
+              <Chip
+                label={city ? 'Confirm City' : '+ Add City'}
+                variant='outlined'
+                size='small'
+                onClick={() => openCityEditor(row.original.id, city)}
+                className='cursor-pointer'
+              />
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'tags',
@@ -877,7 +895,7 @@ const OrderListTable = ({
 
   return (
     <Card>
-      <CardContent className='grid grid-cols-[0.6fr_0.6fr_0.4fr_0.4fr_0.4fr_0.3fr] gap-4'>
+      <CardContent className='flex flex-wrap gap-4'>
         {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
@@ -900,6 +918,7 @@ const OrderListTable = ({
               }))
             }
           }}
+          className='flex'
         />
 
         <DebouncedInput
@@ -962,6 +981,7 @@ const OrderListTable = ({
             element={Button}
             elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
             dialog={ConfirmationDialog}
+            size='small'
             dialogProps={{
               type: 'merge-orders',
               payload: (() => {
@@ -990,6 +1010,7 @@ const OrderListTable = ({
             elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
             dialog={ConfirmationDialog}
             dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
+            size='small'
           />
         ) : (
           <Button color='primary' variant='tonal' disabled size='small'>
@@ -1015,9 +1036,9 @@ const OrderListTable = ({
             <MenuItem value={100}>100</MenuItem>
           </CustomTextField>
 
-          <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
-            Export
-          </Button>
+          {/* <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
+              Export
+            </Button> */}
         </div>
       </CardContent>
 
@@ -1281,12 +1302,12 @@ const OrderListTable = ({
 
       <TablePaginationComponent
         table={table}
-        count={pagination.total} // Use the total prop from parent, not pagination.total
-        page={pagination?.currentPage - 1} // Use the page prop directly, not activePage
+        count={pagination.total || 0} // Use the total prop from parent, not pagination.total
+        page={pagination?.currentPage - 1 || 0} // Use the page prop directly, not activePage
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={pagination.itemsPerPage}
+        rowsPerPage={pagination.itemsPerPage || limit} // Use the limit prop directly, not pagination.itemsPerPage
         onRowsPerPageChange={e => onLimitChange(Number(e.target.value))}
         rowsPerPageOptions={[25, 50, 100]}
       />

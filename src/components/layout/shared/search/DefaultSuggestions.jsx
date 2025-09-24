@@ -13,25 +13,24 @@ const defaultSuggestions = [
     sectionLabel: 'Popular Searches',
     items: [
       {
-        label: 'Analytics',
-        href: '/dashboards/analytics',
+        label: 'Dashbaords',
+        href: '/dashboards/sales',
         icon: 'bx-bar-chart-alt-2'
       },
-
-      // {
-      //   label: 'CRM',
-      //   href: '/dashboards/crm',
-      //   icon: 'bx-doughnut-chart'
-      // },
       {
-        label: 'Sales',
-        href: '/dashboards/sales',
-        icon: 'bx-doughnut-chart'
+        label: 'Reports',
+        href: '/reports/adminReports',
+        icon: 'bx-receipt'
       },
       {
-        label: 'eCommerce',
-        href: '/dashboards/ecommerce',
-        icon: 'bx-cart'
+        label: 'Orders',
+        href: '/apps/ecommerce/orders/list',
+        icon: 'bx-box'
+      },
+      {
+        label: 'Customers',
+        href: '/apps/ecommerce/customers/list',
+        icon: 'bx-user'
       },
       {
         label: 'Logistics',
@@ -44,24 +43,29 @@ const defaultSuggestions = [
     sectionLabel: 'Apps',
     items: [
       {
-        label: 'Calendar',
-        href: '/apps/calendar',
+        label: 'Booking Order Team',
+        href: '/bookingTeam',
         icon: 'bx-calendar'
       },
       {
-        label: 'Invoice List',
-        href: '/apps/invoice/list',
-        icon: 'bx-receipt'
+        label: 'CSR HOD',
+        href: '/CSR_HOD',
+        icon: 'bx-user'
       },
       {
-        label: 'User List',
-        href: '/apps/user/list',
-        icon: 'bx-group'
+        label: 'Products',
+        href: '/apps/ecommerce/products/list',
+        icon: 'bx-box'
       },
       {
         label: 'Roles & Permissions',
         href: '/apps/roles',
         icon: 'bx-lock-alt'
+      },
+      {
+        label: 'Fleets',
+        href: '/apps/logistics/fleet',
+        icon: 'bx-user'
       }
     ]
   },
@@ -79,42 +83,43 @@ const defaultSuggestions = [
         icon: 'bx-cog'
       },
       {
-        label: 'Pricing',
-        href: '/pages/pricing',
-        icon: 'bx-dollar'
+        label: 'Courier',
+        href: '/apps/ecommerce/courier',
+        icon: 'bx-bus'
       },
       {
-        label: 'FAQ',
-        href: '/pages/faq',
-        icon: 'bx-help-circle'
-      }
-    ]
-  },
-  {
-    sectionLabel: 'Forms & Charts',
-    items: [
-      {
-        label: 'Form Layouts',
-        href: '/forms/form-layouts',
-        icon: 'bx-layout'
-      },
-      {
-        label: 'Form Validation',
-        href: '/forms/form-validation',
-        icon: 'bx-task'
-      },
-      {
-        label: 'Form Wizard',
-        href: '/forms/form-wizard',
-        icon: 'bx-git-merge'
-      },
-      {
-        label: 'Apex Charts',
-        href: '/charts/apex-charts',
-        icon: 'bx-line-chart'
+        label: 'Agents',
+        href: '/apps/ecommerce/agents',
+        icon: 'bx-user'
       }
     ]
   }
+
+  // {
+  //   sectionLabel: 'Pages',
+  //   items: [
+  //     {
+  //       label: 'Form Layouts',
+  //       href: '/forms/form-layouts',
+  //       icon: 'bx-layout'
+  //     },
+  //     {
+  //       label: 'Form Validation',
+  //       href: '/forms/form-validation',
+  //       icon: 'bx-task'
+  //     },
+  //     {
+  //       label: 'Form Wizard',
+  //       href: '/forms/form-wizard',
+  //       icon: 'bx-git-merge'
+  //     },
+  //     {
+  //       label: 'Apex Charts',
+  //       href: '/charts/apex-charts',
+  //       icon: 'bx-line-chart'
+  //     }
+  //   ]
+  // }
 ]
 
 const DefaultSuggestions = ({ setOpen }) => {

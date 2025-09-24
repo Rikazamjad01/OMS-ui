@@ -21,7 +21,7 @@ import { Add, Remove } from '@mui/icons-material'
 
 // Redux
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { updateOrderProducts } from '@/redux-store/slices/order'
+import { fetchOrderById, updateOrderProducts } from '@/redux-store/slices/order'
 
 // Component Imports
 import DialogCloseButton from '../DialogCloseButton'
@@ -88,6 +88,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
     dispatch(updateOrderProducts({ orderId: order.id, products }))
       .unwrap()
       .then(() => {
+        dispatch(fetchOrderById(order.id))
         setSnackbar({ open: true, message: 'Order updated successfully!', severity: 'success' })
         setOpen(false)
       })
@@ -171,7 +172,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
 
             {/* Product Selector List */}
             {showProductSelector && (
-              <Grid size={{ xs: 12 }} className='mt-4'>
+              <Grid size={{ xs: 12 }} className='mt-4 h-60 overflow-y-scroll no-scrollbar'>
                 {loading ? (
                   <Typography>Loading products...</Typography>
                 ) : (
@@ -185,8 +186,8 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                         <div className='flex gap-2'>
                           <div className='w-10 h-10'>
                             <Image
-                              src={product.image?.src || null}
-                              alt={product.title || 'Product'}
+                              src={product.image?.src || '/productPlaceholder.png'}
+                              alt={ 'Product'}
                               width={50}
                               height={50}
                               className='w-full h-full object-cover'

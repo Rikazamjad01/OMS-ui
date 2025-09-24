@@ -15,6 +15,14 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import Link from '@components/Link'
 
 const Projects = ({ data }) => {
+
+  // convert data into an array if it's not already
+  if (!Array.isArray(data)) {
+    data = [data]
+  }
+
+  console.log(data, 'data in projects')
+
   return (
     <Grid container spacing={6}>
       {data &&
@@ -101,7 +109,7 @@ const Projects = ({ data }) => {
                   </div>
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center flex-grow gap-3'>
-                      <AvatarGroup className='items-center pull-up'>
+                      {/* <AvatarGroup className='items-center pull-up'>
                         {item.avatarGroup.map((person, index) => {
                           return (
                             <Tooltip key={index} title={person.name}>
@@ -109,7 +117,7 @@ const Projects = ({ data }) => {
                             </Tooltip>
                           )
                         })}
-                      </AvatarGroup>
+                      </AvatarGroup> */}
                       <Typography variant='body2' className='flex-grow'>
                         {item.members}
                       </Typography>

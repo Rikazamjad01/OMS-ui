@@ -7,7 +7,7 @@ import HorizontalWithSubtitle from '@components/card-statistics/HorizontalWithSu
 // Vars
 const data = [
   {
-    title: 'Session',
+    title: 'Confirmed commissions',
     stats: '21,459',
     avatarIcon: 'bx-group',
     avatarColor: 'primary',
@@ -16,7 +16,7 @@ const data = [
     subtitle: 'Total User'
   },
   {
-    title: 'Paid Users',
+    title: 'Pending commissions',
     stats: '4,567',
     avatarIcon: 'bx-user-plus',
     avatarColor: 'error',
@@ -25,7 +25,7 @@ const data = [
     subtitle: 'Last week analytics'
   },
   {
-    title: 'Active Users',
+    title: 'Overall commissions',
     stats: '19,860',
     avatarIcon: 'bx-user-check',
     avatarColor: 'success',
@@ -34,7 +34,7 @@ const data = [
     subtitle: 'Last week analytics'
   },
   {
-    title: 'Pending Users',
+    title: 'Monthly commissions',
     stats: '237',
     avatarIcon: 'bx-user-voice',
     avatarColor: 'warning',
@@ -44,7 +44,7 @@ const data = [
   }
 ]
 
-const UserListCards = () => {
+const ListCards = () => {
   return (
     <Grid container spacing={6}>
       {data.map((item, i) => (
@@ -56,4 +56,4 @@ const UserListCards = () => {
   )
 }
 
-export default UserListCards
+export default ListCards

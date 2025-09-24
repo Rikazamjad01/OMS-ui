@@ -24,16 +24,16 @@ const UserProfile = ({ tabContentList, data }) => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <UserProfileHeader data={data?.profileHeader} />
+        <UserProfileHeader data={data} />
       </Grid>
       {activeTab === undefined ? null : (
         <Grid size={{ xs: 12 }} className='flex flex-col gap-6'>
           <TabContext value={activeTab}>
             <CustomTabList onChange={handleChange} variant='scrollable' pill='true'>
               <Tab label='Profile' icon={<i className='bx-user' />} iconPosition='start' value='profile' />
-              <Tab label='Teams' icon={<i className='bx-group' />} iconPosition='start' value='teams' />
-              <Tab label='Projects' icon={<i className='bx-grid-alt' />} iconPosition='start' value='projects' />
-              <Tab label='Connections' icon={<i className='bx-link' />} iconPosition='start' value='connections' />
+              <Tab label='Daily Report' icon={<i className='bx-receipt' />} iconPosition='start' value='daily-report' />
+              <Tab label='Incentives' icon={<i className='bx-money' />} iconPosition='start' value='projects' />
+              <Tab label='Commissions' icon={<i className='bx-dollar' />} iconPosition='start' value='connections' />
             </CustomTabList>
 
             <TabPanel value={activeTab} className='p-0'>

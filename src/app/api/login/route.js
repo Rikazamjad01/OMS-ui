@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 
 // Mock data for demo purpose
-import { users } from './users'
+// import { users } from './users'
 
 export async function POST(req) {
   // Vars

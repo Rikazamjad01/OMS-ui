@@ -79,8 +79,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           label={dictionary['navigation'].reports}
           icon={<i className='bx-receipt' />}
         >
-          <MenuItem href={`/${locale}/reports/data`}>{dictionary['navigation'].reportData}</MenuItem>
-          <MenuItem href={`/${locale}/reports/filters`}>{dictionary['navigation'].reportFilters}</MenuItem>
+          <MenuItem href={`/${locale}/reports/adminReports`}>{dictionary['navigation'].adminReports}</MenuItem>
+          <MenuItem href={`/${locale}/reports/bookingTeamReports`}>{dictionary['navigation'].bookingTeamReports}</MenuItem>
+          <MenuItem href={`/${locale}/reports/csrTeamReports`}>{dictionary['navigation'].csrTeamReports}</MenuItem>
         </SubMenu>
 
         {/* ORDERS */}

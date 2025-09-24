@@ -13,19 +13,24 @@ const api = axios.create({
 // Generic GET with optional params
 
 const getHeaders = () => {
-  const token = Cookies.get('token')
+  // const token = Cookies.get('token')
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM4MmI4ZjZhNDg1MTg3NTJkMDg4MmYiLCJqdGkiOiI3OTU0Nzg4Y2FiZDU5MjgzNWI3MGU5ODE1ZDRiYzg0ZDkwNGUzMDM0ZjM3ZWI1OTlhYjg4YTQ2YzIwYjcxY2IzIiwiaWF0IjoxNzU4MTAzOTkxLCJleHAiOjE3NjU4Nzk5OTF9.ut51S-UVfkpvl_9pw58GDy-gOcKW-CA3dqPOWMpemMA"
+
   // console.log("Token from cookies:", token);
   const headers = {
     authorization: ''
   }
+
   if (token) {
     headers.authorization = `Bearer ${token}`
   }
+
   return headers
 }
 
 const handleError = error => {
   console.log(error, 'error..........')
+
   // Fix: error is unknown, so we need to safely check status
   if (typeof error === 'object' && error !== null && 'status' in error && error.status === 401) {
     Cookies.remove('token')
@@ -34,6 +39,7 @@ const handleError = error => {
     Cookies.remove('email')
     Cookies.remove('user')
   }
+
   if (axios.isAxiosError(error)) {
     const message =
       error.response?.data?.errors?.[0] || error.response?.data?.error || error.message || 'Something went wrong.'
@@ -50,6 +56,7 @@ export const getRequest = async endPoint => {
   try {
     const headers = getHeaders()
     const response = await axios.get(baseUrl + endPoint, { headers })
+
     if (response.status === 401) {
       Cookies.remove('token')
       Cookies.remove('username')
@@ -57,6 +64,7 @@ export const getRequest = async endPoint => {
       Cookies.remove('email')
       Cookies.remove('user')
     }
+
     if (response.status >= 200 && response.status < 300) {
       // console.log(response.data);
       return response.data
@@ -64,6 +72,8 @@ export const getRequest = async endPoint => {
 
     throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
   } catch (error) {
+    handleError(error)
+
     handleError(error)
 
     throw error
@@ -74,7 +84,7 @@ export const postRequest = async (endPoint, data, method = 'post') => {
   try {
     let response
     const headers = getHeaders()
-    console.log(data, 'headers in postRequest')
+
     // Check if data is FormData and set appropriate headers
     if (data instanceof FormData) {
       // Don't set Content-Type for FormData, let the browser set it with boundary
@@ -94,12 +104,14 @@ export const postRequest = async (endPoint, data, method = 'post') => {
 
     if (response.status >= 200 && response.status < 300) {
       console.log('post request whole response.', response)
+
       return response.data
     } else {
-      console.log(response, 'response in postRequest')
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
     }
   } catch (error) {
+    handleError(error)
+    throw error
     handleError(error)
     throw error
   }
