@@ -179,7 +179,6 @@ export const apiRequest = async (url, options = {}) => {
   }
 
   const response = await fetch(`${baseUrl}${url}`, config)
-  const response = await fetch(`${baseUrl}${url}`, config)
 
   return response.json()
 }
