@@ -327,6 +327,7 @@ const OrderListTable = ({
       // Refresh data
       dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
 
+
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
@@ -656,6 +657,7 @@ const OrderListTable = ({
         meta: { width: '250px' },
         cell: ({ row }) => {
           const remarks = row.original.remarks
+          const remarks = row.original.remarks
 
           // normalize remarks (string → array of strings)
           const remarkList =
@@ -667,10 +669,21 @@ const OrderListTable = ({
               : Array.isArray(remarks)
                 ? remarks.filter(Boolean)
                 : []
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
 
+          const hasRemarks = remarkList.length > 0
           const hasRemarks = remarkList.length > 0
 
           return (
+            <div className='flex flex-col gap-1'>
             <div className='flex flex-col gap-1'>
               {/* First row: Remarks */}
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
@@ -679,8 +692,16 @@ const OrderListTable = ({
                       <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                     ))
                   : '--'}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                    ))
+                  : '--'}
               </div>
             </div>
+          )
+        }
           )
         }
       },
@@ -933,7 +954,20 @@ const OrderListTable = ({
           }}
           placeholder='Search Order'
         />
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onChange={val => {
+            setGlobalFilter(String(val))
+            onSearchChange?.(val) // Add this line
+          }}
+          onEnter={val => {
+            setGlobalFilter(val)
+            onSearchChange?.(val)
+          }}
+          placeholder='Search Order'
+        />
 
+        {/* <FilterModal
         {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
@@ -952,6 +986,7 @@ const OrderListTable = ({
             }}
           /> */}
         {/* <DateRangePicker /> */}
+        {/* <DateRangePicker /> */}
 
         {/* Add the Change Status button - only shows when orders are selected */}
         {selectedCount >= 1 && (
@@ -964,7 +999,28 @@ const OrderListTable = ({
             >
               Change Status
             </Button>
+        {/* Add the Change Status button - only shows when orders are selected */}
+        {selectedCount >= 1 && (
+          <>
+            <Button
+              color='info'
+              variant='tonal'
+              onClick={event => setStatusMenuAnchor(event.currentTarget)}
+              size='small'
+            >
+              Change Status
+            </Button>
 
+            {/* Status Change Menu */}
+            <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
+              {orderStatusArray.map(status => (
+                <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                  <Chip label={status.label} color={statusChipColor[status.value].color} variant='tonal' size='small' />
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        )}
             {/* Status Change Menu */}
             <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
               {orderStatusArray.map(status => (
@@ -991,9 +1047,23 @@ const OrderListTable = ({
               })(),
               onSuccess: async () => {
                 const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
+                return { orderIds: selectedIds }
+              })(),
+              onSuccess: async () => {
+                const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
 
                 setRowSelection({})
+                setRowSelection({})
 
+                // console.log('Merge Orders Success', result)
+              }
+            }}
+          />
+        ) : (
+          <Button color='secondary' variant='tonal' disabled size='small'>
+            Merge orders
+          </Button>
+        )}
                 // console.log('Merge Orders Success', result)
               }
             }}
@@ -1024,7 +1094,23 @@ const OrderListTable = ({
             value={limit}
             onChange={async e => {
               const newLimit = Number(e.target.value)
+        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+          <CustomTextField
+            select
+            value={limit}
+            onChange={async e => {
+              const newLimit = Number(e.target.value)
 
+              // console.log('newLimit', newLimit)
+              onLimitChange?.(newLimit)
+              await dispatch(fetchOrders({ limit: newLimit, force: true }))
+            }}
+            className='max-sm:is-full sm:is-[80px]'
+          >
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+          </CustomTextField>
               // console.log('newLimit', newLimit)
               onLimitChange?.(newLimit)
               await dispatch(fetchOrders({ limit: newLimit, force: true }))

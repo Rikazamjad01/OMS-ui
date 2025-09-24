@@ -74,6 +74,8 @@ export const getRequest = async endPoint => {
   } catch (error) {
     handleError(error)
 
+    handleError(error)
+
     throw error
   }
 }
@@ -108,6 +110,8 @@ export const postRequest = async (endPoint, data, method = 'post') => {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
     }
   } catch (error) {
+    handleError(error)
+    throw error
     handleError(error)
     throw error
   }
@@ -174,6 +178,7 @@ export const apiRequest = async (url, options = {}) => {
     config.body = JSON.stringify(data)
   }
 
+  const response = await fetch(`${baseUrl}${url}`, config)
   const response = await fetch(`${baseUrl}${url}`, config)
 
   return response.json()

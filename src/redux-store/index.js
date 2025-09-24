@@ -10,6 +10,7 @@ import ordersReducer from '@/redux-store/slices/order'
 import customerReducer from '@/redux-store/slices/customer'
 import productsReducer from '@/redux-store/slices/products'
 import bookingReducer from '@/redux-store/slices/bookingSlice'
+import zonesReducer from '@/redux-store/slices/zonesSlice'
 import userReducer from '@/redux-store/slices/user'
 
 
@@ -23,6 +24,7 @@ export const store = configureStore({
     customers: customerReducer,
     products: productsReducer,
     booking: bookingReducer,
+    zones: zonesReducer,
     user: userReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
