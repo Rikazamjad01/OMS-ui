@@ -31,7 +31,7 @@ const UserProfile = ({ tabContentList, data }) => {
           <TabContext value={activeTab}>
             <CustomTabList onChange={handleChange} variant='scrollable' pill='true'>
               <Tab label='Profile' icon={<i className='bx-user' />} iconPosition='start' value='profile' />
-              <Tab label='Daily Report' icon={<i className='bx-receipt' />} iconPosition='start' value='daily-report' />
+              <Tab label='Daily Report' icon={<i className='bx-receipt' />} iconPosition='start' value='teams' />
               <Tab label='Incentives' icon={<i className='bx-money' />} iconPosition='start' value='projects' />
               <Tab label='Commissions' icon={<i className='bx-dollar' />} iconPosition='start' value='connections' />
             </CustomTabList>
