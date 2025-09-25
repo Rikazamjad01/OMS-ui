@@ -1,82 +1,95 @@
-// MUI Imports
 import Grid from '@mui/material/Grid2'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Avatar from '@mui/material/Avatar'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import AvatarGroup from '@mui/material/AvatarGroup'
-import Tooltip from '@mui/material/Tooltip'
-import Chip from '@mui/material/Chip'
 
-// Component Imports
-import OptionMenu from '@core/components/option-menu'
-import Link from '@components/Link'
+import { Checkbox, Chip, LinearProgress, Typography } from '@mui/material'
+
+import BaseTable from '../baseTable/page'
+import OptionMenu from '@/@core/components/option-menu'
+import CustomAvatar from '@/@core/components/mui/Avatar'
 
 const Teams = ({ data }) => {
-  console.log(data, 'data in teams')
-  
+  if (!Array.isArray(data)) {
+    data = [data]
+  }
+
+  const orderColumns = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          indeterminate={row.getIsSomeSelected()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      )
+    },
+    {
+      accessorKey: 'title',
+      header: 'Name',
+      cell: ({ row }) => (
+        <div className='flex items-center gap-3'>
+          <CustomAvatar src={row.original.avatar || '/images/avatars/placeholder.jpg'} size={34} />
+          <div className='flex flex-col'>
+            <Typography variant='h6'>{row.original.firstName + ' ' + row.original.lastName}</Typography>
+            <Typography variant='body2'>{row.original.role.name}</Typography>
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'date',
+      header: 'Date',
+      cell: ({ row }) => <Typography color='text.primary'>{new Date(row.original.createdAt).toDateString()}</Typography>
+    },
+    {
+      accessorKey: 'platform',
+      header: 'Platform',
+      cell: ({ row }) => <Chip label={row.original.platform || 'Shopify'} />,
+      enableSorting: false
+    },
+    {
+      accessorKey: 'status',
+      header: 'Progress',
+      cell: ({ row }) => (
+        <div className='flex items-center gap-3'>
+          <LinearProgress color='primary' value={row.original.status || 0} variant='determinate' className='is-20' />
+          <Typography color='text.primary'>{`${row.original.status || 0}%`}</Typography>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      cell: () => (
+        <OptionMenu
+          iconButtonProps={{ size: 'medium' }}
+          iconClassName='text-textSecondary'
+          options={[
+            'Details',
+            'Archive',
+            { divider: true },
+            { text: 'Delete', menuItemProps: { className: 'text-error' } }
+          ]}
+        />
+      ),
+      enableSorting: false
+    }
+  ]
+
   return (
     <Grid container spacing={6}>
-      {data &&
-        data.map((item, index) => {
-          return (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>
-              <Card>
-                <CardContent className='flex flex-col gap-4'>
-                  <div className='flex items-center justify-between gap-2'>
-                    <div className='flex items-center gap-2'>
-                      <Avatar src={item.avatar} />
-                      <Typography variant='h5'>{item.title}</Typography>
-                    </div>
-                    <div className='flex items-center'>
-                      <IconButton>
-                        <i className='bx-star text-textDisabled' />
-                      </IconButton>
-                      <OptionMenu
-                        iconButtonProps={{ size: 'medium' }}
-                        iconClassName='text-textDisabled'
-                        options={[
-                          'Rename Team',
-                          'View Details',
-                          'Add to Favorite',
-                          { divider: true },
-                          {
-                            text: 'Delete Team',
-                            menuItemProps: { className: 'text-error hover:bg-[var(--mui-palette-error-lightOpacity)]' }
-                          }
-                        ]}
-                      />
-                    </div>
-                  </div>
-                  <Typography>{item.description}</Typography>
-                  <div className='flex items-center justify-between flex-wrap gap-4'>
-                    <AvatarGroup
-                      total={item.extraMembers ? item.extraMembers + 3 : 3}
-                      sx={{ '& .MuiAvatar-root': { width: '2rem', height: '2rem', fontSize: '1rem' } }}
-                      className='items-center pull-up'
-                    >
-                      {item.avatarGroup.map((person, index) => {
-                        return (
-                          <Tooltip key={index} title={person.name}>
-                            <Avatar src={person.avatar} alt={person.name} />
-                          </Tooltip>
-                        )
-                      })}
-                    </AvatarGroup>
-                    <div className='flex items-center gap-2'>
-                      {item.chips.map((chip, index) => (
-                        <Link key={index}>
-                          <Chip variant='tonal' size='small' label={chip.title} color={chip.color} />
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          )
-        })}
+      {data && (
+        <Grid size={{ xs: 12 }}>
+          <BaseTable title='Daily Order List' data={data} columns={orderColumns} />
+        </Grid>
+      )}
     </Grid>
   )
 }

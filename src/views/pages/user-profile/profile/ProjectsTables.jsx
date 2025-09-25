@@ -30,6 +30,8 @@ import {
 } from '@tanstack/react-table'
 
 // Component Imports
+import { Chip } from '@mui/material'
+
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
@@ -108,38 +110,37 @@ const ProjectTables = ({ projectTable }) => {
         )
       },
       columnHelper.accessor('title', {
-        header: 'Project',
+        header: 'Name',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <CustomAvatar src={row.original.avatar} size={34} />
+            <CustomAvatar src={row.original.avatar || '/images/avatars/placeholder.jpg'} size={34} />
             <div className='flex flex-col'>
-              <Typography variant='h6'>{row.original.title}</Typography>
-              <Typography variant='body2'>{row.original.subtitle}</Typography>
+              <Typography variant='h6'>{row.original.firstName + ' ' + row.original.lastName}</Typography>
+              <Typography variant='body2'>{row.original.role.name}</Typography>
             </div>
           </div>
         )
       }),
-      columnHelper.accessor('leader', {
-        header: 'Leader',
-        cell: ({ row }) => <Typography color='text.primary'>{row.original.leader}</Typography>
-      }),
-      columnHelper.accessor('avatarGroup', {
-        header: 'Team',
+      columnHelper.accessor('date', {
+        header: 'Date',
         cell: ({ row }) => (
-          <AvatarGroup max={4} className='flex items-center pull-up'>
-            {row.original.avatarGroup.map((avatar, index) => (
-              <CustomAvatar key={index} src={avatar} size={26} />
-            ))}
-          </AvatarGroup>
-        ),
+          <Typography color='text.primary'>
+            {new Date(row.original.createdAt).toDateString() || row.original.createdAt}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('platform', {
+        header: 'Platform',
+
+        cell: ({ row }) => <Chip color='text.primary'>{row.original.platform || 'Shopify'}</Chip>,
         enableSorting: false
       }),
       columnHelper.accessor('status', {
         header: 'Progress',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <LinearProgress color='primary' value={row.original.status} variant='determinate' className='is-20' />
-            <Typography color='text.primary'>{`${row.original.status}%`}</Typography>
+            <LinearProgress color='primary' value={row.original.status || 0} variant='determinate' className='is-20' />
+            <Typography color='text.primary'>{`${row.original.status || 0}%`}</Typography>
           </div>
         )
       }),
@@ -195,7 +196,7 @@ const ProjectTables = ({ projectTable }) => {
 
   return (
     <Card>
-      <CardHeader title='Project List' />
+      <CardHeader title='Daily Order List' />
       <div className='flex max-sm:flex-col items-center justify-between p-6 pbs-0 gap-4'>
         <CustomTextField
           select
