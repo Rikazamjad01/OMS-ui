@@ -75,6 +75,7 @@ const Connections = ({ data }) => {
               </Card>
             </Grid>
           )
+          
         })}
     </Grid>
   )
