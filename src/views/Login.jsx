@@ -18,7 +18,7 @@ import Divider from '@mui/material/Divider'
 import { styled, useTheme } from '@mui/material/styles'
 
 // Third-party Imports
-import { signIn } from 'next-auth/react'
+// import { signIn } from 'next-auth/react'
 import { Controller, useForm } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
 import { email, object, minLength, string, pipe, nonEmpty } from 'valibot'
@@ -216,7 +216,7 @@ const Login = () => {
               className='self-center text-textPrimary'
               startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
               sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-              onClick={() => signIn('google')}
+              // onClick={() => signIn('google')}
             >
               Sign in with Google
             </Button>

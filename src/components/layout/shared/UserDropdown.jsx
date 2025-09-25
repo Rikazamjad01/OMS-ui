@@ -19,7 +19,7 @@ import Divider from '@mui/material/Divider'
 import MenuItem from '@mui/material/MenuItem'
 
 // Third-party Imports
-import { signOut, useSession } from 'next-auth/react'
+// import { signOut, useSession } from 'next-auth/react'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -49,7 +49,7 @@ const UserDropdown = () => {
 
   // Hooks
   const router = useRouter()
-  const { data: session } = useSession()
+  // const { data: session } = useSession()
   const { settings } = useSettings()
   const { lang: locale } = useParams()
 
@@ -72,7 +72,7 @@ const UserDropdown = () => {
   const handleUserLogout = async () => {
     try {
       // Sign out from the app
-      await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
+      // await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
     } catch (error) {
       console.error(error)
 
@@ -92,8 +92,8 @@ const UserDropdown = () => {
       >
         <CustomAvatar
           ref={anchorRef}
-          alt={session?.user?.name || ''}
-          src={session?.user?.image || ''}
+          // alt={session?.user?.name || ''}
+          // src={session?.user?.image || ''}
           onClick={handleDropdownOpen}
           className='cursor-pointer'
         />
@@ -117,11 +117,11 @@ const UserDropdown = () => {
               <ClickAwayListener onClickAway={e => handleDropdownClose(e)}>
                 <MenuList>
                   <div className='flex items-center plb-2 pli-5 gap-2' tabIndex={-1}>
-                    <CustomAvatar size={40} alt={session?.user?.name || ''} src={session?.user?.image || ''} />
+                    <CustomAvatar size={40} alt={'John Doe'} src={'https://i.pravatar.cc/150?img=1'} />
                     <div className='flex items-start flex-col'>
-                      <Typography variant='h6'>{session?.user?.name || ''}</Typography>
+                      <Typography variant='h6'>{'John Doe'}</Typography>
                       <Typography variant='body2' color='text.disabled'>
-                        {session?.user?.email || ''}
+                        {'john.doe@example.com'}
                       </Typography>
                     </div>
                   </div>
