@@ -107,17 +107,22 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         }
       } else if (isDownloadLoadSheet) {
         onSuccess?.(payload) // Call site can trigger the actual download
+
         return
       } else if (isCancelAwb) {
         onSuccess?.(payload) // Let caller dispatch cancel and handle UI
+
         return
       } else if (isGenerateAwb) {
         const ids = payload?.orderIds ?? []
+
         if (ids.length === 0) throw new Error('Please select at least 1 order.')
         const result = await dispatch(generateAirwayBill({ orderIds: ids })).unwrap()
         const successes = result?.successes ?? result?.data?.successes ?? []
         const failures = result?.failures ?? result?.data?.failures ?? []
+
         setAwbResult({ successes, failures })
+
         if ((failures?.length || 0) > 0) {
           setUserInput(false)
           setResultTitle('Some AWBs Failed')
@@ -131,8 +136,15 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           setResultTitle('AWB Generated')
           setResultSubtitle(`${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}.`)
         }
+
         // Refresh bookings list
         dispatch(fetchBookingOrder({ page: 1, limit: 25, force: true }))
+      } else if (type === 'confirm-city') {
+        const { orderId, city } = payload
+
+        if (!orderId || !city) throw new Error('Order ID and city are required.')
+
+        await dispatch(confirmCity({ orderId, city })).unwrap()
       }
 
       // Success
@@ -178,6 +190,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Are you sure you want to cancel this AWB?'
       case 'generate-airway-bill':
         return 'Generate Airway Bill for selected orders?'
+      case 'confirm-city':
+        return `Do you want to confirm "${payload?.city}" city for this order?`
       default:
         return 'Are you sure?'
     }
@@ -205,6 +219,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Yes, Cancel AWB'
       case 'generate-airway-bill':
         return 'Generate AWB'
+      case 'confirm-city':
+        return 'Yes, Confirm City!'
       default:
         return 'Yes'
     }
@@ -236,6 +252,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Duplicated Successfully'
       case 'generate-airway-bill':
         return userInput ? 'AWB Generation Result' : 'AWB Generation Result'
+      case 'confirm-city':
+        return 'City Confirmed'
       default:
         return 'Done'
     }
@@ -265,6 +283,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Order duplicated successfully.'
         case 'generate-airway-bill':
           return resultSubtitle || (userInput ? 'AWB generated successfully.' : 'Some AWBs failed.')
+        case 'confirm-city':
+          return 'City confirmed successfully.'
         default:
           return 'Operation completed successfully.'
       }
@@ -291,6 +311,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Order Duplication Cancelled'
         case 'generate-airway-bill':
           return 'Airway Bill Generation Cancelled'
+        case 'confirm-city':
+          return 'City Confirmation Cancelled'
         default:
           return 'Action Cancelled'
       }
@@ -307,6 +329,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
             <Typography variant='h4' gutterBottom>
               {getConfirmationTitle()}
             </Typography>
+
+            {/* {type === 'confirm-city' && payload?.city && (
+              <Typography variant='h6' color='text.secondary' className='mt-2'>
+                Selected City: <strong>{payload.city}</strong>
+              </Typography>
+            )} */}
 
             {/* Split order quantity stepper */}
             {isSplit && payload?.selectedLineItems?.length > 0 && (

@@ -63,6 +63,7 @@ import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
+import CreateOrderDialog from '@/components/dialogs/createOrderDialog'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -74,8 +75,9 @@ export const paymentStatus = {
 
 export const orderPlatform = {
   shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
-  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' }
+  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' }
+
+  // socialMedia: { text: 'Social Media', color: 'info', colorClassName: 'text-info' }
 }
 
 export const statusChipColor = {
@@ -270,6 +272,15 @@ const OrderListTable = ({
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
+  const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
+
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogPayload, setDialogPayload] = useState(null)
+
+  const openCityEditor = (orderId, city) => {
+    setDialogPayload({ orderId, city })
+    setDialogOpen(true)
+  }
 
   const [tagsMap, setTagsMap] = useState({})
 
@@ -895,46 +906,47 @@ const OrderListTable = ({
 
   return (
     <Card>
-      <CardContent className='flex flex-wrap gap-4'>
-        {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+      <CardContent className='flex justify-between items-center'>
+        <div className='flex flex-wrap gap-4'>
+          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
 
-        <RangePicker
-          status='success'
-          value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
-          onChange={dates => {
-            if (dates && dates.length === 2) {
-              setFilters(prev => ({
-                ...prev,
-                startDate: dates[0].format('YYYY-MM-DD'),
-                endDate: dates[1].format('YYYY-MM-DD')
-              }))
-            } else {
-              setFilters(prev => ({
-                ...prev,
-                startDate: '',
-                endDate: ''
-              }))
-            }
-          }}
-          className='flex'
-        />
+          <RangePicker
+            status='success'
+            value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
+            onChange={dates => {
+              if (dates && dates.length === 2) {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: dates[0].format('YYYY-MM-DD'),
+                  endDate: dates[1].format('YYYY-MM-DD')
+                }))
+              } else {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: '',
+                  endDate: ''
+                }))
+              }
+            }}
+            className='flex'
+          />
 
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onChange={val => {
-            setGlobalFilter(String(val))
-            onSearchChange?.(val) // Add this line
-          }}
-          onEnter={val => {
-            setGlobalFilter(val)
-            onSearchChange?.(val)
-          }}
-          placeholder='Search Order'
-        />
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={val => {
+              setGlobalFilter(String(val))
+              onSearchChange?.(val) // Add this line
+            }}
+            onEnter={val => {
+              setGlobalFilter(val)
+              onSearchChange?.(val)
+            }}
+            placeholder='Search Order'
+          />
 
-        {/* <FilterModal
+          {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -951,72 +963,78 @@ const OrderListTable = ({
               setOpenFilter(false)
             }}
           /> */}
-        {/* <DateRangePicker /> */}
+          {/* <DateRangePicker /> */}
 
-        {/* Add the Change Status button - only shows when orders are selected */}
-        {selectedCount >= 1 && (
-          <>
-            <Button
-              color='info'
-              variant='tonal'
-              onClick={event => setStatusMenuAnchor(event.currentTarget)}
+          {/* Add the Change Status button - only shows when orders are selected */}
+          {selectedCount >= 1 && (
+            <>
+              <Button
+                color='info'
+                variant='tonal'
+                onClick={event => setStatusMenuAnchor(event.currentTarget)}
+                size='small'
+              >
+                Change Status
+              </Button>
+
+              {/* Status Change Menu */}
+              <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
+                {orderStatusArray.map(status => (
+                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                    <Chip
+                      label={status.label}
+                      color={statusChipColor[status.value].color}
+                      variant='tonal'
+                      size='small'
+                    />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+
+          {selectedCount >= 2 ? (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
               size='small'
-            >
-              Change Status
+              dialogProps={{
+                type: 'merge-orders',
+                payload: (() => {
+                  // console.log('Merge Payload:', { orderIds: selectedIds })
+
+                  return { orderIds: selectedIds }
+                })(),
+                onSuccess: async () => {
+                  const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
+
+                  setRowSelection({})
+
+                  // console.log('Merge Orders Success', result)
+                }
+              }}
+            />
+          ) : (
+            <Button color='secondary' variant='tonal' disabled size='small'>
+              Merge orders
             </Button>
+          )}
 
-            {/* Status Change Menu */}
-            <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
-              {orderStatusArray.map(status => (
-                <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
-                  <Chip label={status.label} color={statusChipColor[status.value].color} variant='tonal' size='small' />
-                </MenuItem>
-              ))}
-            </Menu>
-          </>
-        )}
-
-        {selectedCount >= 2 ? (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            size='small'
-            dialogProps={{
-              type: 'merge-orders',
-              payload: (() => {
-                // console.log('Merge Payload:', { orderIds: selectedIds })
-
-                return { orderIds: selectedIds }
-              })(),
-              onSuccess: async () => {
-                const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
-
-                setRowSelection({})
-
-                // console.log('Merge Orders Success', result)
-              }
-            }}
-          />
-        ) : (
-          <Button color='secondary' variant='tonal' disabled size='small'>
-            Merge orders
-          </Button>
-        )}
-
-        {selectedCount >= 1 ? (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
-            size='small'
-          />
-        ) : (
-          <Button color='primary' variant='tonal' disabled size='small'>
-            Duplicate Order
-          </Button>
-        )}
+          {selectedCount >= 1 ? (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
+              size='small'
+            />
+          ) : (
+            <Button color='primary' variant='tonal' disabled size='small'>
+              Duplicate Order
+            </Button>
+          )}
+        </div>
 
         <div className='flex max-sm:flex-col sm:items-center gap-4'>
           <CustomTextField
@@ -1039,6 +1057,14 @@ const OrderListTable = ({
           {/* <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
               Export
             </Button> */}
+          {/* Add button for manual order intake */}
+          <Button
+            variant='tonal'
+            color='primary'
+            onClick={() => setOrderIntakeOpen(true)} // open modal on click
+          >
+            <i className='bx-plus' />
+          </Button>
         </div>
       </CardContent>
 
@@ -1329,6 +1355,38 @@ const OrderListTable = ({
           {alert.message}
         </Alert>
       </Snackbar>
+      <CreateOrderDialog
+        open={orderIntakeOpen}
+        setOpen={setOrderIntakeOpen}
+        onSuccess={() => {
+          setAlert({
+            open: true,
+            message: 'Order created successfully!',
+            severity: 'success'
+          })
+          console.log('Order created successfully!')
+        }}
+      />
+      <ConfirmationDialog
+        open={dialogOpen}
+        setOpen={setDialogOpen}
+        type='confirm-city'
+        payload={dialogPayload}
+        onSuccess={() => {
+          setSnackbar({
+            open: true,
+            message: 'City confirmed successfully!',
+            severity: 'success'
+          })
+        }}
+        onError={err => {
+          setSnackbar({
+            open: true,
+            message: err.message || 'Failed to confirm city.',
+            severity: 'error'
+          })
+        }}
+      />
     </Card>
   )
 }
