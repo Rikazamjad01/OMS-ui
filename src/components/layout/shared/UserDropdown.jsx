@@ -17,6 +17,8 @@ import MenuList from '@mui/material/MenuList'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import MenuItem from '@mui/material/MenuItem'
+import { Alert, Snackbar } from '@mui/material'
+import { CircularProgress } from '@mui/material'
 
 // Third-party Imports
 // import { signOut, useSession } from 'next-auth/react'
@@ -29,6 +31,8 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
+import { clearError, logoutThunk, selectError, selectIsLoading } from '@/redux-store/slices/authSlice'
+import { useDispatch, useSelector } from 'react-redux'
 
 // Styled component for badge content
 const BadgeContentSpan = styled('span')({
@@ -46,13 +50,14 @@ const UserDropdown = () => {
 
   // Refs
   const anchorRef = useRef(null)
-
+  const error = useSelector(selectError)
+  const isLoading = useSelector(selectIsLoading)
   // Hooks
   const router = useRouter()
   // const { data: session } = useSession()
   const { settings } = useSettings()
   const { lang: locale } = useParams()
-
+  const dispatch = useDispatch()
   const handleDropdownOpen = () => {
     !open ? setOpen(true) : setOpen(false)
   }
@@ -73,6 +78,10 @@ const UserDropdown = () => {
     try {
       // Sign out from the app
       // await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
+      await dispatch(logoutThunk())
+      if (!error) {
+        router.push('/login')
+      }
     } catch (error) {
       console.error(error)
 
@@ -141,12 +150,12 @@ const UserDropdown = () => {
                   <MenuItem className='gap-3' onClick={e => handleDropdownClose(e, '/pages/faq')}>
                     <i className='bx-help-circle' />
                     <Typography color='text.primary'>FAQ</Typography>
-                  </MenuItem>
+                  </MenuItem> */}
                   <Divider className='mlb-1' />
-                  <MenuItem className='gap-3' onClick={handleUserLogout}>
+                  <MenuItem className='gap-3' onClick={handleUserLogout} disabled={isLoading}>
                     <i className='bx-power-off' />
                     <Typography color='text.primary'>Logout</Typography>
-                  </MenuItem> */}
+                  </MenuItem>
                 </MenuList>
               </ClickAwayListener>
             </Paper>

@@ -40,6 +40,8 @@ import {
 } from '@/redux-store/slices/zonesSlice'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 
 const courierOptions = [
   { value: 'none', label: 'None' },
@@ -85,6 +87,7 @@ export default function ZoneSetup({ initialZone = null }) {
   const [selectedZoneId, setSelectedZoneId] = useState('')
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [saving, setSaving] = useState(false)
+  const [tabIndex, setTabIndex] = useState(0)
 
   // Load zones on mount
   useEffect(() => {
@@ -270,6 +273,13 @@ export default function ZoneSetup({ initialZone = null }) {
     [propagateZones]
   )
 
+  const setPriorityForAll = useCallback((key, value) => {
+    setRows(prev => {
+      const label = prev[0]?.zone
+      return prev.map(r => (r.zone === label ? { ...r, [key]: value } : r))
+    })
+  }, [])
+
   // Hydrate from backend response if provided
   const hydrateFromApi = useCallback(
     apiZone => {
@@ -387,10 +397,17 @@ export default function ZoneSetup({ initialZone = null }) {
       const first = zones[0]
       setSelectedZoneId(first._id || first.id)
       hydrateFromApi(first)
+      setTabIndex(0)
     }
   }, [zones, selectedZoneId, rows.length, initialZone, hydrateFromApi])
 
-  // Select an existing zone from list and hydrate
+  // Keep tabIndex in sync with selectedZoneId
+  useEffect(() => {
+    const idx = (zones || []).findIndex(z => (z._id || z.id) === selectedZoneId)
+    if (idx >= 0) setTabIndex(idx)
+  }, [zones, selectedZoneId])
+
+  // Select an existing zone via tabs and hydrate
   const handleConventionChange = useCallback(
     e => {
       const value = e.target.value
@@ -419,6 +436,27 @@ export default function ZoneSetup({ initialZone = null }) {
         : { label: c?.name || c?.label || '', value: c?.value || c?.name || c?.label || '' }
     )
   }, [])
+
+  // All cities used anywhere (from server + current rows) should be excluded from options
+  const usedCitiesSet = useMemo(() => {
+    const set = new Set()
+    ;(zones || []).forEach(z => (z?.config?.cities || []).forEach(c => set.add(normalizeCity(c))))
+    rows.forEach(r => {
+      const n = normalizeCity(r.city)
+      if (n) set.add(n)
+    })
+    return set
+  }, [zones, rows, normalizeCity])
+
+  const selectedLabelSet = useMemo(() => {
+    const set = new Set()
+    ;(selectedCities || []).forEach(c => set.add(normalizeCity(c)))
+    return set
+  }, [selectedCities, normalizeCity])
+
+  const filteredCityOptions = useMemo(() => {
+    return cityOptions.filter(opt => !usedCitiesSet.has(opt.label) && !selectedLabelSet.has(opt.label))
+  }, [cityOptions, usedCitiesSet, selectedLabelSet])
 
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
 
@@ -499,28 +537,24 @@ export default function ZoneSetup({ initialZone = null }) {
 
         <Divider />
 
-        <Grid container spacing={3} alignItems='center'>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Autocomplete
-              options={zoneOptions}
-              loading={zonesLoading}
-              value={zoneOptions.find(z => z.id === selectedZoneId) || null}
-              onChange={(_e, val) => {
-                setSelectedZoneId(val?.id || '')
-                if (val?.raw) hydrateFromApi(val.raw)
-              }}
-              getOptionLabel={option => option.label || ''}
-              renderInput={params => (
-                <TextField {...params} fullWidth label='Select existing zone' placeholder='Search zones' />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }} className='flex items-start gap-2 justify-end'>
-            <Button variant='tonal' onClick={() => hydrateFromApi(null)}>
-              Clear
-            </Button>
-          </Grid>
-        </Grid>
+        {/* Zone selector tabs */}
+        <Tabs
+          value={tabIndex}
+          onChange={(_e, idx) => {
+            setTabIndex(idx)
+            const item = zoneOptions[idx]
+            if (item) {
+              setSelectedZoneId(item.id)
+              if (item.raw) hydrateFromApi(item.raw)
+            }
+          }}
+          variant='scrollable'
+          scrollButtons='auto'
+        >
+          {(zoneOptions || []).map((z, i) => (
+            <Tab key={z.id || i} label={z.label} />
+          ))}
+        </Tabs>
 
         <Divider />
 
@@ -528,8 +562,11 @@ export default function ZoneSetup({ initialZone = null }) {
           <Grid size={{ xs: 12, md: 9 }}>
             <Autocomplete
               multiple
-              options={cityOptions}
+              disableCloseOnSelect
+              options={filteredCityOptions}
               getOptionLabel={option => option.label}
+              isOptionEqualToValue={(option, value) => option.value === value.value}
+              getOptionDisabled={option => usedCitiesSet.has(option.label) || selectedLabelSet.has(option.label)}
               value={(selectedCities || []).map(c => {
                 const label = normalizeCity(c)
                 return { label, value: label }
@@ -559,10 +596,70 @@ export default function ZoneSetup({ initialZone = null }) {
               <TableRow>
                 <TableCell width={220}>Zone</TableCell>
                 <TableCell width={260}>City</TableCell>
-                <TableCell>Priority 1</TableCell>
-                <TableCell>Priority 2</TableCell>
-                <TableCell>Priority 3</TableCell>
-                <TableCell>Priority 4</TableCell>
+                <TableCell>
+                  Priority 1
+                  <TextField
+                    select
+                    fullWidth
+                    size='small'
+                    value={rows[0]?.priority1 || 'none'}
+                    onChange={e => setPriorityForAll('priority1', e.target.value)}
+                  >
+                    {courierOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
+                <TableCell>
+                  Priority 2
+                  <TextField
+                    select
+                    fullWidth
+                    size='small'
+                    value={rows[0]?.priority2 || 'none'}
+                    onChange={e => setPriorityForAll('priority2', e.target.value)}
+                  >
+                    {courierOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
+                <TableCell>
+                  Priority 3
+                  <TextField
+                    select
+                    fullWidth
+                    size='small'
+                    value={rows[0]?.priority3 || 'none'}
+                    onChange={e => setPriorityForAll('priority3', e.target.value)}
+                  >
+                    {courierOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
+                <TableCell>
+                  Priority 4
+                  <TextField
+                    select
+                    fullWidth
+                    size='small'
+                    value={rows[0]?.priority4 || 'none'}
+                    onChange={e => setPriorityForAll('priority4', e.target.value)}
+                  >
+                    {courierOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
                 <TableCell align='right'>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -583,9 +680,6 @@ export default function ZoneSetup({ initialZone = null }) {
                         value={row.zone}
                         onChange={e => updateRow(row.id, { zone: e.target.value })}
                       />
-                      {/* <Typography variant='caption' color='text.secondary'>
-                      Row {idx + 1}
-                      </Typography> */}
                     </TableCell>
                     <TableCell>
                       <TextField
@@ -597,64 +691,16 @@ export default function ZoneSetup({ initialZone = null }) {
                       />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        select
-                        fullWidth
-                        label='Priority 1'
-                        value={row.priority1}
-                        onChange={e => updateRow(row.id, { priority1: e.target.value })}
-                      >
-                        {courierOptions.map(opt => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      <Chip label={row.priority1 || 'none'} size='small' />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        select
-                        fullWidth
-                        label='Priority 2'
-                        value={row.priority2}
-                        onChange={e => updateRow(row.id, { priority2: e.target.value })}
-                      >
-                        {courierOptions.map(opt => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      <Chip label={row.priority2 || 'none'} size='small' />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        select
-                        fullWidth
-                        label='Priority 3'
-                        value={row.priority3}
-                        onChange={e => updateRow(row.id, { priority3: e.target.value })}
-                      >
-                        {courierOptions.map(opt => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      <Chip label={row.priority3 || 'none'} size='small' />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        select
-                        fullWidth
-                        label='Priority 4'
-                        value={row.priority4}
-                        onChange={e => updateRow(row.id, { priority4: e.target.value })}
-                      >
-                        {courierOptions.map(opt => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      <Chip label={row.priority4 || 'none'} size='small' />
                     </TableCell>
                     <TableCell align='right'>
                       <Tooltip title='Delete row'>

@@ -8,7 +8,6 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
-import Chip from '@mui/material/Chip'
 import TablePagination from '@mui/material/TablePagination'
 import IconButton from '@mui/material/IconButton'
 import MenuItem from '@mui/material/MenuItem'
@@ -30,13 +29,17 @@ import {
 } from '@tanstack/react-table'
 
 // Component Imports
-import PermissionDialog from '@components/dialogs/permission-dialog'
+import DepartmentDialog from '@components/dialogs/department-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+
+// Redux
+import { useDispatch, useSelector } from 'react-redux'
+import { getAllDepartments } from '@/redux-store/slices/roleSlice'
 
 // Vars
 const colors = {
@@ -82,20 +85,39 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 // Column Definitions
 const columnHelper = createColumnHelper()
 
-const Permissions = ({ permissionsData }) => {
+const Permissions = () => {
+  // Redux
+  const dispatch = useDispatch()
+  const { departments, departmentPagination } = useSelector(state => state.role)
+
   // States
   const [open, setOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [editValue, setEditValue] = useState('')
+  const [editDepartment, setEditDepartment] = useState(null)
 
-  const [data, setData] = useState(...[permissionsData])
+  const [data, setData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
+
+  // Server-side pagination state (0-based page for UI)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(9)
+
+  // Fetch departments on mount and whenever page/rowsPerPage change
+  useEffect(() => {
+    dispatch(getAllDepartments({ params: { page: page + 1, limit: rowsPerPage }, force: true }))
+  }, [dispatch, page, rowsPerPage])
+
+  useEffect(() => {
+    setData(departments || [])
+  }, [departments])
+
+  const totalCount = departmentPagination?.total || 0
 
   // Vars
   const buttonProps = {
     variant: 'contained',
-    children: 'Add Permission',
-    onClick: () => handleAddPermission(),
+    children: 'Add Department',
+    onClick: () => handleAddDepartment(),
     className: 'max-sm:is-full',
     startIcon: <i className='bx-plus' />
   }
@@ -107,43 +129,24 @@ const Permissions = ({ permissionsData }) => {
         header: 'Name',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.name}</Typography>
       }),
-      columnHelper.accessor('assignedTo', {
-        header: 'Assigned To',
-        cell: ({ row }) =>
-          typeof row.original.assignedTo === 'string' ? (
-            <Chip
-              variant='tonal'
-              label={row.original.assignedTo}
-              color={colors[row.original.assignedTo]}
-              size='small'
-              className='capitalize'
-            />
-          ) : (
-            row.original.assignedTo.map((item, index) => (
-              <Chip
-                key={index}
-                variant='tonal'
-                label={item}
-                color={colors[item]}
-                size='small'
-                className='capitalize mie-4'
-              />
-            ))
-          )
+      columnHelper.accessor('description', {
+        header: 'Description',
+        cell: ({ row }) => <Typography color='text.secondary'>{row.original.description}</Typography>
       }),
-      columnHelper.accessor('createdDate', {
-        header: 'Created Date',
-        cell: ({ row }) => <Typography>{row.original.createdDate}</Typography>
+      columnHelper.accessor('createdAt', {
+        header: 'Created At',
+        cell: ({ row }) => (
+          <Typography>
+            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '-'}
+          </Typography>
+        )
       }),
       columnHelper.accessor('action', {
         header: 'Actions',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => handleEditPermission(row.original.name)}>
+            <IconButton onClick={() => handleEditDepartment(row.original)}>
               <i className='bx-edit text-textSecondary' />
-            </IconButton>
-            <IconButton>
-              <i className='bx-dots-vertical-rounded text-textSecondary' />
             </IconButton>
           </div>
         ),
@@ -166,7 +169,7 @@ const Permissions = ({ permissionsData }) => {
     },
     initialState: {
       pagination: {
-        pageSize: 9
+        pageSize: rowsPerPage
       }
     },
     enableRowSelection: true, //enable row selection for all rows
@@ -183,13 +186,18 @@ const Permissions = ({ permissionsData }) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
-  const handleEditPermission = name => {
+  const handleEditDepartment = dept => {
     setOpen(true)
-    setEditValue(name)
+    setEditDepartment(dept)
   }
 
-  const handleAddPermission = () => {
-    setEditValue('')
+  const handleAddDepartment = () => {
+    setEditDepartment(null)
+  }
+
+  const handleChangeRowsPerPage = e => {
+    setRowsPerPage(Number(e.target.value))
+    setPage(0)
   }
 
   return (
@@ -198,12 +206,7 @@ const Permissions = ({ permissionsData }) => {
         <CardContent className='flex flex-col gap-4 flex-wrap sm:flex-row items-start sm:items-center justify-between'>
           <div className='flex items-center gap-2'>
             <Typography>Show</Typography>
-            <CustomTextField
-              select
-              value={table.getState().pagination.pageSize}
-              onChange={e => table.setPageSize(Number(e.target.value))}
-              className='is-[70px]'
-            >
+            <CustomTextField select value={rowsPerPage} onChange={handleChangeRowsPerPage} className='is-[70px]'>
               <MenuItem value='5'>5</MenuItem>
               <MenuItem value='7'>7</MenuItem>
               <MenuItem value='9'>9</MenuItem>
@@ -213,14 +216,14 @@ const Permissions = ({ permissionsData }) => {
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search Permissions'
+              placeholder='Search Departments'
               className='max-sm:is-full'
             />
             <OpenDialogOnElementClick
               element={Button}
               elementProps={buttonProps}
-              dialog={PermissionDialog}
-              dialogProps={{ editValue }}
+              dialog={DepartmentDialog}
+              dialogProps={{ department: null }}
             />
           </div>
         </CardContent>
@@ -265,7 +268,7 @@ const Permissions = ({ permissionsData }) => {
               <tbody>
                 {table
                   .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
+                  .rows.slice(0, rowsPerPage)
                   .map(row => {
                     return (
                       <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
@@ -280,16 +283,22 @@ const Permissions = ({ permissionsData }) => {
           </table>
         </div>
         <TablePagination
-          component={() => <TablePaginationComponent table={table} />}
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
+          component={() => (
+            <TablePaginationComponent
+              table={table}
+              count={totalCount}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+            />
+          )}
+          count={totalCount}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
         />
       </Card>
-      <PermissionDialog open={open} setOpen={setOpen} data={editValue} />
+      <DepartmentDialog open={open} setOpen={setOpen} department={editDepartment} />
     </>
   )
 }

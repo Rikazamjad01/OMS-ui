@@ -50,6 +50,8 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+import { useDispatch, useSelector } from 'react-redux'
+import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
 
 // Styled Components
 const Icon = styled('i')({})
@@ -107,13 +109,57 @@ const columnHelper = createColumnHelper()
 const UserListTable = ({ tableData }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
+  const [editUserOpen, setEditUserOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(...[tableData])
-  const [filteredData, setFilteredData] = useState(data)
+  const [data, setData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
+  const dispatch = useDispatch()
+  const { allUsers, allUsersPagination } = useSelector(state => state.auth)
 
   // Hooks
   const { lang: locale } = useParams()
+
+  // Map API user shape to table row fields expected by the UI
+  const mapApiUsersToRows = users => {
+    if (!Array.isArray(users)) return []
+
+    return users.map(user => {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email || 'Unknown'
+      const roleName = (user.role?.name || 'subscriber').toLowerCase()
+      const departmentName = user.department?.name || 'standard'
+      const status = user.isVerified ? 'active' : user.passwordMustChange ? 'pending' : 'inactive'
+      const billing = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''
+
+      return {
+        id: user._id || user.id,
+        fullName,
+        username: user.email,
+        role: roleName,
+        currentPlan: departmentName,
+        billing,
+        status
+      }
+    })
+  }
+
+  // Load users on mount or when pagination changes (from Redux)
+  useEffect(() => {
+    const page = Math.max(1, Number(allUsersPagination.page) || 1)
+    const limit = Math.max(1, Number(allUsersPagination.limit) || 10)
+    if (!allUsers || allUsers.length === 0) {
+      dispatch(getAlUsersThunk({ params: { page, limit } }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sync component rows with Redux users
+  useEffect(() => {
+    const rows = mapApiUsersToRows(allUsers)
+    setData(rows)
+    setFilteredData(rows)
+  }, [allUsers])
 
   const columns = useMemo(
     () => [
@@ -156,8 +202,10 @@ const UserListTable = ({ tableData }) => {
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
             <Icon
-              className={classnames('text-xl', userRoleObj[row.original.role].icon)}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)` }}
+              className={classnames('text-xl', userRoleObj[row.original.role]?.icon || userRoleObj.subscriber.icon)}
+              sx={{
+                color: `var(--mui-palette-${userRoleObj[row.original.role]?.color || userRoleObj.subscriber.color}-main)`
+              }}
             />
             <Typography className='capitalize' color='text.primary'>
               {row.original.role}
@@ -195,15 +243,25 @@ const UserListTable = ({ tableData }) => {
         header: 'Action',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
+            {/* <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
               <i className='bx-trash text-textSecondary text-[22px]' />
             </IconButton>
             <IconButton>
               <Link href={getLocalizedUrl('/apps/user/view', locale)} className='flex'>
                 <i className='bx-show text-textSecondary text-[22px]' />
               </Link>
+            </IconButton> */}
+            <IconButton
+              onClick={() => {
+                // Find the full user object by id from Redux allUsers
+                const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+                setSelectedUser(full || null)
+                setEditUserOpen(true)
+              }}
+            >
+              <i className='bx-edit text-textSecondary text-[22px]' />
             </IconButton>
-            <OptionMenu
+            {/* <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
               options={[
@@ -218,7 +276,7 @@ const UserListTable = ({ tableData }) => {
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
                 }
               ]}
-            />
+            /> */}
           </div>
         ),
         enableSorting: false
@@ -267,16 +325,24 @@ const UserListTable = ({ tableData }) => {
     }
   }
 
+  const currentPageZeroBased = Math.max(0, Number(allUsersPagination.page) - 1 || 0)
+  const currentLimit = Math.max(1, Number(allUsersPagination.limit) || 10)
+  const totalCount = Math.max(0, Number(allUsersPagination.total) || 0)
+
   return (
     <>
       <Card>
-        <CardHeader title='Filters' className='pbe-4' />
-        <TableFilters setData={setFilteredData} tableData={data} />
+        {/* <CardHeader title='Filters' className='pbe-4' /> */}
+        {/* <TableFilters setData={setFilteredData} tableData={data} /> */}
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
           <CustomTextField
             select
-            value={table.getState().pagination.pageSize}
-            onChange={e => table.setPageSize(Number(e.target.value))}
+            value={currentLimit}
+            onChange={e => {
+              const newLimit = Number(e.target.value) || currentLimit
+              // Reset to first page when limit changes
+              dispatch(getAlUsersThunk({ params: { page: 1, limit: newLimit }, force: true }))
+            }}
             className='max-sm:is-full sm:is-[70px]'
           >
             <MenuItem value='10'>10</MenuItem>
@@ -349,7 +415,7 @@ const UserListTable = ({ tableData }) => {
               <tbody>
                 {table
                   .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
+                  .rows.slice(0, currentLimit)
                   .map(row => {
                     return (
                       <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
@@ -364,12 +430,26 @@ const UserListTable = ({ tableData }) => {
           </table>
         </div>
         <TablePagination
-          component={() => <TablePaginationComponent table={table} />}
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
+          component={() => (
+            <TablePaginationComponent
+              table={table}
+              count={totalCount}
+              rowsPerPage={currentLimit}
+              page={currentPageZeroBased}
+              onPageChange={(_, newPage) => {
+                dispatch(getAlUsersThunk({ params: { page: newPage + 1, limit: currentLimit }, force: true }))
+              }}
+            />
+          )}
+          count={totalCount}
+          rowsPerPage={currentLimit}
+          page={currentPageZeroBased}
+          onPageChange={(_, newPage) => {
+            dispatch(getAlUsersThunk({ params: { page: newPage + 1, limit: currentLimit }, force: true }))
+          }}
+          onRowsPerPageChange={e => {
+            const newLimit = Number(e.target.value) || currentLimit
+            dispatch(getAlUsersThunk({ params: { page: 1, limit: newLimit }, force: true }))
           }}
         />
       </Card>
@@ -379,6 +459,7 @@ const UserListTable = ({ tableData }) => {
         userData={data}
         setData={setData}
       />
+      <AddUserDrawer open={editUserOpen} handleClose={() => setEditUserOpen(false)} mode='edit' user={selectedUser} />
     </>
   )
 }
