@@ -1,19 +1,26 @@
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Button from '@mui/material/Button'
-import Drawer from '@mui/material/Drawer'
-import IconButton from '@mui/material/IconButton'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 import MenuItem from '@mui/material/MenuItem'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
+import DialogCloseButton from '@components/dialogs/DialogCloseButton'
+import { useDispatch, useSelector } from 'react-redux'
+import { getAllRoles, getAllDepartments } from '@/redux-store/slices/roleSlice'
+import { createUserThunk, editUserThunk } from '@/redux-store/slices/authSlice'
 
 // Vars
 const initialData = {
@@ -24,10 +31,15 @@ const initialData = {
 
 const AddUserDrawer = props => {
   // Props
-  const { open, handleClose, userData, setData } = props
+  const { open, handleClose, userData, setData, mode = 'add', user: editingUser } = props
+
+  const isEdit = mode === 'edit'
 
   // States
   const [formData, setFormData] = useState(initialData)
+  const dispatch = useDispatch()
+  const { roles, departments } = useSelector(state => state.role)
+  const authLoading = useSelector(state => state.auth.isLoading)
 
   // Hooks
   const {
@@ -37,85 +49,137 @@ const AddUserDrawer = props => {
     formState: { errors }
   } = useForm({
     defaultValues: {
-      fullName: '',
-      username: '',
-      email: '',
-      role: '',
-      plan: '',
-      status: ''
+      firstName: editingUser?.firstName || '',
+      lastName: editingUser?.lastName || '',
+      department: editingUser?.department?._id || '', // will store department _id
+      email: editingUser?.email || '',
+      role: editingUser?.role?._id || '' // will store role _id
     }
   })
 
-  const onSubmit = data => {
+  // When opening in edit mode or editingUser changes, reset defaults
+  useEffect(() => {
+    if (open) {
+      resetForm({
+        firstName: editingUser?.firstName || '',
+        lastName: editingUser?.lastName || '',
+        department: editingUser?.department?._id || '',
+        email: editingUser?.email || '',
+        role: editingUser?.role?._id || ''
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingUser])
+
+  useEffect(() => {
+    if (open) {
+      dispatch(getAllRoles({ params: { page: 1, limit: 100 }, force: false }))
+      dispatch(getAllDepartments({ params: { page: 1, limit: 100 }, force: false }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const onSubmit = async data => {
+    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim()
+
+    if (isEdit && editingUser?._id) {
+      const payload = {
+        _id: editingUser._id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        roleId: data.role,
+        departmentId: data.department
+      }
+      await dispatch(editUserThunk(payload))
+      handleClose()
+      return
+    }
+
+    // Construct payload for backend with _ids (create)
+    const payload = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      roleId: data.role, // _id
+      departmentId: data.department // _id
+    }
+    await dispatch(createUserThunk(payload))
+    // For UI preview in table (no backend call here), add a local row
     const newUser = {
       id: (userData?.length && userData?.length + 1) || 1,
       avatar: `/images/avatars/${Math.floor(Math.random() * 20) + 1}.png`,
-      fullName: data.fullName,
-      username: data.username,
+      fullName,
+      username: data.email,
       email: data.email,
-      role: data.role,
-      currentPlan: data.plan,
-      status: data.status,
+      role: (roles.find(r => r._id === data.role)?.name || 'subscriber').toLowerCase(),
+      currentPlan: departments.find(d => d._id === data.department)?.name || 'standard',
+      status: 'active',
       company: formData.company,
       country: formData.country,
       contact: formData.contact,
-      billing: userData?.[Math.floor(Math.random() * 50) + 1].billing ?? 'Auto Debit'
+      billing: userData?.[Math.floor(Math.random() * 50) + 1]?.billing ?? 'Auto Debit'
     }
 
     setData([...(userData ?? []), newUser])
     handleClose()
     setFormData(initialData)
-    resetForm({ fullName: '', username: '', email: '', role: '', plan: '', status: '' })
+    resetForm({ firstName: '', lastName: '', email: '', role: '', department: '' })
   }
 
   const handleReset = () => {
+    if (authLoading) return
     handleClose()
     setFormData(initialData)
   }
 
   return (
-    <Drawer
+    <Dialog
       open={open}
-      anchor='right'
-      variant='temporary'
       onClose={handleReset}
-      ModalProps={{ keepMounted: true }}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: 300, sm: 400 } } }}
+      fullWidth
+      maxWidth='sm'
+      scroll='body'
+      sx={{ '& .MuiDialog-paper': { overflow: 'visible' } }}
     >
-      <div className='flex items-center justify-between p-6'>
-        <Typography variant='h5'>Add New User</Typography>
-        <IconButton size='small' onClick={handleReset}>
-          <i className='bx-x text-textPrimary text-2xl' />
-        </IconButton>
-      </div>
+      <DialogCloseButton onClick={handleReset} disableRipple disabled={authLoading}>
+        <i className='bx-x' />
+      </DialogCloseButton>
+      <DialogTitle className='flex items-center justify-between p-6'>
+        <Typography component='span' variant='h5'>
+          {isEdit ? 'Edit User' : 'Add New User'}
+        </Typography>
+      </DialogTitle>
       <Divider />
-      <div className='p-6'>
-        <form onSubmit={handleSubmit(data => onSubmit(data))} className='flex flex-col gap-6'>
+      <form onSubmit={handleSubmit(data => onSubmit(data))}>
+        <DialogContent className='p-6 flex flex-col gap-6'>
           <Controller
-            name='fullName'
+            name='firstName'
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
               <CustomTextField
                 {...field}
                 fullWidth
-                label='Full Name'
-                placeholder='John Doe'
-                {...(errors.fullName && { error: true, helperText: 'This field is required.' })}
+                label='First Name'
+                placeholder='John'
+                disabled={authLoading}
+                {...(errors.firstName && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
           <Controller
-            name='username'
+            name='lastName'
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
               <CustomTextField
                 {...field}
                 fullWidth
-                label='Username'
-                placeholder='johndoe'
-                {...(errors.username && { error: true, helperText: 'This field is required.' })}
+                label='Last Name'
+                placeholder='Doe'
+                disabled={authLoading}
+                {...(errors.lastName && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
@@ -130,38 +194,12 @@ const AddUserDrawer = props => {
                 type='email'
                 label='Email'
                 placeholder='johndoe@gmail.com'
+                disabled={authLoading}
                 {...(errors.email && { error: true, helperText: 'This field is required.' })}
               />
             )}
           />
-          <CustomTextField
-            label='Company'
-            fullWidth
-            placeholder='Themeselection'
-            value={formData.company}
-            onChange={e => setFormData({ ...formData, company: e.target.value })}
-          />
-          <CustomTextField
-            select
-            fullWidth
-            id='country'
-            value={formData.country}
-            onChange={e => setFormData({ ...formData, country: e.target.value })}
-            label='Select Country'
-          >
-            <MenuItem value='India'>India</MenuItem>
-            <MenuItem value='USA'>USA</MenuItem>
-            <MenuItem value='Australia'>Australia</MenuItem>
-            <MenuItem value='Germany'>Germany</MenuItem>
-          </CustomTextField>
-          <CustomTextField
-            label='Contact'
-            type='number'
-            fullWidth
-            placeholder='202 555 0111'
-            value={formData.contact}
-            onChange={e => setFormData({ ...formData, contact: e.target.value })}
-          />
+
           <Controller
             name='role'
             control={control}
@@ -170,69 +208,65 @@ const AddUserDrawer = props => {
               <CustomTextField
                 select
                 fullWidth
-                id='select-role'
+                id='role'
                 label='Select Role'
-                {...field}
                 error={Boolean(errors.role)}
+                disabled={authLoading}
+                {...field}
               >
-                <MenuItem value='admin'>Admin</MenuItem>
-                <MenuItem value='author'>Author</MenuItem>
-                <MenuItem value='editor'>Editor</MenuItem>
-                <MenuItem value='maintainer'>Maintainer</MenuItem>
-                <MenuItem value='subscriber'>Subscriber</MenuItem>
+                <MenuItem value='' disabled>
+                  Select Role
+                </MenuItem>
+                {roles?.map(role => (
+                  <MenuItem key={role?._id} value={role?._id}>
+                    {role?.name}
+                  </MenuItem>
+                ))}
               </CustomTextField>
             )}
           />
+
           <Controller
-            name='plan'
+            name='department'
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
               <CustomTextField
                 select
                 fullWidth
-                id='select-plan'
-                label='Select Plan'
+                id='select-department'
+                label='Select Department'
+                error={Boolean(errors.department)}
+                disabled={authLoading}
                 {...field}
-                {...(errors.plan && { error: true, helperText: 'This field is required.' })}
               >
-                <MenuItem value='basic'>Basic</MenuItem>
-                <MenuItem value='company'>Company</MenuItem>
-                <MenuItem value='enterprise'>Enterprise</MenuItem>
-                <MenuItem value='team'>Team</MenuItem>
+                <MenuItem value='' disabled>
+                  Select Department
+                </MenuItem>
+                {departments?.map(dept => (
+                  <MenuItem key={dept?._id} value={dept?._id}>
+                    {dept?.name}
+                  </MenuItem>
+                ))}
               </CustomTextField>
             )}
           />
-          <Controller
-            name='status'
-            control={control}
-            rules={{ required: true }}
-            render={({ field }) => (
-              <CustomTextField
-                select
-                fullWidth
-                id='select-status'
-                label='Select Status'
-                {...field}
-                {...(errors.status && { error: true, helperText: 'This field is required.' })}
-              >
-                <MenuItem value='pending'>Pending</MenuItem>
-                <MenuItem value='active'>Active</MenuItem>
-                <MenuItem value='inactive'>Inactive</MenuItem>
-              </CustomTextField>
-            )}
-          />
-          <div className='flex items-center gap-4'>
-            <Button variant='contained' type='submit'>
-              Submit
-            </Button>
-            <Button variant='tonal' color='error' type='reset' onClick={() => handleReset()}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
-    </Drawer>
+        </DialogContent>
+        <DialogActions className='flex items-center gap-4 p-6'>
+          <Button
+            variant='contained'
+            type='submit'
+            disabled={authLoading}
+            startIcon={authLoading ? <CircularProgress color='inherit' size={18} /> : null}
+          >
+            {isEdit ? 'Update' : 'Submit'}
+          </Button>
+          <Button variant='tonal' color='error' type='reset' onClick={() => handleReset()} disabled={authLoading}>
+            Cancel
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   )
 }
 

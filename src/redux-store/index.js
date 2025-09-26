@@ -12,7 +12,8 @@ import productsReducer from '@/redux-store/slices/products'
 import bookingReducer from '@/redux-store/slices/bookingSlice'
 import zonesReducer from '@/redux-store/slices/zonesSlice'
 import userReducer from '@/redux-store/slices/user'
-
+import authReducer from '@/redux-store/slices/authSlice'
+import roleReducer from '@/redux-store/slices/roleSlice'
 
 export const store = configureStore({
   reducer: {
@@ -25,7 +26,9 @@ export const store = configureStore({
     products: productsReducer,
     booking: bookingReducer,
     zones: zonesReducer,
-    user: userReducer
+    user: userReducer,
+    auth: authReducer,
+    role: roleReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })

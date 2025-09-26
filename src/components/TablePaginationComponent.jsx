@@ -2,7 +2,6 @@ import Pagination from '@mui/material/Pagination'
 import Typography from '@mui/material/Typography'
 
 const TablePaginationComponent = ({ table, count, rowsPerPage, page, onPageChange }) => {
-
   console.log(page, 'page in TablePaginationComponent')
 
   const totalPages = Math.ceil(count / rowsPerPage)
@@ -30,6 +29,5 @@ const TablePaginationComponent = ({ table, count, rowsPerPage, page, onPageChang
     </div>
   )
 }
-
 
 export default TablePaginationComponent

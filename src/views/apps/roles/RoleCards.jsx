@@ -5,9 +5,6 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
-import Avatar from '@mui/material/Avatar'
-import AvatarGroup from '@mui/material/AvatarGroup'
-import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 
 // Component Imports
@@ -15,14 +12,11 @@ import RoleDialog from '@components/dialogs/role-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import Link from '@components/Link'
 
-// Vars
-const cardData = [
-  { totalUsers: 4, title: 'Administrator', avatars: ['1.png', '2.png', '3.png', '4.png'] },
-  { totalUsers: 7, title: 'Editor', avatars: ['5.png', '6.png', '7.png'] },
-  { totalUsers: 5, title: 'Users', avatars: ['4.png', '5.png', '6.png'] },
-  { totalUsers: 6, title: 'Support', avatars: ['10.png', '7.png', '9.png'] },
-  { totalUsers: 10, title: 'Restricted User', avatars: ['4.png', '5.png', '6.png'] }
-]
+// Redux Imports
+import { useDispatch, useSelector } from 'react-redux'
+import { useEffect } from 'react'
+import { getAllRoles } from '@/redux-store/slices/roleSlice'
+import Cookies from 'js-cookie'
 
 const RoleCards = () => {
   // Vars
@@ -32,6 +26,10 @@ const RoleCards = () => {
     color: 'primary.main',
     onClick: e => e.preventDefault()
   }
+
+  const permissionsString = Cookies.get('user')
+  const user = JSON.parse(permissionsString)
+  const permissions = user?.permissions || []
 
   const CardProps = {
     className: 'cursor-pointer bs-full',
@@ -59,34 +57,44 @@ const RoleCards = () => {
     )
   }
 
+  const dispatch = useDispatch()
+  const { roles } = useSelector(state => state.role)
+
+  useEffect(() => {
+    dispatch(getAllRoles({ params: { page: 1, limit: 100 }, force: true }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <>
       <Grid container spacing={6}>
-        {cardData.map((item, index) => (
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={index}>
+        {roles?.map((role, index) => (
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={role?._id || index}>
             <Card>
               <CardContent className='flex flex-col gap-4'>
                 <div className='flex items-center justify-between'>
-                  <Typography className='flex-grow'>{`Total ${item.totalUsers} users`}</Typography>
-                  <AvatarGroup total={item.totalUsers}>
-                    {item.avatars.map((img, index) => (
-                      <Avatar key={index} alt={item.title} src={`/images/avatars/${img}`} />
-                    ))}
-                  </AvatarGroup>
+                  {/* <Typography className='flex-grow'>{`Total ${role.totalUsers ?? 0} users`}</Typography> */}
                 </div>
-                <div className='flex justify-between items-center'>
+                <div className='flex justify-between items-start'>
                   <div className='flex flex-col items-start gap-1'>
-                    <Typography variant='h5'>{item.title}</Typography>
+                    <Typography variant='h5' className='capitalize'>
+                      {role?.name}
+                    </Typography>
+                    {role?.description ? (
+                      <Typography variant='body2' className='text-textSecondary'>
+                        {role.description}
+                      </Typography>
+                    ) : null}
+                    <Typography variant='caption' className='text-textDisabled'>
+                      Scope: {role?.scope?.type || '—'}
+                    </Typography>
                     <OpenDialogOnElementClick
                       element={Typography}
                       elementProps={typographyProps}
                       dialog={RoleDialog}
-                      dialogProps={{ title: item.title }}
+                      dialogProps={{ title: role?.name, role }}
                     />
                   </div>
-                  <IconButton>
-                    <i className='bx-copy text-textDisabled' />
-                  </IconButton>
                 </div>
               </CardContent>
             </Card>
