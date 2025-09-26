@@ -1,0 +1,15 @@
+{
+    "root": true,
+    "extends": [
+        "next",
+        "next/core-web-vitals"
+    ],
+    "rules": {
+        "import/order": "off",
+        "import/no-duplicates": "warn",
+        "import/no-unresolved": "off",
+        "lines-around-comment": "off",
+        "padding-line-between-statements": "off",
+        "react-hooks/exhaustive-deps": "off"
+    }
+}
