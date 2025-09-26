@@ -1,6 +1,12 @@
 'use client'
-
 import { useState, useEffect } from 'react'
+
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+import Snackbar from '@mui/material/Snackbar'
+import MuiAlert from '@mui/material/Alert'
 
 import {
   Box,
@@ -31,20 +37,76 @@ import DownloadDialog from '../downloadDialogue/page'
 const { RangePicker } = DatePicker
 
 const reportTabs = [
-  { key: 'agents', label: 'Agents' },
-  { key: 'cities', label: 'Cities' },
-  { key: 'products', label: 'Products' },
+  {
+    key: 'agents',
+    label: 'Agents',
+    subs: [
+      { key: 'activeAgents', label: 'Active Agents' },
+      { key: 'inactiveAgents', label: 'Inactive Agents' }
+    ]
+  },
+  { key: 'cities', label: 'Cities' }, // no subs
+  {
+    key: 'products',
+    label: 'Products',
+    subs: [
+      { key: 'topSelling', label: 'Top Selling' },
+      { key: 'lowStock', label: 'Low Stock' }
+    ]
+  },
   { key: 'discounts', label: 'Discounts' },
   { key: 'returns', label: 'Returns' }
 ]
 
+// CSV/Excel Export
+const exportToExcel = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Report')
+  XLSX.writeFile(workbook, `${fileName}.xlsx`)
+}
+
+const exportToCSV = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+
+  link.href = URL.createObjectURL(blob)
+  link.download = `${fileName}.csv`
+  link.click()
+}
+
+// PDF Export
+const exportToPDF = (data, columns, fileName) => {
+  const doc = new jsPDF()
+
+  doc.text('Admin Report', 14, 10)
+
+  const headers = columns.map(col => col.header)
+  const rows = data.map(row => columns.map(col => row[col.accessorKey]))
+
+  autoTable(doc, {
+    head: [headers],
+    body: rows,
+    startY: 20
+  })
+
+  doc.save(`${fileName}.pdf`)
+}
+
 export default function AdminReportsPage() {
   const [selectedTab, setSelectedTab] = useState('')
+  const [selectedSubTab, setSelectedSubTab] = useState('')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({ search: '' })
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success')
 
   useEffect(() => {
     if (!selectedTab) return
@@ -53,81 +115,53 @@ export default function AdminReportsPage() {
     setTimeout(() => {
       let apiData = []
 
-      if (selectedTab === 'agents') {
+      // --- Demo API data (replace with your real API) ---
+      if (selectedTab === 'agents' && selectedSubTab === 'activeAgents') {
         apiData = [
-          {
-            name: 'Ali',
-            total: 50,
-            confirmed: 30,
-            assigned: 10,
-            noPick: 5,
-            cancelled: 5,
-            progress: 60
-          },
-          {
-            name: 'Sara',
-            total: 40,
-            confirmed: 20,
-            assigned: 15,
-            noPick: 2,
-            cancelled: 3,
-            progress: 80
-          }
+          { name: 'Ali', total: 50, confirmed: 30, assigned: 10 },
+          { name: 'Sara', total: 40, confirmed: 20, assigned: 15 }
+        ]
+      } else if (selectedTab === 'cities') {
+        apiData = [
+          { city: 'Lahore', orders: 120, revenue: 56000 },
+          { city: 'Karachi', orders: 200, revenue: 89000 }
         ]
       }
 
-      if (selectedTab === 'agents') {
-        setColumns([
-          { accessorKey: 'name', header: 'Name' },
-          {
-            accessorKey: 'total',
-            header: 'Total',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='primary' size='small' />
-          },
-          {
-            accessorKey: 'confirmed',
-            header: 'Confirmed',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='success' size='small' />
-          },
-          {
-            accessorKey: 'assigned',
-            header: 'Assigned',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='info' size='small' />
-          },
-          {
-            accessorKey: 'noPick',
-            header: 'No Pick',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='warning' size='small' />
-          },
-          {
-            accessorKey: 'cancelled',
-            header: 'Cancelled',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' color='error' size='small' />
-          },
-          {
-            accessorKey: 'progress',
-            header: 'Progress',
-            cell: ({ getValue }) => (
-              <Box display='flex' alignItems='center' gap={1} minWidth={120}>
-                <LinearProgress
-                  variant='determinate'
-                  value={getValue()}
-                  sx={{ flexGrow: 1, height: 8, borderRadius: 5 }}
-                  color={getValue() > 70 ? 'success' : 'warning'}
-                />
-                <Typography variant='body2' color='text.secondary'>
-                  {getValue()}%
-                </Typography>
-              </Box>
-            )
-          }
-        ])
+      // -------------------------------------------------
+
+      // 🎨 Available chip colors
+      const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info', 'default']
+
+      // 🎨 Mapping to keep consistent random colors per unique value
+      const valueColorMap = {}
+
+      const getColorForValue = value => {
+        if (!valueColorMap[value]) {
+          const newColor = chipColors[Math.floor(Math.random() * chipColors.length)]
+
+          valueColorMap[value] = newColor
+        }
+
+        return valueColorMap[value]
       }
 
+      // 🔄 Dynamic columns
+      const dynamicCols = Object.keys(apiData[0] || {}).map(key => ({
+        accessorKey: key,
+        header: key.charAt(0).toUpperCase() + key.slice(1),
+        cell: ({ getValue }) => {
+          const value = getValue()
+
+          return <Chip label={value} size='small' variant='tonal' color={getColorForValue(value)} />
+        }
+      }))
+
       setData(apiData)
+      setColumns(dynamicCols)
       setLoading(false)
-    })
-  }, [selectedTab])
+    }, 500)
+  }, [selectedTab, selectedSubTab])
 
   const table = useReactTable({
     data,
@@ -145,17 +179,36 @@ export default function AdminReportsPage() {
         </Typography>
 
         {/* Tabs as buttons */}
-        <Box mb={3} display='flex' gap={2} px={4}>
+        <Box mb={4} display='flex' gap={2} px={4}>
           {reportTabs.map(tab => (
             <Button
               key={tab.key}
               variant={selectedTab === tab.key ? 'contained' : 'outlined'}
-              onClick={() => setSelectedTab(tab.key)}
+              onClick={() => {
+                setSelectedTab(tab.key)
+                setSelectedSubTab(tab.subs?.[0]?.key || '') // default to first sub if exists
+              }}
             >
               {tab.label}
             </Button>
           ))}
         </Box>
+
+        {selectedTab && reportTabs.find(t => t.key === selectedTab)?.subs && (
+          <Box mb={3} display='flex' gap={2} px={4}>
+            {reportTabs
+              .find(t => t.key === selectedTab)
+              .subs.map(sub => (
+                <Button
+                  key={sub.key}
+                  variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedSubTab(sub.key)}
+                >
+                  {sub.label}
+                </Button>
+              ))}
+          </Box>
+        )}
 
         {/* Filters Section */}
         {selectedTab && (
@@ -216,9 +269,8 @@ export default function AdminReportsPage() {
                 fullWidth
                 className='flex flex-1'
                 options={[
-                  { label: 'Brand A', value: 'brandA' },
-                  { label: 'Brand B', value: 'brandB' },
-                  { label: 'Brand C', value: 'brandC' }
+                  { label: 'Sukoon Wellness', value: 'sukoon' },
+                  { label: 'Glorify', value: 'glorify' }
                 ]}
                 getOptionLabel={option => option.label}
                 value={filters.brand || []}
@@ -330,7 +382,7 @@ export default function AdminReportsPage() {
           </Typography>
         )}
       </Box>
-      {selectedTab ? (
+      {selectedTab && data.length > 0 ? (
         <div className='p-4 flex justify-end'>
           <Button
             variant='contained'
@@ -346,14 +398,44 @@ export default function AdminReportsPage() {
         open={downloadDialogOpen}
         onClose={() => setDownloadDialogOpen(false)}
         onConfirm={format => {
-          console.log('User selected format:', format)
+          const fileName = `${selectedTab}_report_${dayjs().format('YYYYMMDD')}`
 
-          // 🔽 Here you implement actual export logic:
-          // - CSV: convert JSON to CSV
-          // - PDF: use jsPDF or pdfmake
-          // - Excel: use SheetJS (xlsx)
+          try {
+            if (format === 'csv') {
+              exportToCSV(data, fileName)
+            } else if (format === 'excel') {
+              exportToExcel(data, fileName)
+            } else if (format === 'pdf') {
+              exportToPDF(data, columns, fileName)
+            }
+
+            // ✅ Show success snackbar
+            setSnackbarMessage(`Report downloaded successfully as ${format.toUpperCase()}`)
+            setSnackbarSeverity('success')
+            setSnackbarOpen(true)
+          } catch (error) {
+            console.error(error)
+            setSnackbarMessage(`Failed to download report as ${format.toUpperCase()}`)
+            setSnackbarSeverity('error')
+            setSnackbarOpen(true)
+          }
         }}
       />
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <MuiAlert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+          variant='filled'
+        >
+          {snackbarMessage}
+        </MuiAlert>
+      </Snackbar>
     </Card>
   )
 }

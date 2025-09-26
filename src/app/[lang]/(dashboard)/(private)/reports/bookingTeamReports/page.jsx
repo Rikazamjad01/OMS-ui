@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react'
 
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
 import {
   Box,
   Typography,
@@ -11,8 +15,11 @@ import {
   LinearProgress,
   Chip,
   Card,
-  Autocomplete
+  Autocomplete,
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material'
+
 import classnames from 'classnames'
 import {
   useReactTable,
@@ -23,27 +30,100 @@ import {
 } from '@tanstack/react-table'
 import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
-import classNames from 'classnames'
 
 import DownloadDialog from '../downloadDialogue/page'
 
 const { RangePicker } = DatePicker
 
 const reportTabs = [
-  { key: 'products', label: 'Products' },
-  { key: 'couriers', label: 'Couriers' },
-  { key: 'city', label: 'City' },
-  { key: 'demand-sheet', label: 'Demand Sheet' },
-  { key: 'dispatch', label: 'Dispatch' }
+  {
+    key: 'products',
+    label: 'Products',
+    subs: [
+      { key: 'topSelling', label: 'Top Selling' },
+      { key: 'lowStock', label: 'Low Stock' }
+    ]
+  },
+  {
+    key: 'couriers',
+    label: 'Couriers'
+  },
+  {
+    key: 'city',
+    label: 'City'
+  },
+  {
+    key: 'demand-sheet',
+    label: 'Demand Sheet'
+  },
+  {
+    key: 'dispatch',
+    label: 'Dispatch'
+  }
 ]
+
+// CSV/Excel Export
+const exportToExcel = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Report')
+  XLSX.writeFile(workbook, `${fileName}.xlsx`)
+}
+
+const exportToCSV = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+
+  link.href = URL.createObjectURL(blob)
+  link.download = `${fileName}.csv`
+  link.click()
+}
+
+// PDF Export
+const exportToPDF = (data, columns, fileName) => {
+  const doc = new jsPDF({ orientation: 'landscape' })
+
+  doc.text('Admin Report', 14, 10)
+  const truncate = (str, maxLength = 15) => (str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str)
+
+  const headers = columns.map(col => col.header)
+  const rows = data.map(row => columns.map(col => truncate(row[col.accessorKey], 20)))
+
+  autoTable(doc, {
+    head: [headers],
+    body: rows,
+    startY: 20,
+    styles: {
+      fontSize: 8,
+      cellPadding: 3,
+      overflow: 'ellipsize', // show dots instead of wrapping
+      lineWidth: 0.1,
+      lineColor: [0, 0, 0]
+    },
+    headStyles: {
+      fillColor: [41, 128, 185], // nice blue header
+      textColor: 255,
+      halign: 'center'
+    }
+  })
+
+  doc.save(`${fileName}.pdf`)
+}
 
 export default function AdminReportsPage() {
   const [selectedTab, setSelectedTab] = useState('')
+  const [selectedSubTab, setSelectedSubTab] = useState('')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({ search: '' })
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success')
 
   useEffect(() => {
     if (!selectedTab) return
@@ -51,117 +131,43 @@ export default function AdminReportsPage() {
 
     setTimeout(() => {
       let apiData = []
+      let cols = []
 
       if (selectedTab === 'products') {
-        apiData = [
+        if (selectedSubTab === 'topSelling') {
+          apiData = [
+            { name: 'Product A', sold: 500, stock: 100 },
+            { name: 'Product B', sold: 300, stock: 150 }
+          ]
+        }
+
+        if (selectedSubTab === 'lowStock') {
+          apiData = [
+            { name: 'Product X', sold: 50, stock: 5 },
+            { name: 'Product Y', sold: 30, stock: 2 }
+          ]
+        }
+
+        cols = [
+          { accessorKey: 'name', header: 'Product Name' },
           {
-            name: 'Ali',
-            date: '2025-09-20',
-            amount: 2000,
-            unit: 'Box',
-            status: 'Shipped',
-            dispatch_date: '2025-09-22',
-            last_process_working_date: '2025-09-21',
-            origin: 'Faisalabad',
-            destination: 'Lahore',
-            address: '123 Street, Lahore',
-            contact: '0300-1234567',
-            tracking_number: 'TRK123',
-            email: 'ali@example.com',
-            courier: 'TCS'
+            accessorKey: 'sold',
+            header: 'Units Sold',
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='success' />
           },
           {
-            name: 'Sara',
-            date: '2025-09-21',
-            amount: 1500,
-            unit: 'Carton',
-            status: 'Pending',
-            dispatch_date: '2025-09-23',
-            last_process_working_date: '2025-09-22',
-            origin: 'Karachi',
-            destination: 'Islamabad',
-            address: '456 Avenue, Islamabad',
-            contact: '0301-9876543',
-            tracking_number: 'TRK456',
-            email: 'sara@example.com',
-            courier: 'Leopard'
+            accessorKey: 'stock',
+            header: 'Stock Remaining',
+            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='warning' />
           }
         ]
-
-        setColumns([
-          { accessorKey: 'date', header: 'Booking Date' },
-          {
-            accessorKey: 'amount',
-            header: 'Amount',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='success' />
-          },
-          {
-            accessorKey: 'unit',
-            header: 'Unit',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='info' />
-          },
-          {
-            accessorKey: 'status',
-            header: 'Status',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='warning' />
-          },
-          {
-            accessorKey: 'dispatch_date',
-            header: 'Dispatch Date',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='info' />
-          },
-          {
-            accessorKey: 'last_process_working_date',
-            header: 'Last Process Working Date',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='error' />
-          },
-          {
-            accessorKey: 'origin',
-            header: 'Origin',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='success' />
-          },
-          {
-            accessorKey: 'destination',
-            header: 'Destination',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='info' />
-          },
-          {
-            accessorKey: 'address',
-            header: 'Address',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          },
-          {
-            accessorKey: 'name',
-            header: 'Name',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          },
-          {
-            accessorKey: 'contact',
-            header: 'Contact',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          },
-          {
-            accessorKey: 'tracking_number',
-            header: 'Tracking Number',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          },
-          {
-            accessorKey: 'email',
-            header: 'Email',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          },
-          {
-            accessorKey: 'courier',
-            header: 'Courier',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' />
-          }
-        ])
       }
 
       setData(apiData)
+      setColumns(cols)
       setLoading(false)
-    })
-  }, [selectedTab])
+    }, 500)
+  }, [selectedTab, selectedSubTab])
 
   const table = useReactTable({
     data,
@@ -184,12 +190,32 @@ export default function AdminReportsPage() {
             <Button
               key={tab.key}
               variant={selectedTab === tab.key ? 'contained' : 'outlined'}
-              onClick={() => setSelectedTab(tab.key)}
+              onClick={() => {
+                setSelectedTab(tab.key)
+                setSelectedSubTab(tab.subs?.[0]?.key || '') // auto-select first sub-tab
+              }}
             >
               {tab.label}
             </Button>
           ))}
         </Box>
+
+        {/* Sub-Tabs */}
+        {selectedTab && reportTabs.find(t => t.key === selectedTab)?.subs && (
+          <Box mb={3} display='flex' gap={2} px={4}>
+            {reportTabs
+              .find(t => t.key === selectedTab)
+              .subs.map(sub => (
+                <Button
+                  key={sub.key}
+                  variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedSubTab(sub.key)}
+                >
+                  {sub.label}
+                </Button>
+              ))}
+          </Box>
+        )}
 
         {/* Filters */}
         {selectedTab && (
@@ -372,7 +398,7 @@ export default function AdminReportsPage() {
           </Typography>
         )}
       </Box>
-      {selectedTab ? (
+      {selectedTab && data.length > 0 ? (
         <div className='p-4 flex justify-end'>
           <Button
             variant='contained'
@@ -390,12 +416,44 @@ export default function AdminReportsPage() {
         onConfirm={format => {
           console.log('User selected format:', format)
 
-          // 🔽 Here you implement actual export logic:
-          // - CSV: convert JSON to CSV
-          // - PDF: use jsPDF or pdfmake
-          // - Excel: use SheetJS (xlsx)
+          const fileName = `${selectedTab}_report_${dayjs().format('YYYYMMDD')}`
+
+          try {
+            if (format === 'csv') {
+              exportToCSV(data, fileName)
+            } else if (format === 'excel') {
+              exportToExcel(data, fileName)
+            } else if (format === 'pdf') {
+              exportToPDF(data, columns, fileName)
+            }
+
+            // ✅ Show success snackbar
+            setSnackbarMessage(`Report downloaded successfully as ${format.toUpperCase()}`)
+            setSnackbarSeverity('success')
+            setSnackbarOpen(true)
+          } catch (error) {
+            console.error(error)
+            setSnackbarMessage(`Failed to download report as ${format.toUpperCase()}`)
+            setSnackbarSeverity('error')
+            setSnackbarOpen(true)
+          }
         }}
       />
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <MuiAlert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+          variant='filled'
+        >
+          {snackbarMessage}
+        </MuiAlert>
+      </Snackbar>
     </Card>
   )
 }

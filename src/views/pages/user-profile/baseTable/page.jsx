@@ -99,11 +99,11 @@ export default function BaseTable({ title, data, columns }) {
       {/* Pagination */}
       <TablePagination
         component={() => <TablePaginationComponent table={table} />}
-        count={table.getFilteredRowModel().rows.length}
-        rowsPerPage={table.getState().pagination.pageSize}
-        page={table.getState().pagination.pageIndex}
-        onPageChange={(_, page) => table.setPageIndex(page)}
-        onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+        count={table.getFilteredRowModel().rows.length || 0}
+        rowsPerPage={table.getState().pagination.pageSize || 0}
+        page={table.getState().pagination.pageIndex || 0}
+        onPageChange={(_, page) => table.setPageIndex(page) || 0}
+        onRowsPerPageChange={e => table.setPageSize(Number(e.target.value)) || 0}
       />
     </Card>
   )

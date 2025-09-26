@@ -42,7 +42,7 @@ const handleError = error => {
 
   if (axios.isAxiosError(error)) {
     const message =
-      error.response?.data?.errors?.[0] || error.response?.data?.error || error.message || 'Something went wrong.'
+      error.response?.data?.message || error.response?.data?.message || error.message || 'Something went wrong.'
 
     console.error('Axios Error:', message, error.response?.data)
     throw new Error(message) // Still throw for catching

@@ -2,7 +2,22 @@
 
 import { useState, useEffect } from 'react'
 
-import { Box, Typography, Button, CircularProgress, TextField, Chip, Card, Autocomplete } from '@mui/material'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  TextField,
+  Chip,
+  Card,
+  Autocomplete,
+  Snackbar,
+  Alert as MuiAlert
+} from '@mui/material'
 import {
   useReactTable,
   getCoreRowModel,
@@ -20,15 +35,27 @@ const { RangePicker } = DatePicker
 
 // 🔹 CSR Reports Tabs
 const csrReportsTabs = [
-  { key: 'agentOrderReport', label: 'Agent Order Report' },
+  {
+    key: 'agentReports',
+    label: 'Agent Reports',
+    subReports: [
+      { key: 'agentOrderReport', label: 'Agent Order Report' },
+      { key: 'agentIncentiveReport', label: 'Agent Incentive Report' },
+      { key: 'agentChannelReport', label: 'Agent Channel Report' }
+    ]
+  },
+  {
+    key: 'courierReports',
+    label: 'Courier Reports',
+    subReports: [
+      { key: 'courierDeliveryReport', label: 'Courier Delivery Report' },
+      { key: 'courierFocReport', label: 'Courier FOC Report' },
+      { key: 'dispatchReport', label: 'Dispatch Report' }
+    ]
+  },
   { key: 'productUnitReport', label: 'Product Unit Report' },
   { key: 'bookingUnitReport', label: 'Booking Unit Report' },
-  { key: 'courierFocReport', label: 'Courier FOC Report' },
-  { key: 'agentChannelReport', label: 'Agent Channel Report' },
-  { key: 'channelOrderReport', label: 'Channel Order Report' },
-  { key: 'agentIncentiveReport', label: 'Agent Incentive Report' },
-  { key: 'courierDeliveryReport', label: 'Courier Delivery Report' },
-  { key: 'dispatchReport', label: 'Dispatch Report' }
+  { key: 'channelOrderReport', label: 'Channel Order Report' }
 ]
 
 const valueColorMap = {
@@ -42,67 +69,112 @@ const valueColorMap = {
   returned: 'error'
 }
 
+// CSV/Excel Export
+const exportToExcel = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Report')
+  XLSX.writeFile(workbook, `${fileName}.xlsx`)
+}
+
+const exportToCSV = (data, fileName) => {
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+
+  link.href = URL.createObjectURL(blob)
+  link.download = `${fileName}.csv`
+  link.click()
+}
+
+// PDF Export
+const exportToPDF = (data, columns, fileName) => {
+  const doc = new jsPDF()
+
+  doc.text('Admin Report', 14, 10)
+  const truncate = (str, maxLength = 15) => (str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str)
+
+  const headers = columns.map(col => col.header)
+  const rows = data.map(row => columns.map(col => truncate(row[col.accessorKey], 20)))
+
+  autoTable(doc, {
+    head: [headers],
+    body: rows,
+    startY: 20,
+    styles: {
+      fontSize: 8,
+      cellPadding: 3,
+      overflow: 'ellipsize', // show dots instead of wrapping
+      lineWidth: 0.1,
+      lineColor: [0, 0, 0]
+    },
+    headStyles: {
+      fillColor: [41, 128, 185], // nice blue header
+      textColor: 255,
+      halign: 'center'
+    }
+  })
+
+  doc.save(`${fileName}.pdf`)
+}
+
 export default function CSRReportsPage() {
   const [selectedTab, setSelectedTab] = useState('')
+  const [selectedSubTab, setSelectedSubTab] = useState('')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({})
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success')
 
   useEffect(() => {
-    if (!selectedTab) return
+    const activeKey = selectedSubTab || selectedTab
+
+    if (!activeKey) return
     setLoading(true)
 
     setTimeout(() => {
       let apiData = []
 
-      if (selectedTab === 'agentOrderReport') {
+      if (activeKey === 'agentOrderReport') {
         apiData = [
           { agent: 'Ali', orders: 50, confirmed: 40, returned: 5 },
           { agent: 'Sara', orders: 70, confirmed: 60, returned: 7 }
         ]
-      } else if (selectedTab === 'productUnitReport') {
+      } else if (activeKey === 'productUnitReport') {
         apiData = [
           { product: 'Shirts', units: 120, confirmed: 100 },
           { product: 'Shoes', units: 80, confirmed: 65 }
         ]
-      } else if (selectedTab === 'courierDeliveryReport') {
+      } else if (activeKey === 'courierDeliveryReport') {
         apiData = [
           { courier: 'TCS', parcels: 200, delivered: 180, ratio: '90%' },
           { courier: 'Leopard', parcels: 150, delivered: 123, ratio: '82%' }
         ]
-      } else if (selectedTab === 'dispatchReport') {
+      } else if (activeKey === 'dispatchReport') {
         apiData = [
           { courier: 'TCS', dispatched: 300, charges: 5000 },
           { courier: 'Leopard', dispatched: 220, charges: 3700 }
         ]
       }
 
+      const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info', 'default']
+
       const dynamicCols = Object.keys(apiData[0] || {}).map(key => ({
         accessorKey: key,
         header: key.charAt(0).toUpperCase() + key.slice(1),
         cell: ({ getValue }) => {
           const value = getValue()
-          const lowerVal = String(value).toLowerCase()
-          const chipColor = valueColorMap[lowerVal] || 'default'
 
-          return (
-            <Chip
-              label={value}
-              variant='tonal'
-              size='small'
-              color={chipColor}
-              sx={{
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  backgroundColor: theme =>
-                    chipColor !== 'default' ? theme.palette[chipColor].main : theme.palette.grey[400],
-                  color: '#fff'
-                }
-              }}
-            />
-          )
+          // Pick a random color for this render
+          const randomColor = chipColors[Math.floor(Math.random() * chipColors.length)]
+
+          return <Chip label={value} size='small' variant='tonal' color={randomColor} />
         }
       }))
 
@@ -110,7 +182,7 @@ export default function CSRReportsPage() {
       setColumns(dynamicCols)
       setLoading(false)
     })
-  }, [selectedTab])
+  }, [selectedTab, selectedSubTab])
 
   const table = useReactTable({
     data,
@@ -133,12 +205,31 @@ export default function CSRReportsPage() {
             <Button
               key={tab.key}
               variant={selectedTab === tab.key ? 'contained' : 'outlined'}
-              onClick={() => setSelectedTab(tab.key)}
+              onClick={() => {
+                setSelectedTab(tab.key)
+                setSelectedSubTab('') // reset when switching main tab
+              }}
             >
               {tab.label}
             </Button>
           ))}
         </Box>
+
+        {selectedTab && csrReportsTabs.find(t => t.key === selectedTab)?.subReports && (
+          <Box mb={2} display='flex' gap={2} px={4} flexWrap='wrap'>
+            {csrReportsTabs
+              .find(t => t.key === selectedTab)
+              ?.subReports.map(sub => (
+                <Button
+                  key={sub.key}
+                  variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedSubTab(sub.key)}
+                >
+                  {sub.label}
+                </Button>
+              ))}
+          </Box>
+        )}
 
         {/* Filters */}
         {selectedTab && (
@@ -293,7 +384,7 @@ export default function CSRReportsPage() {
           </Typography>
         )}
       </Box>
-      {selectedTab ? (
+      {selectedTab && data.length > 0 ? (
         <div className='p-4 flex justify-end'>
           <Button
             variant='contained'
@@ -311,12 +402,44 @@ export default function CSRReportsPage() {
         onConfirm={format => {
           console.log('User selected format:', format)
 
-          // 🔽 Here you implement actual export logic:
-          // - CSV: convert JSON to CSV
-          // - PDF: use jsPDF or pdfmake
-          // - Excel: use SheetJS (xlsx)
+          const fileName = `${selectedTab}_report_${dayjs().format('YYYYMMDD')}`
+
+          try {
+            if (format === 'csv') {
+              exportToCSV(data, fileName)
+            } else if (format === 'excel') {
+              exportToExcel(data, fileName)
+            } else if (format === 'pdf') {
+              exportToPDF(data, columns, fileName)
+            }
+
+            // ✅ Show success snackbar
+            setSnackbarMessage(`Report downloaded successfully as ${format.toUpperCase()}`)
+            setSnackbarSeverity('success')
+            setSnackbarOpen(true)
+          } catch (error) {
+            console.error(error)
+            setSnackbarMessage(`Failed to download report as ${format.toUpperCase()}`)
+            setSnackbarSeverity('error')
+            setSnackbarOpen(true)
+          }
         }}
       />
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <MuiAlert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+          variant='filled'
+        >
+          {snackbarMessage}
+        </MuiAlert>
+      </Snackbar>
     </Card>
   )
 }

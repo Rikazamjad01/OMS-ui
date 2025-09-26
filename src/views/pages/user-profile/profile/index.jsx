@@ -15,24 +15,24 @@ const ProfileTab = ({ data }) => {
 const mapUserDataToOverview = data => {
   return {
     about: [
-      { property: 'First Name', value: data.firstName, icon: 'tabler-user' },
-      { property: 'Last Name', value: data.lastName, icon: 'tabler-user' },
+      { property: 'First Name', value: data?.firstName, icon: 'tabler-user' },
+      { property: 'Last Name', value: data?.lastName, icon: 'tabler-user' },
       { property: 'Country', value: 'Pakistan', icon: 'tabler-map-pin' },
-      { property: 'Role', value: data.role?.name, icon: 'tabler-briefcase' },
-      { property: 'Department', value: (data.department?.name.toUpperCase()), icon: 'tabler-building' }
+      { property: 'Role', value: data?.role?.name, icon: 'tabler-briefcase' },
+      { property: 'Department', value: (data?.department?.name.toUpperCase()), icon: 'tabler-building' }
     ],
     contacts: [
-      { property: 'Email', value: data.email, icon: 'tabler-mail' },
-      { property: 'Verified', value: data.isVerified ? 'Yes' : 'No', icon: 'tabler-check' }
+      { property: 'Email', value: data?.email, icon: 'tabler-mail' },
+      { property: 'Verified', value: data?.isVerified ? 'Yes' : 'No', icon: 'tabler-check' }
     ],
     description: [
-      { property: 'Department Description', value: data.department?.description },
-      { property: 'Role Description', value: data.role?.description }
+      { property: 'Department Description', value: data?.department?.description },
+      { property: 'Role Description', value: data?.role?.description }
     ],
     overview: [
-      { property: 'Created At', value: new Date(data.createdAt).toLocaleString() },
-      { property: 'Updated At', value: new Date(data.updatedAt).toLocaleString() },
-      { property: 'Password Must Change', value: data.passwordMustChange ? 'Yes' : 'No' }
+      { property: 'Created At', value: new Date(data?.createdAt).toLocaleString() },
+      { property: 'Updated At', value: new Date(data?.updatedAt).toLocaleString() },
+      { property: 'Password Must Change', value: data?.passwordMustChange ? 'Yes' : 'No' }
     ]
   }
 }

@@ -16,9 +16,9 @@ const renderList = list => {
           <i className={classnames(item.icon, 'text-xl')} />
           <div className='flex items-center flex-wrap gap-2'>
             <Typography className='font-medium'>
-              {`${item.property.charAt(0).toUpperCase() + item.property.slice(1)}:`}
+              {`${item?.property?.charAt(0).toUpperCase() + item?.property?.slice(1)}:`}
             </Typography>
-            <Typography> {item.value.charAt(0).toUpperCase() + item.value.slice(1)}</Typography>
+            <Typography> {item?.value?.charAt(0).toUpperCase() + item?.value?.slice(1)}</Typography>
           </div>
         </div>
       )
@@ -33,9 +33,9 @@ const renderTeams = description => {
       return (
         <div key={index} className='flex items-center flex-wrap gap-2'>
           <Typography className='font-medium'>
-            {item.property.charAt(0).toUpperCase() + item.property.slice(1)}
+            {item?.property?.charAt(0).toUpperCase() + item?.property?.slice(1)}
           </Typography>
-          <Typography>{item.value.charAt(0).toUpperCase() + item.value.slice(1)}</Typography>
+          <Typography>{item?.value?.charAt(0).toUpperCase() + item?.value?.slice(1)}</Typography>
         </div>
       )
     })

@@ -195,6 +195,23 @@ export const updateOrderProducts = createAsyncThunk(
   }
 )
 
+export const createOrder = createAsyncThunk(
+  'orders/createOrder',
+  async (orderData, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('orders', orderData) // POST /orders
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      return response.data // backend should return the created order
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 const ordersSlice = createSlice({
   name: 'orders',
   initialState: {
@@ -376,6 +393,24 @@ const ordersSlice = createSlice({
         }
       })
       .addCase(updateOrderProducts.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(createOrder.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(createOrder.fulfilled, (state, action) => {
+        state.loading = false
+        const newOrder = action.payload
+
+        // add new order at the top
+        state.orders = [newOrder, ...state.orders]
+
+        // increment pagination total
+        state.pagination.total = (state.pagination.total || 0) + 1
+      })
+      .addCase(createOrder.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })
