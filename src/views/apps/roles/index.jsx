@@ -1,3 +1,5 @@
+'use client'
+
 // MUI Imports
 import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
@@ -5,8 +7,22 @@ import Typography from '@mui/material/Typography'
 // Component Imports
 import RoleCards from './RoleCards'
 import RolesTable from './RolesTable'
+import UserListTable from '../user/list/UserListTable'
+import { useDispatch, useSelector } from 'react-redux'
+import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
+import { useEffect } from 'react'
 
 const Roles = ({ userData }) => {
+  const dispatch = useDispatch()
+  const { allUsers } = useSelector(state => state.auth)
+
+  useEffect(() => {
+    const params = {
+      page: 1,
+      limit: 10
+    }
+    dispatch(getAlUsersThunk({ params, force: true }))
+  }, [])
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
@@ -28,7 +44,7 @@ const Roles = ({ userData }) => {
         <Typography>Find all of your company&#39;s administrator accounts and their associate roles.</Typography>
       </Grid>
       <Grid size={{ xs: 12 }}>
-        <RolesTable tableData={userData} />
+        <UserListTable tableData={allUsers} />
       </Grid>
     </Grid>
   )

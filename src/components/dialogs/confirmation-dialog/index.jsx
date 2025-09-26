@@ -20,6 +20,7 @@ import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
 import { fetchOrderById, splitOrderProductSetting } from '@/redux-store/slices/order'
+import { generateAirwayBill, fetchBookingOrder } from '@/redux-store/slices/bookingSlice'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
@@ -27,6 +28,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [userInput, setUserInput] = useState(false) // true = user confirmed; false = cancelled or failed
   const [resultTitle, setResultTitle] = useState(null)
   const [resultSubtitle, setResultSubtitle] = useState(null)
+  const [awbResult, setAwbResult] = useState(null) // { successes: string[], failures: [{id,error,status}] }
 
   const dispatch = useDispatch()
 
@@ -34,6 +36,10 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [quantities, setQuantities] = useState({})
   const isMerge = type === 'merge-orders' || type === 'merge-order'
   const isSplit = type === 'split-order'
+  const isGenerateAwb = type === 'generate-airway-bill'
+  const isGenerateAirwayBill = type === 'generate-airway-bill'
+  const isDownloadLoadSheet = type === 'download-load-sheet'
+  const isCancelAwb = type === 'cancel-awb'
   const Wrapper = type === 'suspend-account' ? 'div' : Fragment
 
   // Initialize quantities when dialog opens
@@ -54,6 +60,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
     setSecondDialog(false)
     setResultTitle(null)
     setResultSubtitle(null)
+    setAwbResult(null)
     setOpen(false)
   }
 
@@ -98,6 +105,46 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           // dispatch(splitOrderProductSetting(enrichedResponse))
           dispatch(fetchOrderById(orderId))
         }
+      } else if (isDownloadLoadSheet) {
+        onSuccess?.(payload) // Call site can trigger the actual download
+
+        return
+      } else if (isCancelAwb) {
+        onSuccess?.(payload) // Let caller dispatch cancel and handle UI
+
+        return
+      } else if (isGenerateAwb) {
+        const ids = payload?.orderIds ?? []
+
+        if (ids.length === 0) throw new Error('Please select at least 1 order.')
+        const result = await dispatch(generateAirwayBill({ orderIds: ids })).unwrap()
+        const successes = result?.successes ?? result?.data?.successes ?? []
+        const failures = result?.failures ?? result?.data?.failures ?? []
+
+        setAwbResult({ successes, failures })
+
+        if ((failures?.length || 0) > 0) {
+          setUserInput(false)
+          setResultTitle('Some AWBs Failed')
+          setResultSubtitle(
+            `${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}, ${failures?.length || 0} failure${
+              (failures?.length || 0) !== 1 ? 's' : ''
+            }.`
+          )
+        } else {
+          setUserInput(true)
+          setResultTitle('AWB Generated')
+          setResultSubtitle(`${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}.`)
+        }
+
+        // Refresh bookings list
+        dispatch(fetchBookingOrder({ page: 1, limit: 25, force: true }))
+      } else if (type === 'confirm-city') {
+        const { orderId, city } = payload
+
+        if (!orderId || !city) throw new Error('Order ID and city are required.')
+
+        await dispatch(confirmCity({ orderId, city })).unwrap()
       }
 
       // Success
@@ -139,6 +186,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Are you sure?'
       case 'duplicate-order':
         return 'Are you sure to duplicate this order?'
+      case 'cancel-awb':
+        return 'Are you sure you want to cancel this AWB?'
+      case 'generate-airway-bill':
+        return 'Generate Airway Bill for selected orders?'
+      case 'confirm-city':
+        return `Do you want to confirm "${payload?.city}" city for this order?`
       default:
         return 'Are you sure?'
     }
@@ -162,6 +215,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Yes, Suspend User!'
       case 'duplicate-order':
         return 'Yes, Duplicate Order!'
+      case 'cancel-awb':
+        return 'Yes, Cancel AWB'
+      case 'generate-airway-bill':
+        return 'Generate AWB'
+      case 'confirm-city':
+        return 'Yes, Confirm City!'
       default:
         return 'Yes'
     }
@@ -191,6 +250,10 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Unsubscribed'
       case 'duplicate-order':
         return 'Duplicated Successfully'
+      case 'generate-airway-bill':
+        return userInput ? 'AWB Generation Result' : 'AWB Generation Result'
+      case 'confirm-city':
+        return 'City Confirmed'
       default:
         return 'Done'
     }
@@ -218,6 +281,10 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Your subscription cancelled successfully.'
         case 'duplicate-order':
           return 'Order duplicated successfully.'
+        case 'generate-airway-bill':
+          return resultSubtitle || (userInput ? 'AWB generated successfully.' : 'Some AWBs failed.')
+        case 'confirm-city':
+          return 'City confirmed successfully.'
         default:
           return 'Operation completed successfully.'
       }
@@ -242,6 +309,10 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Unsubscription Cancelled!'
         case 'duplicate-order':
           return 'Order Duplication Cancelled'
+        case 'generate-airway-bill':
+          return 'Airway Bill Generation Cancelled'
+        case 'confirm-city':
+          return 'City Confirmation Cancelled'
         default:
           return 'Action Cancelled'
       }
@@ -258,6 +329,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
             <Typography variant='h4' gutterBottom>
               {getConfirmationTitle()}
             </Typography>
+
+            {/* {type === 'confirm-city' && payload?.city && (
+              <Typography variant='h6' color='text.secondary' className='mt-2'>
+                Selected City: <strong>{payload.city}</strong>
+              </Typography>
+            )} */}
 
             {/* Split order quantity stepper */}
             {isSplit && payload?.selectedLineItems?.length > 0 && (
@@ -344,7 +421,41 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           <Typography variant='h4' className='mbe-2'>
             {resultTitle ?? getResultTitle()}
           </Typography>
-          <Typography color='text.primary'>{resultSubtitle ?? getResultSubtitle()}</Typography>
+          <Typography color='text.primary' className='mb-4'>
+            {resultSubtitle ?? getResultSubtitle()}
+          </Typography>
+          {type === 'generate-airway-bill' && awbResult && (
+            <div className='text-left w-full max-w-[520px]'>
+              <div className='mb-3'>
+                <Typography variant='h6'>Successes ({awbResult.successes?.length || 0})</Typography>
+                {(awbResult.successes || []).length > 0 ? (
+                  <ul className='list-disc pli-6'>
+                    {awbResult.successes.map(id => (
+                      <li key={`s-${id}`} className='text-success'>
+                        {id}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Typography color='text.secondary'>None</Typography>
+                )}
+              </div>
+              <div>
+                <Typography variant='h6'>Failures ({awbResult.failures?.length || 0})</Typography>
+                {(awbResult.failures || []).length > 0 ? (
+                  <ul className='list-disc pli-6'>
+                    {awbResult.failures.map(f => (
+                      <li key={`f-${f.id || Math.random()}`} className='text-error'>
+                        {f.id || 'Unknown ID'}: {f.error || 'Failed'}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Typography color='text.secondary'>None</Typography>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
         {/* <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
           <Button variant='contained' color='success' onClick={handleSecondDialogClose}>

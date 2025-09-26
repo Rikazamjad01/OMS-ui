@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -18,7 +18,7 @@ import Divider from '@mui/material/Divider'
 import { styled, useTheme } from '@mui/material/styles'
 
 // Third-party Imports
-import { signIn } from 'next-auth/react'
+// import { signIn } from 'next-auth/react'
 import { Controller, useForm } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
 import { email, object, minLength, string, pipe, nonEmpty } from 'valibot'
@@ -33,6 +33,10 @@ import themeConfig from '@configs/themeConfig'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
+import { loginThunk, selectError, selectIsAuthenticated, selectIsLoading } from '@/redux-store/slices/authSlice'
+import { useDispatch, useSelector } from 'react-redux'
+import { Alert, Snackbar } from '@mui/material'
+import { clearError } from '@/redux-store/slices/authSlice'
 
 // Styled Custom Components
 const LoginIllustration = styled('img')(({ theme }) => ({
@@ -62,13 +66,16 @@ const Login = () => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const [errorState, setErrorState] = useState(null)
+  const error = useSelector(selectError)
+  const isLoading = useSelector(selectIsLoading)
+  const isAuthenticated = useSelector(selectIsAuthenticated)
 
   // Hooks
   const router = useRouter()
   const searchParams = useSearchParams()
   const { lang: locale } = useParams()
   const theme = useTheme()
-
+  const dispatch = useDispatch()
   const {
     control,
     handleSubmit,
@@ -76,35 +83,28 @@ const Login = () => {
   } = useForm({
     resolver: valibotResolver(schema),
     defaultValues: {
-      email: 'admin@sneat.com',
-      password: 'admin'
+      email: '',
+      password: ''
     }
   })
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit = async data => {
-    // const res = await signIn('credentials', {
-    //   email: data.email,
-    //   password: data.password,
-    //   redirect: false
-    // })
+    await dispatch(loginThunk({ email: data.email, password: data.password }))
+      .unwrap()
+      .catch(() => {})
+  }
 
-    // console.log(res, "results")
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirectURL = searchParams.get('redirectTo') ?? '/'
+      router.replace(getLocalizedUrl(redirectURL, locale))
+    }
+  }, [isAuthenticated, locale, router, searchParams])
 
-    // if (res && res.ok && res.error === null) {
-    //   // Vars
-
-    // } else {
-    //   // if (res?.error) {
-    //   //   const error = JSON.parse(res.error)
-
-    //   //   setErrorState(error)
-    //   // }
-    // }
-    const redirectURL = searchParams.get('redirectTo') ?? '/'
-
-    router.replace(getLocalizedUrl(redirectURL, locale))
+  const handleSnackbarClose = () => {
+    dispatch(clearError())
   }
 
   return (
@@ -201,8 +201,8 @@ const Login = () => {
                 Forgot password?
               </Typography>
             </div>
-            <Button fullWidth variant='contained' type='submit'>
-              Login
+            <Button fullWidth variant='contained' type='submit' disabled={isLoading}>
+              {isLoading ? 'Logging in…' : 'Login'}
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>
@@ -210,19 +210,24 @@ const Login = () => {
                 Create an account
               </Typography>
             </div>
-            <Divider className='gap-2 text-textPrimary'>or</Divider>
+            {/* <Divider className='gap-2 text-textPrimary'>or</Divider>
             <Button
               color='secondary'
               className='self-center text-textPrimary'
               startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
               sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-              onClick={() => signIn('google')}
+              // onClick={() => signIn('google')}
             >
               Sign in with Google
-            </Button>
+            </Button> */}
           </form>
         </div>
       </div>
+      <Snackbar open={!!error} autoHideDuration={3000} onClose={handleSnackbarClose}>
+        <Alert severity='error' onClose={handleSnackbarClose}>
+          {error}
+        </Alert>
+      </Snackbar>
     </div>
   )
 }

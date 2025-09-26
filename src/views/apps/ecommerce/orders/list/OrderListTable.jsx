@@ -27,7 +27,7 @@ import {
   getFilteredRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  getFacetedMinMaxValues,
+  getFacetedMinMaxValues
 } from '@tanstack/react-table'
 import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
 
@@ -39,7 +39,12 @@ import dayjs from 'dayjs'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
-import { fetchOrders, updateOrderCommentsAndRemarks, selectPagination, updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import {
+  fetchOrders,
+  updateOrderCommentsAndRemarks,
+  selectPagination,
+  updateOrdersStatusThunk
+} from '@/redux-store/slices/order'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -58,6 +63,7 @@ import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
+import CreateOrderDialog from '@/components/dialogs/createOrderDialog'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -69,8 +75,9 @@ export const paymentStatus = {
 
 export const orderPlatform = {
   shopify: { text: 'Shopify', color: 'success', colorClassName: 'text-success' },
-  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' },
-  split: { text: 'Split', color: 'warning', colorClassName: 'text-warning' }
+  whatsapp: { text: 'Whatsapp', color: 'secondary', colorClassName: 'text-secondary' }
+
+  // socialMedia: { text: 'Social Media', color: 'info', colorClassName: 'text-info' }
 }
 
 export const statusChipColor = {
@@ -158,11 +165,11 @@ const mapFiltersToApiFormat = localFilters => {
   if (localFilters.maxAmount) apiFilters.amountMax = localFilters.maxAmount
 
   if (localFilters.paymentMethods && localFilters.paymentMethods.length > 0) {
-    apiFilters.paymentMethod = localFilters.paymentMethods[0].value
+    apiFilters.paymentMethod = localFilters.paymentMethods.map(pm => pm.value).join(',')
   }
 
   if (localFilters.paymentStatus && localFilters.paymentStatus.length > 0) {
-    apiFilters.paymentStatus = localFilters.paymentStatus[0].value
+    apiFilters.paymentStatus = localFilters.paymentStatus.map(ps => ps.value).join(',')
   }
 
   // Date filters (you need to add startDate/endDate to your filters state)
@@ -171,16 +178,16 @@ const mapFiltersToApiFormat = localFilters => {
 
   // Status filters - you need to decide which one to use
   if (localFilters.orderStatus && localFilters.orderStatus.length > 0) {
-    apiFilters.status = localFilters.orderStatus[0].value
+    apiFilters.status = localFilters.orderStatus.map(st => st.value).join(',')
   }
 
   // Platform filters
   if (localFilters.orderPlatform?.length > 0) {
-    apiFilters.platform = localFilters.orderPlatform[0].value // or join them
+    apiFilters.platform = localFilters.orderPlatform.map(p => p.value).join(',') // or join them
   }
 
   if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
-    apiFilters.city = localFilters.pakistanCities[0].value
+    apiFilters.city = localFilters.pakistanCities.map(c => c.value).join(',')
   }
 
   return apiFilters
@@ -265,6 +272,15 @@ const OrderListTable = ({
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
+  const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
+
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogPayload, setDialogPayload] = useState(null)
+
+  const openCityEditor = (orderId, city) => {
+    setDialogPayload({ orderId, city })
+    setDialogOpen(true)
+  }
 
   const [tagsMap, setTagsMap] = useState({})
 
@@ -320,7 +336,9 @@ const OrderListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchOrders({ page, limit, force: true }))
+      dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
+
+      // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
       // Clean up UI state only if it was a bulk operation
       if (selectedIds.length > 0) {
@@ -337,8 +355,7 @@ const OrderListTable = ({
   }
 
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
-  const handleBulkStatusChange = (newStatus) => updateOrdersStatus(selectedIds, newStatus)
-
+  const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
 
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
@@ -522,7 +539,7 @@ const OrderListTable = ({
             href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
             color='primary.main'
           >
-            #{row.original.orderNumber}
+            #{row.original.orderNumber || '—'}
           </Typography>
         )
       },
@@ -543,7 +560,7 @@ const OrderListTable = ({
           return (
             <Typography component='div'>
               <div>{monthDateYear}</div>
-              <div>{`${dayName}, ${row.original.time}`}</div>
+              <div>{`${dayName}, ${row.original.time || '—'}`}</div>
             </Typography>
           )
         }
@@ -564,7 +581,7 @@ const OrderListTable = ({
               >
                 {row.original.customer || '—'}
               </Typography>
-              <Typography variant='body2'>{row.original.email}</Typography>
+              <Typography variant='body2'>{row.original.email || '—'}</Typography>
             </div>
           </div>
         )
@@ -632,24 +649,51 @@ const OrderListTable = ({
                     ? 'bx-wallet'
                     : 'bx-purchase-tag-alt'
 
-          const rightText = m === 'card' ? row.original.methodNumber || label : label
+          // const rightText = m === 'card' ? row.original.methodNumber || label : label
 
           return (
             <div className='flex items-center gap-2'>
               <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
                 <i className={`${iconClass} text-[18px]`} />
               </div>
-              <Typography className='font-medium'>{rightText}</Typography>
+              <Typography className='font-medium'>{m}</Typography>
             </div>
           )
         }
       },
-
-      // column of remarks
       {
         accessorKey: 'remarks',
         header: 'Remarks',
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.remarks}</Typography>
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const remarks = row.original.remarks
+
+          // normalize remarks (string → array of strings)
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
+
+          const hasRemarks = remarkList.length > 0
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: Remarks */}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                    ))
+                  : '--'}
+              </div>
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'Amount',
@@ -657,7 +701,7 @@ const OrderListTable = ({
         filterFn: amountRangeFilterFn,
         cell: ({ row }) => (
           <Typography className='font-medium text-gray-800'>
-            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount)}
+            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
           </Typography>
         )
       },
@@ -665,7 +709,25 @@ const OrderListTable = ({
         accessorKey: 'city',
         header: 'City',
         meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city}</Typography>
+        cell: ({ row }) => {
+          const city = row.original.city
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: current city value */}
+              <Typography className='font-medium text-gray-800'>{city}</Typography>
+
+              {/* Second row: "+ Add City" button */}
+              <Chip
+                label={city ? 'Confirm City' : '+ Add City'}
+                variant='outlined'
+                size='small'
+                onClick={() => openCityEditor(row.original.id, city)}
+                className='cursor-pointer'
+              />
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'tags',
@@ -796,7 +858,7 @@ const OrderListTable = ({
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
     globalFilterFn: fuzzyFilter,
-    manualPagination: true,
+    manualPagination: true
 
     // pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
     // onPaginationChange: updater => {
@@ -831,20 +893,20 @@ const OrderListTable = ({
     pakistanCities: []
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className='flex items-center justify-between'>
-          <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
-          <Button variant='contained'>Retry</Button>
-        </CardContent>
-      </Card>
-    )
-  }
+  // if (error) {
+  //   return (
+  //     <Card>
+  //       <CardContent className='flex items-center justify-between'>
+  //         <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
+  //         <Button variant='contained'>Retry</Button>
+  //       </CardContent>
+  //     </Card>
+  //   )
+  // }
 
   return (
     <Card>
-      <CardContent className='flex flex-wrap justify-between gap-4'>
+      <CardContent className='flex justify-between items-center'>
         <div className='flex flex-wrap gap-4'>
           {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
@@ -868,6 +930,7 @@ const OrderListTable = ({
                 }))
               }
             }}
+            className='flex'
           />
 
           <DebouncedInput
@@ -901,105 +964,111 @@ const OrderListTable = ({
             }}
           /> */}
           {/* <DateRangePicker /> */}
+
+          {/* Add the Change Status button - only shows when orders are selected */}
+          {selectedCount >= 1 && (
+            <>
+              <Button
+                color='info'
+                variant='tonal'
+                onClick={event => setStatusMenuAnchor(event.currentTarget)}
+                size='small'
+              >
+                Change Status
+              </Button>
+
+              {/* Status Change Menu */}
+              <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
+                {orderStatusArray.map(status => (
+                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                    <Chip
+                      label={status.label}
+                      color={statusChipColor[status.value].color}
+                      variant='tonal'
+                      size='small'
+                    />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+
+          {selectedCount >= 2 ? (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              size='small'
+              dialogProps={{
+                type: 'merge-orders',
+                payload: (() => {
+                  // console.log('Merge Payload:', { orderIds: selectedIds })
+
+                  return { orderIds: selectedIds }
+                })(),
+                onSuccess: async () => {
+                  const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
+
+                  setRowSelection({})
+
+                  // console.log('Merge Orders Success', result)
+                }
+              }}
+            />
+          ) : (
+            <Button color='secondary' variant='tonal' disabled size='small'>
+              Merge orders
+            </Button>
+          )}
+
+          {selectedCount >= 1 ? (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
+              size='small'
+            />
+          ) : (
+            <Button color='primary' variant='tonal' disabled size='small'>
+              Duplicate Order
+            </Button>
+          )}
         </div>
 
-        <div className='flex gap-4 flex-wrap'>
-          <div className='flex gap-4'>
-            {/* Add the Change Status button - only shows when orders are selected */}
-            {selectedCount >= 1 && (
-              <>
-                <Button
-                  color='info'
-                  variant='tonal'
-                  startIcon={<i className='bx-edit' />}
-                  onClick={event => setStatusMenuAnchor(event.currentTarget)}
-                >
-                  Change Status ({selectedCount})
-                </Button>
+        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+          <CustomTextField
+            select
+            value={limit}
+            onChange={async e => {
+              const newLimit = Number(e.target.value)
 
-                {/* Status Change Menu */}
-                <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
-                  {orderStatusArray.map(status => (
-                    <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
-                      <Chip
-                        label={status.label}
-                        color={statusChipColor[status.value].color}
-                        variant='tonal'
-                        size='small'
-                      />
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
-            )}
+              // console.log('newLimit', newLimit)
+              onLimitChange?.(newLimit)
+              await dispatch(fetchOrders({ limit: newLimit, force: true }))
+            }}
+            className='max-sm:is-full sm:is-[80px]'
+          >
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+          </CustomTextField>
 
-            {selectedCount >= 2 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{
-                  type: 'merge-orders',
-                  payload: (() => {
-                    // console.log('Merge Payload:', { orderIds: selectedIds })
-
-                    return { orderIds: selectedIds }
-                  })(),
-                  onSuccess: async () => {
-                    const result = await dispatch(fetchOrders({ page: 1, limit, force: true }))
-
-                    setRowSelection({})
-
-                    // console.log('Merge Orders Success', result)
-                  }
-                }}
-              />
-            ) : (
-              <Button color='secondary' variant='tonal' disabled>
-                Merge orders
-              </Button>
-            )}
-
-            {selectedCount >= 1 ? (
-              <OpenDialogOnElementClick
-                element={Button}
-                elementProps={{ children: 'Duplicate Order', color: 'primary', variant: 'tonal' }}
-                dialog={ConfirmationDialog}
-                dialogProps={{ type: 'duplicate-order', payload: { orderIds: selectedIds.slice(0, 1) } }}
-              />
-            ) : (
-              <Button color='primary' variant='tonal' disabled>
-                Duplicate Order
-              </Button>
-            )}
-          </div>
-
-          <div className='flex max-sm:flex-col sm:items-center gap-4'>
-            <CustomTextField
-              select
-              value={limit}
-              onChange={async e => {
-                const newLimit = Number(e.target.value)
-
-                // console.log('newLimit', newLimit)
-                onLimitChange?.(newLimit)
-                await dispatch(fetchOrders({ limit: newLimit, force: true }))
-              }}
-              className='max-sm:is-full sm:is-[80px]'
-            >
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-              <MenuItem value={100}>100</MenuItem>
-            </CustomTextField>
-
-            <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
+          {/* <Button variant='tonal' color='secondary' startIcon={<i className='bx-export' />}>
               Export
-            </Button>
-          </div>
+            </Button> */}
+          {/* Add button for manual order intake */}
+          <Button
+            variant='tonal'
+            color='primary'
+            onClick={() => setOrderIntakeOpen(true)} // open modal on click
+          >
+            <i className='bx-plus' />
+          </Button>
         </div>
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3 '>
+      <CardContent className='grid grid-cols-4 gap-3 '>
         <Autocomplete
           multiple
           fullWidth
@@ -1008,9 +1077,18 @@ const OrderListTable = ({
           value={filters.paymentMethods || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentMethods: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Method' label='Payment Method' size='medium' />
@@ -1024,9 +1102,18 @@ const OrderListTable = ({
           value={filters.orderPlatform || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderPlatform: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Order Platform' label='Order Platform' size='medium' />
@@ -1040,9 +1127,18 @@ const OrderListTable = ({
           value={filters.orderStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
@@ -1056,9 +1152,18 @@ const OrderListTable = ({
           value={filters.paymentStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, paymentStatus: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => (
             <TextField {...params} fullWidth placeholder='Payment Status' label='Payment Status' size='medium' />
@@ -1066,9 +1171,9 @@ const OrderListTable = ({
         />
       </CardContent>
 
-      <CardContent className='flex items-center justify-between gap-3'>
+      <CardContent className='grid grid-cols-4 gap-3'>
         <AmountRangePicker
-          style={{ border: '1px solid #00000'}}
+          style={{ border: '1px solid #00000' }}
           min={filters.minAmount}
           max={filters.maxAmount}
           onChange={([min, max]) =>
@@ -1087,9 +1192,18 @@ const OrderListTable = ({
           value={filters.tagsMap || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value || index} {...getTagProps({ index })} variant='outlined' label={option.label} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='Tags' label='Tags' size='medium' />}
         />
@@ -1101,9 +1215,18 @@ const OrderListTable = ({
           value={filters.pakistanCities || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, pakistanCities: newValue }))}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip key={option.value} variant='outlined' label={option.label} {...getTagProps({ index })} />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index })
+
+              return (
+                <Chip
+                  {...props}
+                  key={option.value || index} // override key
+                  variant='outlined'
+                  label={option.label}
+                />
+              )
+            })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}
         />
@@ -1204,15 +1327,13 @@ const OrderListTable = ({
       </div>
 
       <TablePaginationComponent
-
-        // component='div'
         table={table}
-        count={pagination.total} // Use the total prop from parent, not pagination.total
-        page={pagination?.currentPage - 1} // Use the page prop directly, not activePage
+        count={pagination.total || 0} // Use the total prop from parent, not pagination.total
+        page={pagination?.currentPage - 1 || 0} // Use the page prop directly, not activePage
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={pagination.itemsPerPage}
+        rowsPerPage={pagination.itemsPerPage || limit} // Use the limit prop directly, not pagination.itemsPerPage
         onRowsPerPageChange={e => onLimitChange(Number(e.target.value))}
         rowsPerPageOptions={[25, 50, 100]}
       />
@@ -1230,14 +1351,42 @@ const OrderListTable = ({
         onClose={() => setAlert({ ...alert, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setAlert({ ...alert, open: false })}
-          severity={alert.severity}
-          variant="filled"
-        >
+        <Alert onClose={() => setAlert({ ...alert, open: false })} severity={alert.severity} variant='filled'>
           {alert.message}
         </Alert>
       </Snackbar>
+      <CreateOrderDialog
+        open={orderIntakeOpen}
+        setOpen={setOrderIntakeOpen}
+        onSuccess={() => {
+          setAlert({
+            open: true,
+            message: 'Order created successfully!',
+            severity: 'success'
+          })
+          console.log('Order created successfully!')
+        }}
+      />
+      <ConfirmationDialog
+        open={dialogOpen}
+        setOpen={setDialogOpen}
+        type='confirm-city'
+        payload={dialogPayload}
+        onSuccess={() => {
+          setSnackbar({
+            open: true,
+            message: 'City confirmed successfully!',
+            severity: 'success'
+          })
+        }}
+        onError={err => {
+          setSnackbar({
+            open: true,
+            message: err.message || 'Failed to confirm city.',
+            severity: 'error'
+          })
+        }}
+      />
     </Card>
   )
 }

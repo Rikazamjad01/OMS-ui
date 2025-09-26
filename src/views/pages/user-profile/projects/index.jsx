@@ -10,120 +10,97 @@ import AvatarGroup from '@mui/material/AvatarGroup'
 import Tooltip from '@mui/material/Tooltip'
 
 // Component Imports
+import { Checkbox } from '@mui/material'
+
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 import Link from '@components/Link'
+import ProjectTables from '../profile/ProjectsTables'
+import BaseTable from '../baseTable/page'
 
 const Projects = ({ data }) => {
+  // convert data into an array if it's not already
+  if (!Array.isArray(data)) {
+    data = [data]
+  }
+
+  const orderColumns = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          indeterminate={row.getIsSomeSelected()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      )
+    },
+    {
+      accessorKey: 'date',
+      header: 'Order Date',
+      cell: ({ row }) => <Typography color='text.primary'>{new Date(row.original.createdAt).toDateString()}</Typography>
+    },
+    {
+      accessorKey: 'platform',
+      header: 'Platform',
+      cell: ({ row }) => <Chip label={row.original.platform || 'Shopify'} />,
+      enableSorting: false
+    },
+    {
+      accessorKey: 'status',
+      header: 'Progress',
+      cell: ({ row }) => (
+        <div className='flex items-center gap-3'>
+          <LinearProgress color='primary' value={row.original.status || 0} variant='determinate' className='is-20' />
+          <Typography color='text.primary'>{`${row.original.status || 0}%`}</Typography>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Incentive Amount',
+      cell: ({ row }) => (
+        <div className='flex items-center gap-3'>
+          <Typography color='text.primary' >{`${row.original.amount || 0}`}</Typography>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      cell: () => (
+        <OptionMenu
+          iconButtonProps={{ size: 'medium' }}
+          iconClassName='text-textSecondary'
+          options={[
+            'Details',
+            'Archive',
+            { divider: true },
+            { text: 'Delete', menuItemProps: { className: 'text-error' } }
+          ]}
+        />
+      ),
+      enableSorting: false
+    }
+  ]
+
+  console.log(data, 'data in projects')
+
   return (
     <Grid container spacing={6}>
-      {data &&
-        data.map((item, index) => {
-          return (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>
-              <Card>
-                <CardContent className='flex flex-col gap-4'>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-4'>
-                      <CustomAvatar src={item.avatar} size={38} />
-                      <div>
-                        <Typography variant='h5' component={Link} className='hover:text-primary'>
-                          {item.title}
-                        </Typography>
-                        <Typography>
-                          <span className='font-medium'>Client: </span>
-                          {item.client}
-                        </Typography>
-                      </div>
-                    </div>
-                    <OptionMenu
-                      iconClassName='text-textDisabled'
-                      options={[
-                        'Rename Project',
-                        'View Details',
-                        'Add to Favorite',
-                        { divider: true },
-                        {
-                          text: 'Leave Project',
-                          menuItemProps: { className: 'text-error hover:bg-[var(--mui-palette-error-lightOpacity)]' }
-                        }
-                      ]}
-                      iconButtonProps={{ size: 'medium' }}
-                    />
-                  </div>
-                  <div className='flex items-center justify-between flex-wrap gap-4'>
-                    <div className='rounded bg-actionHover plb-2 pli-3'>
-                      <div className='flex'>
-                        <Typography variant='h6'>{item.budgetSpent}</Typography>
-                        <Typography>{`/${item.budget}`}</Typography>
-                      </div>
-                      <Typography>Total Budget</Typography>
-                    </div>
-                    <div className='flex flex-col'>
-                      <div className='flex'>
-                        <Typography variant='h6'>Start Date:</Typography>
-                        <Typography>{item.startDate}</Typography>
-                      </div>
-                      <div className='flex'>
-                        <Typography variant='h6'>Deadline:</Typography>
-                        <Typography>{item.deadline}</Typography>
-                      </div>
-                    </div>
-                  </div>
-                  <Typography>{item.description}</Typography>
-                </CardContent>
-                <Divider />
-                <CardContent className='flex flex-col gap-4'>
-                  <div className='flex items-center justify-between '>
-                    <div className='flex'>
-                      <Typography variant='h6'>All Hours:</Typography>
-                      <Typography>{item.hours}</Typography>
-                    </div>
-                    <Chip variant='tonal' size='small' color={item.chipColor} label={`${item.daysLeft} days left`} />
-                  </div>
-                  <div>
-                    <div className='flex items-center justify-between mbe-2'>
-                      <Typography
-                        variant='caption'
-                        className='text-textSecondary'
-                      >{`Tasks: ${item.completedTask}/${item.totalTask}`}</Typography>
-                      <Typography
-                        variant='caption'
-                        className='text-textSecondary'
-                      >{`${Math.round((item.completedTask / item.totalTask) * 100)}% Completed`}</Typography>
-                    </div>
-                    <LinearProgress
-                      color='primary'
-                      variant='determinate'
-                      value={Math.round((item.completedTask / item.totalTask) * 100)}
-                      className='bs-2'
-                    />
-                  </div>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center flex-grow gap-3'>
-                      <AvatarGroup className='items-center pull-up'>
-                        {item.avatarGroup.map((person, index) => {
-                          return (
-                            <Tooltip key={index} title={person.name}>
-                              <CustomAvatar src={person.avatar} alt={person.name} size={32} />
-                            </Tooltip>
-                          )
-                        })}
-                      </AvatarGroup>
-                      <Typography variant='body2' className='flex-grow'>
-                        {item.members}
-                      </Typography>
-                    </div>
-                    <div className='flex items-center gap-1'>
-                      <i className='bx-chat text-xl text-textDisabled' />
-                      <Typography color='text.disabled'>{item.comments}</Typography>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          )
-        })}
+      {data && (
+        <Grid size={{ xs: 12 }}>
+          <BaseTable title='Daily Order List' data={data} columns={orderColumns} />
+        </Grid>
+      )}
     </Grid>
   )
 }

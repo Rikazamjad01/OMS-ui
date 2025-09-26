@@ -36,8 +36,8 @@ const CommentsAndRemarks = ({ order }) => {
   const [newComment, setNewComment] = useState('')
   const [newRemark, setNewRemark] = useState('')
 
-  const [comments, setComments] = useState(order.comments || []);
-  const [remarks, setRemarks] = useState(order.remarks || []);
+  const [comments, setComments] = useState(order.comments || [])
+  const [remarks, setRemarks] = useState(order.remarks || [])
 
   // const comments = order?.comments || []
   // const remarks = order?.remarks || []
@@ -48,12 +48,12 @@ const CommentsAndRemarks = ({ order }) => {
     if (newComment.trim()) {
       const commentToAdd = newComment.trim()
 
-      setComments(prev => [...prev, commentToAdd]);
-      setNewComment('');
+      setComments(prev => [...prev, commentToAdd])
+      setNewComment('')
       dispatch(
         updateOrderCommentsAndRemarks({
           orderId: order.id,
-          comments: commentToAdd,
+          comments: commentToAdd
         })
       )
         .unwrap()
@@ -66,16 +66,15 @@ const CommentsAndRemarks = ({ order }) => {
 
   const handleAddRemark = () => {
     if (newRemark.trim()) {
+      const remarkToAdd = newRemark.trim()
 
-      const remarkToAdd = newRemark.trim();
-
-      setRemarks(prev => [...prev, remarkToAdd]);
-      setNewRemark('');
+      setRemarks(prev => [...prev, remarkToAdd])
+      setNewRemark('')
 
       dispatch(
         updateOrderCommentsAndRemarks({
           orderId: order.id,
-          remarks: remarkToAdd,
+          remarks: remarkToAdd
         })
       )
         .unwrap()

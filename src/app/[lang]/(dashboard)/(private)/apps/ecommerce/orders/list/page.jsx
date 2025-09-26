@@ -1,5 +1,3 @@
-"use client"
-
 import OrderList from '@views/apps/ecommerce/orders/list'
 
 const OrdersListPage = () => {

@@ -3,13 +3,13 @@ import { InputNumber, Space } from 'antd'
 const AmountRangePicker = ({min, max, onChange}) => {
 
   return (
-    <Space className='border p-3 rounded'>
+    <Space className='flex items-center justify-between border xl:p-3 rounded'>
       <InputNumber
         min={0} // Set your desired minimum value
         placeholder='Min Amount'
         value={min}
         onChange={val => onChange([val, max])}
-        className='border-0 w-[117px]'
+        className='border-0 xl:w-[117px] w-[90px]'
       />
       <span>-</span>
       <InputNumber
@@ -17,7 +17,7 @@ const AmountRangePicker = ({min, max, onChange}) => {
         placeholder='Max Amount'
         value={max}
         onChange={val => onChange([min, val])}
-        className='border-0 w-[117px]'
+        className='border-0 xl:w-[117px] w-[90px]'
       />
     </Space>
   )

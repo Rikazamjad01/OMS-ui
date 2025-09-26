@@ -22,6 +22,8 @@ const CustomerStatisticsCard = ({ customerData }) => {
   const customer = customerData.customer || {}
   const stats = customerData.stats || {}
 
+  console.log(stats, 'stats')
+
   // Build cards directly from API-provided stats
   const cards = [
     {
@@ -30,7 +32,7 @@ const CustomerStatisticsCard = ({ customerData }) => {
       color: 'primary',
       totalOrders: stats.total_orders ?? customer.orders_count ?? 0,
       completedOrdersByCustomer: stats.completed_orders ?? 0,
-      confirmedOrders: stats.processing_orders ?? 0, // or however you define confirmed
+      confirmedOrders: stats.confirmed_orders ?? 0, // or however you define confirmed
       pendingOrders: stats.pending_orders ?? 0,
       notDelivered: stats.cancelled_orders ?? 0
     },
@@ -54,7 +56,7 @@ const CustomerStatisticsCard = ({ customerData }) => {
       title: 'Acquisition Strategy',
       avatarIcon: 'bx-target-lock',
       color: 'warning',
-      device: parseDeviceName(stats.device) ?? 'Not found',
+      device: parseDeviceName(stats.device) || 'Not found',
       campaign: customer.previousOrders?.[0]?.campaign ?? 'No campaign available'
     },
     {

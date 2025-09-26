@@ -7,21 +7,22 @@ export default function TagEditDialog({ open, initialTags = [], onClose, onSave,
 
   useEffect(() => {
     if (open) {
-      setTag([])
+      setTag('')
     }
   }, [open])
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
       <DialogTitle>Edit Tag</DialogTitle>
-      <DialogContent>
+      <DialogContent className='py-2 m-0'>
         <TextField
-          fullWidth
-          variant='outlined'
+          id='outlined-basic'
           label='Tag'
+          variant='outlined'
           value={tag}
           onChange={e => setTag(e.target.value)}
           placeholder='Type a tag'
+          fullWidth
         />
       </DialogContent>
       <DialogActions>

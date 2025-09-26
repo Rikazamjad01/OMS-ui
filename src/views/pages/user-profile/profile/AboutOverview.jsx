@@ -16,9 +16,9 @@ const renderList = list => {
           <i className={classnames(item.icon, 'text-xl')} />
           <div className='flex items-center flex-wrap gap-2'>
             <Typography className='font-medium'>
-              {`${item.property.charAt(0).toUpperCase() + item.property.slice(1)}:`}
+              {`${item?.property?.charAt(0).toUpperCase() + item?.property?.slice(1)}:`}
             </Typography>
-            <Typography> {item.value.charAt(0).toUpperCase() + item.value.slice(1)}</Typography>
+            <Typography> {item?.value?.charAt(0).toUpperCase() + item?.value?.slice(1)}</Typography>
           </div>
         </div>
       )
@@ -26,16 +26,16 @@ const renderList = list => {
   )
 }
 
-const renderTeams = teams => {
+const renderTeams = description => {
   return (
-    teams.length > 0 &&
-    teams.map((item, index) => {
+    description.length > 0 &&
+    description.map((item, index) => {
       return (
         <div key={index} className='flex items-center flex-wrap gap-2'>
           <Typography className='font-medium'>
-            {item.property.charAt(0).toUpperCase() + item.property.slice(1)}
+            {item?.property?.charAt(0).toUpperCase() + item?.property?.slice(1)}
           </Typography>
-          <Typography>{item.value.charAt(0).toUpperCase() + item.value.slice(1)}</Typography>
+          <Typography>{item?.value?.charAt(0).toUpperCase() + item?.value?.slice(1)}</Typography>
         </div>
       )
     })
@@ -43,6 +43,8 @@ const renderTeams = teams => {
 }
 
 const AboutOverview = ({ data }) => {
+  console.log(data, 'data in about overview')
+
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
@@ -52,7 +54,7 @@ const AboutOverview = ({ data }) => {
               <Typography className='uppercase' variant='body2' color='text.disabled'>
                 About
               </Typography>
-              {data?.about && renderList(data?.about)}
+              {data ? renderList(data?.about) : null}
             </div>
             <div className='flex flex-col gap-4'>
               <Typography className='uppercase' variant='body2' color='text.disabled'>
@@ -62,9 +64,9 @@ const AboutOverview = ({ data }) => {
             </div>
             <div className='flex flex-col gap-4'>
               <Typography className='uppercase' variant='body2' color='text.disabled'>
-                Teams
+                Description
               </Typography>
-              {data?.teams && renderTeams(data?.teams)}
+              {data?.description && renderTeams(data?.description)}
             </div>
           </CardContent>
         </Card>

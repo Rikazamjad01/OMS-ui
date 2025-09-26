@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation'
 
 // Third-party Imports
-import { getServerSession } from 'next-auth'
+// import { getServerSession } from 'next-auth'
 
 // Config Imports
 import themeConfig from '@configs/themeConfig'
@@ -14,7 +14,7 @@ const GuestOnlyRoute = async ({ children, lang }) => {
   // const session = await getServerSession()
 
   // if (session) {
-    // redirect(getLocalizedUrl(themeConfig.homePageUrl, lang))
+  // redirect(getLocalizedUrl(themeConfig.homePageUrl, lang))
   // }
 
   return <>{children}</>
