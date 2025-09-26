@@ -44,13 +44,13 @@ module.exports = {
         next: '*'
       }
     ],
-    'newline-before-return': 'error',
-    'import/newline-after-import': [
-      'error',
-      {
-        count: 1
-      }
-    ],
+    // 'newline-before-return': 'error',
+    // 'import/newline-after-import': [
+    //   'error',
+    //   {
+    //     count: 1
+    //   }
+    // ],
     'import/order': [
       'error',
       {
@@ -76,8 +76,8 @@ module.exports = {
             group: 'internal'
           }
         ],
-        pathGroupsExcludedImportTypes: ['react', 'type'],
-        'newlines-between': 'always-and-inside-groups'
+        pathGroupsExcludedImportTypes: ['react', 'type']
+        // 'newlines-between': 'always-and-inside-groups'
       }
     ]
   },

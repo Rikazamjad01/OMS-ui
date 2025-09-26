@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
@@ -13,6 +13,7 @@ import Checkbox from '@mui/material/Checkbox'
 import FormGroup from '@mui/material/FormGroup'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Button from '@mui/material/Button'
+import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
 import DialogCloseButton from '../DialogCloseButton'
@@ -21,72 +22,85 @@ import CustomTextField from '@core/components/mui/TextField'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-const defaultData = [
-  'User Management',
-  'Content Management',
-  'Disputes Management',
-  'Database Management',
-  'Financial Management',
-  'Reporting',
-  'API Control',
-  'Repository Management',
-  'Payroll'
-]
+// Redux
+import { useDispatch, useSelector } from 'react-redux'
+import { addRole, updateRole, getAllDepartments } from '@/redux-store/slices/roleSlice'
 
-const RoleDialog = ({ open, setOpen, title }) => {
-  // States
-  const [selectedCheckbox, setSelectedCheckbox] = useState(
-    title
-      ? [
-          'user-management-read',
-          'user-management-write',
-          'user-management-create',
-          'disputes-management-read',
-          'disputes-management-write',
-          'disputes-management-create'
-        ]
-      : []
-  )
+// Cookies
+import Cookies from 'js-cookie'
 
-  const [isIndeterminateCheckbox, setIsIndeterminateCheckbox] = useState(false)
+const RoleDialog = ({ open, setOpen, title, role }) => {
+  const dispatch = useDispatch()
+  const { departments, isLoading } = useSelector(state => state.role)
 
-  const handleClose = () => {
-    setOpen(false)
-  }
-
-  const togglePermission = id => {
-    const arr = selectedCheckbox
-
-    if (selectedCheckbox.includes(id)) {
-      arr.splice(arr.indexOf(id), 1)
-      setSelectedCheckbox([...arr])
-    } else {
-      arr.push(id)
-      setSelectedCheckbox([...arr])
+  // Permissions derived from cookie user.role.permissions
+  const cookieUser = useMemo(() => {
+    try {
+      const str = Cookies.get('user')
+      return str ? JSON.parse(str) : null
+    } catch {
+      return null
     }
-  }
+  }, [])
 
-  const handleSelectAllCheckbox = () => {
-    if (isIndeterminateCheckbox) {
-      setSelectedCheckbox([])
-    } else {
-      defaultData.forEach(row => {
-        const id = (typeof row === 'string' ? row : row.title).toLowerCase().split(' ').join('-')
+  const availablePermissions = useMemo(() => {
+    return cookieUser?.role?.permissions?.map(p => ({ _id: p._id, name: p.name })) || []
+  }, [cookieUser])
 
-        togglePermission(`${id}-read`)
-        togglePermission(`${id}-write`)
-        togglePermission(`${id}-create`)
-      })
+  // Group permissions by resource (before the dot), with actions as the part after the dot
+  const groupedPermissions = useMemo(() => {
+    const groups = {}
+    for (const perm of availablePermissions) {
+      if (!perm?.name) continue
+      const [resource, action] = perm.name.split('.')
+      if (!resource || !action) continue
+      if (!groups[resource]) groups[resource] = []
+      groups[resource].push({ _id: perm._id, action })
     }
-  }
+    return groups
+  }, [availablePermissions])
+
+  // Form state
+  const [name, setName] = useState(role?.name || '')
+  const [description, setDescription] = useState(role?.description || '')
+  const [scopeType, setScopeType] = useState(role?.scope?.type || 'organization')
+  const [refIds, setRefIds] = useState(role?.scope?.refIds || [])
+  const [selectedPermissions, setSelectedPermissions] = useState(role?.permissions?.map(p => p._id) || [])
 
   useEffect(() => {
-    if (selectedCheckbox.length > 0 && selectedCheckbox.length < defaultData.length * 3) {
-      setIsIndeterminateCheckbox(true)
-    } else {
-      setIsIndeterminateCheckbox(false)
+    if (open && scopeType === 'department') {
+      dispatch(getAllDepartments({ params: { page: 1, limit: 100 }, force: false }))
     }
-  }, [selectedCheckbox])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, scopeType])
+
+  const handleTogglePermission = id => {
+    setSelectedPermissions(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
+  }
+
+  const handleClose = () => setOpen(false)
+
+  const onSubmit = async e => {
+    e.preventDefault()
+
+    const payload = {
+      name: name?.trim(),
+      description: description?.trim(),
+      permissions: selectedPermissions,
+      scope: {
+        type: scopeType,
+        ...(scopeType === 'department' ? { refIds } : {})
+      }
+    }
+
+    if (role?._id) {
+      await dispatch(updateRole({ _id: role._id, ...payload }))
+    } else {
+      await dispatch(addRole(payload))
+    }
+
+    handleClose()
+  }
 
   return (
     <Dialog
@@ -102,126 +116,113 @@ const RoleDialog = ({ open, setOpen, title }) => {
         <i className='bx-x' />
       </DialogCloseButton>
       <DialogTitle variant='h4' className='flex flex-col gap-2 text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
-        {title ? 'Edit Role' : 'Add Role'}
+        {role?._id ? 'Edit Role' : 'Add Role'}
         <Typography component='span' className='flex flex-col text-center'>
           Set Role Permissions
         </Typography>
       </DialogTitle>
-      <form onSubmit={e => e.preventDefault()}>
+      <form onSubmit={onSubmit}>
         <DialogContent className='overflow-visible flex flex-col gap-6 pbs-0 sm:pli-16'>
           <CustomTextField
             label='Role Name'
-            variant='outlined'
             fullWidth
             placeholder='Enter Role Name'
-            defaultValue={title}
-            onChange={e => e.target.value}
+            value={name}
+            onChange={e => setName(e.target.value)}
           />
+          <CustomTextField
+            label='Description'
+            fullWidth
+            placeholder='Enter description'
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            multiline
+            minRows={2}
+          />
+
+          <div className='grid gap-6 sm:grid-cols-2'>
+            <CustomTextField
+              select
+              fullWidth
+              label='Scope Type'
+              value={scopeType}
+              onChange={e => setScopeType(e.target.value)}
+            >
+              <MenuItem value='organization'>Organization</MenuItem>
+              <MenuItem value='department'>Department</MenuItem>
+            </CustomTextField>
+
+            {scopeType === 'department' ? (
+              <CustomTextField
+                select
+                fullWidth
+                label='Departments'
+                value={refIds[0] || ''}
+                onChange={e => setRefIds([e.target.value])}
+              >
+                <MenuItem value='' disabled>
+                  Select Department
+                </MenuItem>
+                {departments?.map(dept => (
+                  <MenuItem key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </MenuItem>
+                ))}
+              </CustomTextField>
+            ) : null}
+          </div>
+
           <Typography variant='h5' className='min-is-[225px]'>
-            Role Permissions
+            Permissions
           </Typography>
           <div className='overflow-x-auto'>
             <table className={tableStyles.table}>
               <tbody>
-                <tr className='border-bs-0'>
-                  <th className='pis-0'>
-                    <Typography variant='h6' className='whitespace-nowrap flex-grow min-is-[225px]'>
-                      Administrator Access
-                    </Typography>
-                  </th>
-                  <th className='!text-end pie-0'>
-                    <FormControlLabel
-                      className='mie-0 capitalize'
-                      control={
-                        <Checkbox
-                          onChange={handleSelectAllCheckbox}
-                          indeterminate={isIndeterminateCheckbox}
-                          checked={selectedCheckbox.length === defaultData.length * 3}
-                        />
-                      }
-                      label='Select All'
-                    />
-                  </th>
-                </tr>
-                {defaultData.map((item, index) => {
-                  const id = (typeof item === 'string' ? item : item.title).toLowerCase().split(' ').join('-')
-
-                  return (
-                    <tr key={index} className='border-be'>
+                {Object.keys(groupedPermissions).length === 0 ? (
+                  <tr>
+                    <td className='pis-0'>
+                      <Typography variant='body2' className='text-textSecondary'>
+                        No permissions available from your role.
+                      </Typography>
+                    </td>
+                  </tr>
+                ) : (
+                  Object.entries(groupedPermissions).map(([resource, actions], idx) => (
+                    <tr key={resource || idx} className='border-be'>
                       <td className='pis-0'>
-                        <Typography variant='h6' className='whitespace-nowrap flex-grow min-is-[225px]'>
-                          {typeof item === 'object' ? item.title : item}
+                        <Typography variant='h6' className='whitespace-nowrap flex-grow min-is-[225px] capitalize'>
+                          {resource}
                         </Typography>
                       </td>
                       <td className='!text-end pie-0'>
-                        {typeof item === 'object' ? (
-                          <FormGroup className='flex-row justify-end flex-nowrap gap-6'>
+                        <FormGroup className='flex-row justify-end flex-nowrap gap-6'>
+                          {actions.map(item => (
                             <FormControlLabel
-                              className='mie-0'
-                              control={<Checkbox checked={item.read} />}
-                              label='Read'
-                            />
-                            <FormControlLabel
-                              className='mie-0'
-                              control={<Checkbox checked={item.write} />}
-                              label='Write'
-                            />
-                            <FormControlLabel
-                              className='mie-0'
-                              control={<Checkbox checked={item.select} />}
-                              label='Select'
-                            />
-                          </FormGroup>
-                        ) : (
-                          <FormGroup className='flex-row justify-end flex-nowrap gap-6'>
-                            <FormControlLabel
-                              className='mie-0'
+                              key={item._id}
+                              className='mie-0 capitalize'
                               control={
                                 <Checkbox
-                                  id={`${id}-read`}
-                                  onChange={() => togglePermission(`${id}-read`)}
-                                  checked={selectedCheckbox.includes(`${id}-read`)}
+                                  checked={selectedPermissions.includes(item._id)}
+                                  onChange={() => handleTogglePermission(item._id)}
                                 />
                               }
-                              label='Read'
+                              label={item.action.replace('-', ' ')}
                             />
-                            <FormControlLabel
-                              className='mie-0'
-                              control={
-                                <Checkbox
-                                  id={`${id}-write`}
-                                  onChange={() => togglePermission(`${id}-write`)}
-                                  checked={selectedCheckbox.includes(`${id}-write`)}
-                                />
-                              }
-                              label='Write'
-                            />
-                            <FormControlLabel
-                              className='mie-0'
-                              control={
-                                <Checkbox
-                                  id={`${id}-create`}
-                                  onChange={() => togglePermission(`${id}-create`)}
-                                  checked={selectedCheckbox.includes(`${id}-create`)}
-                                />
-                              }
-                              label='Create'
-                            />
-                          </FormGroup>
-                        )}
+                          ))}
+                        </FormGroup>
                       </td>
                     </tr>
-                  )
-                })}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </DialogContent>
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' type='submit' onClick={handleClose}>
-            Submit
+          <Button variant='contained' type='submit' disabled={isLoading}>
+            {role?._id ? 'Update' : 'Submit'}
           </Button>
-          <Button variant='tonal' type='reset' color='secondary' onClick={handleClose}>
+          <Button variant='tonal' type='button' color='secondary' onClick={handleClose}>
             Cancel
           </Button>
         </DialogActions>

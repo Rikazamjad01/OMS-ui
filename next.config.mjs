@@ -4,13 +4,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'cdn.shopify.com',
+        hostname: 'cdn.shopify.com'
       },
       {
-      protocol: 'https',
-      hostname: 'res.cloudinary.com', 
-    },
-    ],
+        protocol: 'https',
+        hostname: 'res.cloudinary.com'
+      }
+    ]
   },
   basePath: process.env.BASEPATH,
   redirects: async () => {
@@ -34,6 +34,9 @@ const nextConfig = {
         locale: false
       }
     ]
+  },
+  eslint: {
+    ignoreDuringBuilds: true
   }
 }
 

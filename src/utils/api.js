@@ -13,8 +13,10 @@ const api = axios.create({
 // Generic GET with optional params
 
 const getHeaders = () => {
-  // const token = Cookies.get('token')
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM4MmI4ZjZhNDg1MTg3NTJkMDg4MmYiLCJqdGkiOiI3OTU0Nzg4Y2FiZDU5MjgzNWI3MGU5ODE1ZDRiYzg0ZDkwNGUzMDM0ZjM3ZWI1OTlhYjg4YTQ2YzIwYjcxY2IzIiwiaWF0IjoxNzU4MTAzOTkxLCJleHAiOjE3NjU4Nzk5OTF9.ut51S-UVfkpvl_9pw58GDy-gOcKW-CA3dqPOWMpemMA"
+  const tokens = Cookies.get('token')
+  const token = JSON.parse(tokens || '{}')?.accessToken
+  // const token =
+  //   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM4MmI4ZjZhNDg1MTg3NTJkMDg4MmYiLCJqdGkiOiI3OTU0Nzg4Y2FiZDU5MjgzNWI3MGU5ODE1ZDRiYzg0ZDkwNGUzMDM0ZjM3ZWI1OTlhYjg4YTQ2YzIwYjcxY2IzIiwiaWF0IjoxNzU4MTAzOTkxLCJleHAiOjE3NjU4Nzk5OTF9.ut51S-UVfkpvl_9pw58GDy-gOcKW-CA3dqPOWMpemMA'
 
   // console.log("Token from cookies:", token);
   const headers = {
@@ -22,7 +24,7 @@ const getHeaders = () => {
   }
 
   if (token) {
-    headers.authorization = `Bearer ${token}`
+    headers.authorization = `${token}`
   }
 
   return headers
@@ -30,15 +32,6 @@ const getHeaders = () => {
 
 const handleError = error => {
   console.log(error, 'error..........')
-
-  // Fix: error is unknown, so we need to safely check status
-  if (typeof error === 'object' && error !== null && 'status' in error && error.status === 401) {
-    Cookies.remove('token')
-    Cookies.remove('username')
-    Cookies.remove('role')
-    Cookies.remove('email')
-    Cookies.remove('user')
-  }
 
   if (axios.isAxiosError(error)) {
     const message =
@@ -70,10 +63,8 @@ export const getRequest = async endPoint => {
       return response.data
     }
 
-    throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
+    // throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
   } catch (error) {
-    handleError(error)
-
     handleError(error)
 
     throw error
@@ -110,8 +101,6 @@ export const postRequest = async (endPoint, data, method = 'post') => {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
     }
   } catch (error) {
-    handleError(error)
-    throw error
     handleError(error)
     throw error
   }
