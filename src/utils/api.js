@@ -33,15 +33,6 @@ const getHeaders = () => {
 const handleError = error => {
   console.log(error, 'error..........')
 
-  // Fix: error is unknown, so we need to safely check status
-  if (typeof error === 'object' && error !== null && 'status' in error && error.status === 401) {
-    Cookies.remove('token')
-    Cookies.remove('username')
-    Cookies.remove('role')
-    Cookies.remove('email')
-    Cookies.remove('user')
-  }
-
   if (axios.isAxiosError(error)) {
     const message =
       error.response?.data?.message || error.response?.data?.message || error.message || 'Something went wrong.'
