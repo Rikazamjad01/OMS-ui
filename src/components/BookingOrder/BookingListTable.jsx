@@ -29,7 +29,18 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem } from '@mui/material'
+import {
+  Alert,
+  Autocomplete,
+  DialogActions,
+  InputAdornment,
+  Snackbar,
+  TextField,
+  MenuItem,
+  Drawer,
+  Box,
+  IconButton
+} from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -70,6 +81,7 @@ import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
+import OrderDetails from '@/views/apps/ecommerce/orders/details'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
 import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
@@ -307,6 +319,14 @@ const BookingListTable = ({
     tags: []
   })
 
+  // Right-side details drawer state
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOrderId, setDetailsOrderId] = useState(null)
+  const openDetails = id => {
+    setDetailsOrderId(id)
+    setDetailsOpen(true)
+  }
+
   const openTagEditor = (orderId, currentTags = []) => {
     const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
 
@@ -429,7 +449,8 @@ const BookingListTable = ({
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.courier?.name || 'none', // note: lowercase 'platform'
-        status: order?.courier?.dispatchStatus === 'cancelled' ? 'cancelled' : order.orderStatus,
+        status: order.orderStatus,
+        // status: order?.courier?.dispatchStatus === 'cancelled' ? 'cancelled' : order.orderStatus,
         awb: order.courier?.awbLink || '',
         method: normalizePaymentMethod(shortFormNames),
         remarks: order.remarks,
@@ -558,9 +579,10 @@ const BookingListTable = ({
         header: 'Order #',
         cell: ({ row }) => (
           <Typography
-            component={Link}
-            href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
+            component='button'
+            onClick={() => openDetails(row.original.id)}
             color='primary.main'
+            className='cursor-pointer bg-transparent border-0 p-0'
           >
             #{row.original.orderNumber || '—'}
           </Typography>
@@ -588,27 +610,27 @@ const BookingListTable = ({
           )
         }
       },
-      {
-        accessorKey: 'customer',
-        header: 'Customer Name',
-        meta: { width: '250px' },
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            {getAvatar(row.original)}
-            <div className='flex flex-col'>
-              <Typography
-                variant='h6'
-                component={Link}
-                href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original.customerId}`, locale)}
-                className='hover:text-primary'
-              >
-                {row.original.customer || '—'}
-              </Typography>
-              <Typography variant='body2'>{row.original.email || '—'}</Typography>
-            </div>
-          </div>
-        )
-      },
+      // {
+      //   accessorKey: 'customer',
+      //   header: 'Customer Name',
+      //   meta: { width: '250px' },
+      //   cell: ({ row }) => (
+      //     <div className='flex items-center gap-3'>
+      //       {getAvatar(row.original)}
+      //       <div className='flex flex-col'>
+      //         <Typography
+      //           variant='h6'
+      //           component={Link}
+      //           href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original.customerId}`, locale)}
+      //           className='hover:text-primary'
+      //         >
+      //           {row.original.customer || '—'}
+      //         </Typography>
+      //         <Typography variant='body2'>{row.original.email || '—'}</Typography>
+      //       </div>
+      //     </div>
+      //   )
+      // },
       {
         accessorKey: 'payment',
         header: 'Payment Status',
@@ -617,8 +639,8 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-              color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
-              className='font-medium'
+              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
+              className='font-medium '
             >
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
             </Typography>
@@ -636,15 +658,63 @@ const BookingListTable = ({
           }
 
           return (
-            <div className='flex items-center gap-1'>
-              {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
-              <Typography
-                color={`${courierPlatforms[row.original.platform]?.color || 'default'}.main`}
-                className='font-medium'
-              >
-                {courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown'}
-              </Typography>
-            </div>
+            <OpenDialogOnElementClick
+              element={Chip}
+              elementProps={{
+                label: courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown',
+                variant: 'outlined',
+                size: 'small',
+                className: 'cursor-pointer'
+              }}
+              dialog={EditCourierInfo}
+              dialogProps={{
+                data: (() => {
+                  const inferCourierKey = name => {
+                    if (!name) return 'none'
+                    const n = String(name).toLowerCase()
+                    if (n.includes('leopard')) return 'leopard'
+                    if (n.includes('daewoo')) return 'daewoo'
+                    if (n.includes('post')) return 'postEx'
+                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    if (n.includes('tcs')) return 'tcs'
+                    return 'none'
+                  }
+                  const defaultCourier = inferCourierKey(row.original.platform)
+
+                  return {
+                    orderIds: [row.original.id],
+                    courier: defaultCourier,
+                    reason: ''
+                  }
+                })(),
+                onSubmit: async (payload, controls) => {
+                  try {
+                    const courierApiMap = {
+                      none: 'None',
+                      leopard: 'Leopard',
+                      daewoo: 'Daewoo',
+                      postEx: 'PostEx',
+                      mp: 'M&P',
+                      tcs: 'TCS'
+                    }
+                    const body = {
+                      orderId: [String(row.original.id)],
+                      courier: courierApiMap[payload.courier] || payload.courier,
+                      reason: payload.reason
+                    }
+                    const res = await dispatch(courierAssignment(body)).unwrap()
+                    setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                    controls?.close()
+                    controls?.reset()
+                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                  } catch (err) {
+                    setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                  } finally {
+                    controls?.done?.()
+                  }
+                }
+              }}
+            />
           )
         }
       },
@@ -712,7 +782,10 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      <p key={i} className='text-gray-500'>
+                        {remark}
+                      </p>
                     ))
                   : '--'}
               </div>
@@ -789,9 +862,9 @@ const BookingListTable = ({
         header: 'Airway Bill',
         meta: { width: '250px' },
         cell: ({ row }) => {
-          if (row.original?.status === 'cancelled') {
-            return <Chip label='Cancelled' variant='outlined' size='small' />
-          }
+          // if (row.original?.status === 'cancelled') {
+          //   return <Chip label='Cancelled' variant='outlined' size='small' />
+          // }
 
           if (row.original.platform === 'none') {
             return (
@@ -924,8 +997,10 @@ const BookingListTable = ({
                 {
                   text: 'View',
                   icon: 'bx-show',
-                  href: getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale),
-                  linkProps: { className: 'flex items-center gap-2 is-full plb-2 pli-5' }
+                  menuItemProps: {
+                    onClick: () => openDetails(row.original.id),
+                    className: 'flex items-center gap-2 is-full plb-2 pli-5'
+                  }
                 }
               ]}
             />
@@ -1547,6 +1622,22 @@ const BookingListTable = ({
           {alert.message}
         </Alert>
       </Snackbar>
+      {/* Right-side Drawer for order details */}
+      <Drawer
+        anchor='right'
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: '80vw' } } }}
+      >
+        <Box className='p-4 overflow-auto' sx={{ height: '100%' }}>
+          <div className='flex justify-end'>
+            <IconButton onClick={() => setDetailsOpen(false)} aria-label='Close'>
+              <i className='bx-x text-2xl' />
+            </IconButton>
+          </div>
+          {detailsOrderId ? <OrderDetails id={detailsOrderId} /> : null}
+        </Box>
+      </Drawer>
     </Card>
   )
 }

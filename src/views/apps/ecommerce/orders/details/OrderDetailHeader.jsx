@@ -133,9 +133,18 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
         <div className={'flex gap-2'}>
           {/* 👇 Hide Cancel Order button if already cancelled */}
           {order?.orderStatus !== 'cancelled' && (
-            <Button color='error' variant='tonal' onClick={handleCancelOrder}>
-              Cancel Order
-            </Button>
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ color: 'error', variant: 'tonal', children: 'Cancel Order' }}
+              dialog={ConfirmationDialog}
+              dialogProps={{
+                type: 'cancel-order',
+                payload: { orderIds: [order.id] },
+                onSuccess: async () => {
+                  await handleCancelOrder()
+                }
+              }}
+            />
           )}
 
           <OpenDialogOnElementClick

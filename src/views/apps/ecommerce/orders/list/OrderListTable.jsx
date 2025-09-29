@@ -29,7 +29,19 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem, Menu } from '@mui/material'
+import {
+  Alert,
+  Autocomplete,
+  DialogActions,
+  InputAdornment,
+  Snackbar,
+  TextField,
+  MenuItem,
+  Menu,
+  Drawer,
+  IconButton,
+  Box
+} from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -64,6 +76,7 @@ import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import CreateOrderDialog from '@/components/dialogs/createOrderDialog'
+import OrderDetails from '../details'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -275,6 +288,14 @@ const OrderListTable = ({
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
   const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
+
+  // Right-side details drawer state
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOrderId, setDetailsOrderId] = useState(null)
+  const openDetails = id => {
+    setDetailsOrderId(id)
+    setDetailsOpen(true)
+  }
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogPayload, setDialogPayload] = useState(null)
@@ -535,9 +556,10 @@ const OrderListTable = ({
         header: 'Order #',
         cell: ({ row }) => (
           <Typography
-            component={Link}
-            href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
+            component='button'
+            onClick={() => openDetails(row.original.id)}
             color='primary.main'
+            className='cursor-pointer bg-transparent border-0 p-0'
           >
             #{row.original.orderNumber || '—'}
           </Typography>
@@ -592,9 +614,9 @@ const OrderListTable = ({
         meta: { width: '200px' },
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
-            <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} />
+            {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-              color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
+              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium'
             >
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
@@ -614,9 +636,9 @@ const OrderListTable = ({
 
           return (
             <div className='flex items-center gap-1'>
-              <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} />
+              {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-                color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
+                // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
                 {orderPlatform[row.original.platform]?.text || row.original.platform || 'Unknown'}
@@ -687,7 +709,10 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      <p key={i} className='text-gray-500'>
+                        {remark}
+                      </p>
                     ))
                   : '--'}
               </div>
@@ -788,8 +813,10 @@ const OrderListTable = ({
                 {
                   text: 'View',
                   icon: 'bx-show',
-                  href: getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale),
-                  linkProps: { className: 'flex items-center gap-2 is-full plb-2 pli-5' }
+                  menuItemProps: {
+                    onClick: () => openDetails(row.original.id),
+                    className: 'flex items-center gap-2 is-full plb-2 pli-5'
+                  }
                 }
               ]}
             />
@@ -1367,6 +1394,22 @@ const OrderListTable = ({
           console.log('Order created successfully!')
         }}
       />
+      {/* Right-side Drawer for order details */}
+      <Drawer
+        anchor='right'
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: '80vw' } } }}
+      >
+        <Box className='p-4 overflow-auto' sx={{ height: '100%' }}>
+          <div className='flex justify-end'>
+            <IconButton onClick={() => setDetailsOpen(false)} aria-label='Close'>
+              <i className='bx-x text-2xl' />
+            </IconButton>
+          </div>
+          {detailsOrderId ? <OrderDetails id={detailsOrderId} /> : null}
+        </Box>
+      </Drawer>
       <ConfirmationDialog
         open={dialogOpen}
         setOpen={setDialogOpen}

@@ -44,9 +44,11 @@ const StatusCell = ({ row, onStatusChange }) => {
     <>
       <Chip
         label={statusChipColor[row.original.status]?.text || row.original.status}
+        // color={'black'}
         color={statusChipColor[row.original.status]?.color || 'primary'}
         variant='tonal'
         size='small'
+        className='text-black'
         onClick={handleClick}
         style={{ cursor: 'pointer' }}
       />
