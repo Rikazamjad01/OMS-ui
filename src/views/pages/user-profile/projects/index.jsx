@@ -10,7 +10,7 @@ import AvatarGroup from '@mui/material/AvatarGroup'
 import Tooltip from '@mui/material/Tooltip'
 
 // Component Imports
-import { Checkbox } from '@mui/material'
+import { Checkbox, TextField } from '@mui/material'
 
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -69,7 +69,7 @@ const Projects = ({ data }) => {
       header: 'Incentive Amount',
       cell: ({ row }) => (
         <div className='flex items-center gap-3'>
-          <Typography color='text.primary' >{`${row.original.amount || 0}`}</Typography>
+          <Typography color='text.primary'>{`${row.original.amount || 0}`}</Typography>
         </div>
       )
     },
@@ -98,7 +98,22 @@ const Projects = ({ data }) => {
     <Grid container spacing={6}>
       {data && (
         <Grid size={{ xs: 12 }}>
-          <BaseTable title='Daily Order List' data={data} columns={orderColumns} />
+          <BaseTable
+            title='Daily Order List'
+            data={data}
+            columns={orderColumns}
+            extraFilters={
+              <TextField
+                type='number'
+                label='Incentive Amount'
+                size='medium'
+                onChange={e => {
+                  // You can lift state up and trigger API/filtering here
+                  console.log('Filter incentive amount:', e.target.value)
+                }}
+              />
+            }
+          />
         </Grid>
       )}
     </Grid>

@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import Grid from '@mui/material/Grid2'
 
-import { Checkbox, Chip, LinearProgress, Typography } from '@mui/material'
+import { Box, Checkbox, Chip, LinearProgress, Paper, Typography } from '@mui/material'
 
 import BaseTable from '../baseTable/page'
 import OptionMenu from '@/@core/components/option-menu'
 import CustomAvatar from '@/@core/components/mui/Avatar'
+
+
 
 const Teams = ({ data }) => {
   if (!Array.isArray(data)) {
@@ -84,7 +87,7 @@ const Teams = ({ data }) => {
   ]
 
   return (
-    <Grid container spacing={6}>
+    <Grid container>
       {data && (
         <Grid size={{ xs: 12 }}>
           <BaseTable title='Daily Order List' data={data} columns={orderColumns} />

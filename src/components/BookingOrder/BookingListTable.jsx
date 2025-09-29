@@ -30,13 +30,13 @@ import {
   getFacetedMinMaxValues
 } from '@tanstack/react-table'
 import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem } from '@mui/material'
-import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
 // import { DateRangePicker } from '@mui/lab'
 
 import dayjs from 'dayjs'
+import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
 
@@ -46,8 +46,10 @@ import {
   downloadLoadSheet,
   fetchBookingOrder,
   fetchBookingOrders,
+
   // updateOrderCommentsAndRemarks,
   selectBookingOrdersPagination
+
   // updateOrdersStatusThunk
 } from '@/redux-store/slices/bookingSlice'
 
@@ -56,6 +58,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
 import EditCourierInfo from '@components/dialogs/edit-courier-info'
+
 // import FilterModal from '../filterModal/page'
 
 // Utils
@@ -69,6 +72,7 @@ import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
+import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -284,6 +288,8 @@ const BookingListTable = ({
   const dispatch = useDispatch()
   const pagination = useSelector(selectBookingOrdersPagination)
 
+  console.log(pagination, 'pagination')
+
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [editCourierData, setEditCourierData] = useState({ open: false, courier: null, remarks: '' })
 
@@ -315,7 +321,7 @@ const BookingListTable = ({
       const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds]
 
       const result = await dispatch(
-        updateBookingOrdersStatusThunk({
+        updateOrdersStatusThunk({
           orderIds: idsArray,
           status: newStatus
         })
@@ -392,12 +398,15 @@ const BookingListTable = ({
         : order.payment_gateway_names
           ? [order.payment_gateway_names]
           : []
+
       let shortFormNames = names.map(name => {
         if (name === 'Cash on Delivery (COD)') {
           return 'cod'
         }
+
         return name
       })
+
       const parsedTags =
         typeof order.tags === 'string'
           ? order.tags
@@ -809,7 +818,7 @@ const BookingListTable = ({
                     const defaultCourier = inferCourierKey(firstSelected?.platform)
 
                     return {
-                      orderIds: selectedIds,
+                      orderIds: selectedIds.length > 0 ? selectedIds : [row.original.id],
                       courier: defaultCourier,
                       reason: ''
                     }
@@ -824,7 +833,10 @@ const BookingListTable = ({
                         mp: 'M&P',
                         tcs: 'TCS'
                       }
-                      const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                      const freshSelectedIds = (() => {
+                        const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                        return ids.length > 0 ? ids : [row.original.id]
+                      })()
                       const body = {
                         orderId: freshSelectedIds.map(id => String(id)),
                         courier: courierApiMap[payload.courier] || payload.courier,
@@ -859,6 +871,7 @@ const BookingListTable = ({
                     onSuccess: async ({ trackNumbers }) => {
                       try {
                         const res = await dispatch(cancelAwb({ trackNumber: trackNumbers })).unwrap()
+
                         setAlert({ open: true, message: res?.message || 'AWB cancelled', severity: 'success' })
                         await dispatch(fetchBookingOrders({ page, limit, force: true }))
                       } catch (e) {
@@ -876,6 +889,7 @@ const BookingListTable = ({
               </div>
             )
           }
+
           return (
             <div className='flex flex-col gap-1'>
               <OpenDialogOnElementClick
@@ -1017,7 +1031,8 @@ const BookingListTable = ({
   console.log('selectedIds', rowSelection)
   return (
     <Card>
-      <CardContent className='grid grid-cols-[0.6fr_0.6fr_0.4fr_0.4fr_0.4fr_0.3fr] gap-4'>
+      <CardContent className='w-full flex items-center justify-between'>
+      <div className='flex items-center gap-4 w-full'>
         {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
@@ -1080,12 +1095,15 @@ const BookingListTable = ({
             element={Button}
             elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
             dialog={EditCourierInfo}
+            size='small'
             dialogProps={{
               data: (() => {
                 const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+
                 const inferCourierKey = name => {
                   if (!name) return 'none'
                   const n = String(name).toLowerCase()
+
                   if (n.includes('leopard')) return 'leopard'
                   if (n.includes('daewoo')) return 'daewoo'
                   if (n.includes('post')) return 'postEx'
@@ -1093,6 +1111,7 @@ const BookingListTable = ({
                   if (n.includes('tcs')) return 'tcs'
                   return 'none'
                 }
+
                 const defaultCourier = inferCourierKey(firstSelected?.platform)
 
                 return {
@@ -1111,13 +1130,17 @@ const BookingListTable = ({
                     mp: 'M&P',
                     tcs: 'TCS'
                   }
+
                   const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+
                   const body = {
                     orderId: freshSelectedIds.map(id => String(id)),
                     courier: courierApiMap[payload.courier] || payload.courier,
                     reason: payload.reason
                   }
+
                   const res = await dispatch(courierAssignment(body)).unwrap()
+
                   setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
                   controls?.close()
                   controls?.reset()
@@ -1138,6 +1161,7 @@ const BookingListTable = ({
             element={Button}
             elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
             dialog={ConfirmationDialog}
+            size='small'
             dialogProps={{
               type: 'download-load-sheet',
               payload: { orderIds: selectedIds },
@@ -1151,6 +1175,7 @@ const BookingListTable = ({
 
                   if (base64) {
                     const link = document.createElement('a')
+
                     link.href = `data:${mimeType};base64,${base64}`
                     link.download = filename
                     document.body.appendChild(link)
@@ -1197,8 +1222,10 @@ const BookingListTable = ({
             elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
             dialog={ConfirmationDialog}
             dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
+            size='small'
           />
         )}
+        </div>
 
         <div className='flex max-sm:flex-col sm:items-center gap-4'>
           <CustomTextField
