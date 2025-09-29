@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import Grid from '@mui/material/Grid2'
 
 import { Box, Checkbox, Chip, LinearProgress, Paper, Typography } from '@mui/material'
@@ -6,8 +5,6 @@ import { Box, Checkbox, Chip, LinearProgress, Paper, Typography } from '@mui/mat
 import BaseTable from '../baseTable/page'
 import OptionMenu from '@/@core/components/option-menu'
 import CustomAvatar from '@/@core/components/mui/Avatar'
-
-
 
 const Teams = ({ data }) => {
   if (!Array.isArray(data)) {
