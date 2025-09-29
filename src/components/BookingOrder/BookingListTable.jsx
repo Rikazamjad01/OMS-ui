@@ -222,7 +222,8 @@ export const paymentMethodsMap = {
 export const normalizePaymentMethod = (names = []) => {
   const label = (names[0] || '').toLowerCase()
 
-  if (label.includes('cod') || label.includes('cash on delivery (cod)')) return 'cod'
+  if (label.includes('cod') || label.includes('cash on delivery (cod)') || label.includes('cash on delivery'))
+    return 'cod'
   if (label.includes('paypal')) return 'paypal'
   if (label.includes('mastercard') || label.includes('visa') || label.includes('card')) return 'card'
   if (label.includes('wallet')) return 'wallet'
@@ -414,10 +415,11 @@ const BookingListTable = ({
         time: new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         customer: `${order?.first_name || ''} ${order?.last_name || ''}`.trim(),
         customerId: order?.customer,
+        // dispatchStatus: order.courier?.dispatchStatus,
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.courier?.name || 'none', // note: lowercase 'platform'
-        status: order.orderStatus,
+        status: order?.courier?.dispatchStatus === 'cancelled' ? 'cancelled' : order.orderStatus,
         awb: order.courier?.awbLink || '',
         method: normalizePaymentMethod(shortFormNames),
         remarks: order.remarks,
@@ -639,7 +641,9 @@ const BookingListTable = ({
       {
         accessorKey: 'status',
         header: 'Order Status',
-        cell: props => <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
+        cell: props => {
+          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
+        }
       },
       {
         accessorKey: 'method',
@@ -754,7 +758,6 @@ const BookingListTable = ({
           )
         }
       },
-
       {
         accessorKey: 'city',
         header: 'City',
@@ -776,6 +779,73 @@ const BookingListTable = ({
         header: 'Airway Bill',
         meta: { width: '250px' },
         cell: ({ row }) => {
+          if (row.original?.status === 'cancelled') {
+            return <Chip label='Cancelled' variant='outlined' size='small' />
+          }
+          if (row.original.platform === 'none') {
+            return (
+              <OpenDialogOnElementClick
+                element={Chip}
+                elementProps={{
+                  label: 'Assign',
+                  variant: 'outlined',
+                  size: 'small',
+                  className: 'cursor-pointer w-full'
+                }}
+                dialog={EditCourierInfo}
+                dialogProps={{
+                  data: (() => {
+                    const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+                    const inferCourierKey = name => {
+                      if (!name) return 'none'
+                      const n = String(name).toLowerCase()
+                      if (n.includes('leopard')) return 'leopard'
+                      if (n.includes('daewoo')) return 'daewoo'
+                      if (n.includes('post')) return 'postEx'
+                      if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                      if (n.includes('tcs')) return 'tcs'
+                      return 'none'
+                    }
+                    const defaultCourier = inferCourierKey(firstSelected?.platform)
+
+                    return {
+                      orderIds: selectedIds,
+                      courier: defaultCourier,
+                      reason: ''
+                    }
+                  })(),
+                  onSubmit: async (payload, controls) => {
+                    try {
+                      const courierApiMap = {
+                        none: 'None',
+                        leopard: 'Leopard',
+                        daewoo: 'Daewoo',
+                        postEx: 'PostEx',
+                        mp: 'M&P',
+                        tcs: 'TCS'
+                      }
+                      const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                      const body = {
+                        orderId: freshSelectedIds.map(id => String(id)),
+                        courier: courierApiMap[payload.courier] || payload.courier,
+                        reason: payload.reason
+                      }
+                      const res = await dispatch(courierAssignment(body)).unwrap()
+                      setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                      controls?.close()
+                      controls?.reset()
+                      setRowSelection({})
+                      await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                    } catch (err) {
+                      setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                    } finally {
+                      controls?.done?.()
+                    }
+                  }
+                }}
+              />
+            )
+          }
           if (row.original.awb) {
             return (
               <div className='flex flex-col gap-1'>
