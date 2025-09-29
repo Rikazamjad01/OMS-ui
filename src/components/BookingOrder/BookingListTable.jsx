@@ -424,6 +424,7 @@ const BookingListTable = ({
         time: new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         customer: `${order?.first_name || ''} ${order?.last_name || ''}`.trim(),
         customerId: order?.customer,
+
         // dispatchStatus: order.courier?.dispatchStatus,
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
@@ -791,6 +792,7 @@ const BookingListTable = ({
           if (row.original?.status === 'cancelled') {
             return <Chip label='Cancelled' variant='outlined' size='small' />
           }
+
           if (row.original.platform === 'none') {
             return (
               <OpenDialogOnElementClick
@@ -805,9 +807,11 @@ const BookingListTable = ({
                 dialogProps={{
                   data: (() => {
                     const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+
                     const inferCourierKey = name => {
                       if (!name) return 'none'
                       const n = String(name).toLowerCase()
+
                       if (n.includes('leopard')) return 'leopard'
                       if (n.includes('daewoo')) return 'daewoo'
                       if (n.includes('post')) return 'postEx'
@@ -815,6 +819,7 @@ const BookingListTable = ({
                       if (n.includes('tcs')) return 'tcs'
                       return 'none'
                     }
+
                     const defaultCourier = inferCourierKey(firstSelected?.platform)
 
                     return {
@@ -833,16 +838,21 @@ const BookingListTable = ({
                         mp: 'M&P',
                         tcs: 'TCS'
                       }
+
                       const freshSelectedIds = (() => {
                         const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+
                         return ids.length > 0 ? ids : [row.original.id]
                       })()
+
                       const body = {
                         orderId: freshSelectedIds.map(id => String(id)),
                         courier: courierApiMap[payload.courier] || payload.courier,
                         reason: payload.reason
                       }
+
                       const res = await dispatch(courierAssignment(body)).unwrap()
+
                       setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
                       controls?.close()
                       controls?.reset()
@@ -858,6 +868,7 @@ const BookingListTable = ({
               />
             )
           }
+
           if (row.original.awb) {
             return (
               <div className='flex flex-col gap-1'>
@@ -1032,12 +1043,12 @@ const BookingListTable = ({
   return (
     <Card>
       <CardContent className='w-full flex items-center justify-between'>
-      <div className='flex items-center gap-4 w-full'>
-        {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+        <div className='flex items-center gap-4 w-full'>
+          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
 
-        {/* <RangePicker
+          {/* <RangePicker
             status='success'
             value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
             onChange={dates => {
@@ -1057,20 +1068,20 @@ const BookingListTable = ({
             }}
           /> */}
 
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onChange={val => {
-            setGlobalFilter(String(val))
-            onSearchChange?.(val) // Add this line
-          }}
-          onEnter={val => {
-            setGlobalFilter(val)
-            onSearchChange?.(val)
-          }}
-          placeholder='Search Order'
-        />
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={val => {
+              setGlobalFilter(String(val))
+              onSearchChange?.(val) // Add this line
+            }}
+            onEnter={val => {
+              setGlobalFilter(val)
+              onSearchChange?.(val)
+            }}
+            placeholder='Search Order'
+          />
 
-        {/* <FilterModal
+          {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -1087,109 +1098,109 @@ const BookingListTable = ({
               setOpenFilter(false)
             }}
           /> */}
-        {/* <DateRangePicker /> */}
+          {/* <DateRangePicker /> */}
 
-        {/* Add the Change Status button - only shows when orders are selected */}
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
-            dialog={EditCourierInfo}
-            size='small'
-            dialogProps={{
-              data: (() => {
-                const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+          {/* Add the Change Status button - only shows when orders are selected */}
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
+              dialog={EditCourierInfo}
+              size='small'
+              dialogProps={{
+                data: (() => {
+                  const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
 
-                const inferCourierKey = name => {
-                  if (!name) return 'none'
-                  const n = String(name).toLowerCase()
+                  const inferCourierKey = name => {
+                    if (!name) return 'none'
+                    const n = String(name).toLowerCase()
 
-                  if (n.includes('leopard')) return 'leopard'
-                  if (n.includes('daewoo')) return 'daewoo'
-                  if (n.includes('post')) return 'postEx'
-                  if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                  if (n.includes('tcs')) return 'tcs'
-                  return 'none'
-                }
-
-                const defaultCourier = inferCourierKey(firstSelected?.platform)
-
-                return {
-                  orderIds: selectedIds,
-                  courier: defaultCourier,
-                  reason: ''
-                }
-              })(),
-              onSubmit: async (payload, controls) => {
-                try {
-                  const courierApiMap = {
-                    none: 'None',
-                    leopard: 'Leopard',
-                    daewoo: 'Daewoo',
-                    postEx: 'PostEx',
-                    mp: 'M&P',
-                    tcs: 'TCS'
+                    if (n.includes('leopard')) return 'leopard'
+                    if (n.includes('daewoo')) return 'daewoo'
+                    if (n.includes('post')) return 'postEx'
+                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    if (n.includes('tcs')) return 'tcs'
+                    return 'none'
                   }
 
-                  const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                  const defaultCourier = inferCourierKey(firstSelected?.platform)
 
-                  const body = {
-                    orderId: freshSelectedIds.map(id => String(id)),
-                    courier: courierApiMap[payload.courier] || payload.courier,
-                    reason: payload.reason
+                  return {
+                    orderIds: selectedIds,
+                    courier: defaultCourier,
+                    reason: ''
                   }
+                })(),
+                onSubmit: async (payload, controls) => {
+                  try {
+                    const courierApiMap = {
+                      none: 'None',
+                      leopard: 'Leopard',
+                      daewoo: 'Daewoo',
+                      postEx: 'PostEx',
+                      mp: 'M&P',
+                      tcs: 'TCS'
+                    }
 
-                  const res = await dispatch(courierAssignment(body)).unwrap()
+                    const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
 
-                  setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
-                  controls?.close()
-                  controls?.reset()
-                  setRowSelection({})
-                  await dispatch(fetchBookingOrders({ page, limit, force: true }))
-                } catch (err) {
-                  setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
-                } finally {
-                  controls?.done?.()
-                }
-              }
-            }}
-          />
-        )}
+                    const body = {
+                      orderId: freshSelectedIds.map(id => String(id)),
+                      courier: courierApiMap[payload.courier] || payload.courier,
+                      reason: payload.reason
+                    }
 
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            size='small'
-            dialogProps={{
-              type: 'download-load-sheet',
-              payload: { orderIds: selectedIds },
-              onSuccess: async ({ orderIds }) => {
-                try {
-                  const res = await dispatch(downloadLoadSheet({ orderIds })).unwrap()
-                  const data = res?.data || res
-                  const base64 = data?.base64
-                  const filename = data?.filename || 'loadsheet.pdf'
-                  const mimeType = data?.mimeType || 'application/pdf'
+                    const res = await dispatch(courierAssignment(body)).unwrap()
 
-                  if (base64) {
-                    const link = document.createElement('a')
-
-                    link.href = `data:${mimeType};base64,${base64}`
-                    link.download = filename
-                    document.body.appendChild(link)
-                    link.click()
-                    link.remove()
+                    setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                    controls?.close()
+                    controls?.reset()
+                    setRowSelection({})
+                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                  } catch (err) {
+                    setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                  } finally {
+                    controls?.done?.()
                   }
-                } catch (e) {
-                  console.error('Failed to download load sheet', e)
                 }
-              }
-            }}
-          />
-        )}
-        {/* {selectedCount >= 2 ? (
+              }}
+            />
+          )}
+
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              size='small'
+              dialogProps={{
+                type: 'download-load-sheet',
+                payload: { orderIds: selectedIds },
+                onSuccess: async ({ orderIds }) => {
+                  try {
+                    const res = await dispatch(downloadLoadSheet({ orderIds })).unwrap()
+                    const data = res?.data || res
+                    const base64 = data?.base64
+                    const filename = data?.filename || 'loadsheet.pdf'
+                    const mimeType = data?.mimeType || 'application/pdf'
+
+                    if (base64) {
+                      const link = document.createElement('a')
+
+                      link.href = `data:${mimeType};base64,${base64}`
+                      link.download = filename
+                      document.body.appendChild(link)
+                      link.click()
+                      link.remove()
+                    }
+                  } catch (e) {
+                    console.error('Failed to download load sheet', e)
+                  }
+                }
+              }}
+            />
+          )}
+          {/* {selectedCount >= 2 ? (
           <OpenDialogOnElementClick
             element={Button}
             elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
@@ -1216,15 +1227,15 @@ const BookingListTable = ({
           </Button>
         )} */}
 
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
-            size='small'
-          />
-        )}
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
+              size='small'
+            />
+          )}
         </div>
 
         <div className='flex max-sm:flex-col sm:items-center gap-4'>

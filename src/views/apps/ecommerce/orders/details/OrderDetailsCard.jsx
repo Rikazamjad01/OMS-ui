@@ -29,6 +29,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 
 // Component Imports
+import { Alert, Snackbar } from '@mui/material'
 import Link from '@components/Link'
 
 // Style Imports
@@ -224,10 +225,17 @@ const OrderTable = ({ data, onSelectionChange }) => {
 }
 
 const OrderDetailsCard = ({ order: initialOrder }) => {
-  const [order, setOrder] = useState(initialOrder)
-  const [openEditModal, setOpenEditModal] = useState(false)
+  const dispatch = useDispatch()
 
-  console.log(order, 'order in OrderDetailsCard')
+  // Use Redux state directly instead of local state
+  const order = useSelector(state => state.orders.selectedOrders)
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [selectedProducts, setSelectedProducts] = useState([])
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false })
+
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
@@ -288,15 +296,6 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
   console.log(orderProducts, 'orderData in OrderDetailsCard')
 
-  const handleUpsell = updatedProducts => {
-    // Update the order with new products/quantities
-    setOrder(prev => ({
-      ...prev,
-      line_items: updatedProducts
-    }))
-    setOpenEditModal(false)
-  }
-
   const typographyProps = (children, color, className) => ({
     children,
     color,
@@ -314,7 +313,10 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             dialog={EditOrderDialog}
             dialogProps={{
               order,
-              products: orderProducts // Pass transformed products here
+              products: orderProducts, // Pass transformed products here
+              onSuccess: (message, severity = 'success') => {
+                setSnackbar({ open: true, message, severity })
+              }
             }}
           />
         }
@@ -356,13 +358,16 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
           </div>
         </div>
       </CardContent>
-
-      <EditOrderModal
-        open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
-        order={order}
-        onUpsell={handleUpsell}
-      />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} variant='filled' sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

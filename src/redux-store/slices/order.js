@@ -135,6 +135,23 @@ export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (o
   }
 })
 
+export const fetchOrderByIds = createAsyncThunk('orders/fetchOrderByIds', async (orderId, { rejectWithValue }) => {
+  try {
+    const response = await getRequest(`orders/${orderId}`)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    const order = response.data || {}
+
+    return order
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
+
 export const updateOrdersStatusThunk = createAsyncThunk(
   'orders/updateStatus',
   async ({ orderIds, status }, { rejectWithValue }) => {
@@ -349,6 +366,18 @@ const ordersSlice = createSlice({
         state.selectedOrders = action.payload // store fetched order details
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      .addCase(fetchOrderByIds.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(fetchOrderByIds.fulfilled, (state, action) => {
+        state.loading = false
+        state.selectedOrders = action.payload // store fetched order details
+      })
+      .addCase(fetchOrderByIds.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

@@ -43,7 +43,6 @@ const renderTeams = description => {
 }
 
 const AboutOverview = ({ data }) => {
-  console.log(data, 'data in about overview')
 
   return (
     <Grid container spacing={6}>
