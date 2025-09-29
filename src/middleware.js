@@ -13,7 +13,7 @@ export async function middleware(request) {
   const pathWithoutLocale = hasLocalePrefix ? `/${segments.slice(1).join('/')}` : pathname
 
   // Auth pages that should remain accessible when not logged in
-  const authPaths = new Set(['/login', '/forgot-password', '/reset-password', '/register'])
+  const authPaths = new Set(['/login', '/forgot-password', '/reset-password', '/register', '/change-password'])
 
   const isAuthRoute = authPaths.has(pathWithoutLocale)
 

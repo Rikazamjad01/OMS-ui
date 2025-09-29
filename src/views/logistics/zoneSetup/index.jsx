@@ -89,6 +89,21 @@ export default function ZoneSetup({ initialZone = null }) {
   const [saving, setSaving] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
 
+  // Zone options derived from store; keep above effects that depend on them
+  const zoneOptions = useMemo(() => (zones || []).map(z => ({ id: z._id || z.id, label: z.name, raw: z })), [zones])
+  const dedupedZoneOptions = useMemo(() => {
+    const seen = new Set()
+    const list = []
+    ;(zoneOptions || []).forEach(z => {
+      const key = z.id || z.label
+      if (!key) return
+      if (seen.has(key)) return
+      seen.add(key)
+      list.push(z)
+    })
+    return list
+  }, [zoneOptions])
+
   // Load zones on mount
   useEffect(() => {
     dispatch(fetchZones())
@@ -137,6 +152,13 @@ export default function ZoneSetup({ initialZone = null }) {
       // Determine the zone label to use for the new/filled rows
       const currentZoneLabel = newRows[0]?.zone || getZoneLabel(convention, nextZoneIndex)
 
+      // Inherit priorities from the current zone header (first row)
+      const header = newRows[0] || {}
+      const inheritedP1 = header.priority1 || 'none'
+      const inheritedP2 = header.priority2 || 'none'
+      const inheritedP3 = header.priority3 || 'none'
+      const inheritedP4 = header.priority4 || 'none'
+
       let startIdx = 0
 
       // If the first row is a boundary with empty city, fill it with the first token
@@ -146,6 +168,7 @@ export default function ZoneSetup({ initialZone = null }) {
         !Boolean(normalizeCity(newRows[0].city)) &&
         tokens.length > 0
       ) {
+        // Fill the boundary row and preserve its existing priorities (already on the row)
         newRows[0] = { ...newRows[0], city: tokens[0], zone: currentZoneLabel, hasCustomZone: true }
         startIdx = 1
       }
@@ -159,10 +182,11 @@ export default function ZoneSetup({ initialZone = null }) {
           zone: currentZoneLabel,
           hasCustomZone: newRows.length === 0, // first row becomes a zone boundary if none exists
           city,
-          priority1: 'none',
-          priority2: 'none',
-          priority3: 'none',
-          priority4: 'none'
+          // Inherit priorities from the header row of this zone
+          priority1: inheritedP1,
+          priority2: inheritedP2,
+          priority3: inheritedP3,
+          priority4: inheritedP4
         })
       }
 
@@ -418,21 +442,27 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Auto-open the first zone by default when arriving on the page
   useEffect(() => {
-    if (!initialZone && !selectedZoneId && (zones || []).length > 0 && rows.length === 0) {
-      const first = zones[0]
-
-      setSelectedZoneId(first._id || first.id)
-      hydrateFromApi(first)
+    if (!initialZone && !selectedZoneId && (dedupedZoneOptions || []).length > 0 && rows.length === 0) {
+      const first = dedupedZoneOptions[0]
+      setSelectedZoneId(first.id)
+      if (first.raw) hydrateFromApi(first.raw)
       setTabIndex(0)
     }
-  }, [zones, selectedZoneId, rows.length, initialZone, hydrateFromApi])
+  }, [dedupedZoneOptions, selectedZoneId, rows.length, initialZone, hydrateFromApi])
 
-  // Keep tabIndex in sync with selectedZoneId
+  // Keep tabIndex in sync with selectedZoneId using the deduped list
   useEffect(() => {
-    const idx = (zones || []).findIndex(z => (z._id || z.id) === selectedZoneId)
-
-    if (idx >= 0) setTabIndex(idx)
-  }, [zones, selectedZoneId])
+    const idx = (dedupedZoneOptions || []).findIndex(z => z.id === selectedZoneId)
+    if (idx >= 0) {
+      setTabIndex(idx)
+    } else if ((dedupedZoneOptions || []).length > 0) {
+      setTabIndex(0)
+      setSelectedZoneId(dedupedZoneOptions[0].id)
+    } else {
+      setTabIndex(0)
+      setSelectedZoneId('')
+    }
+  }, [dedupedZoneOptions, selectedZoneId])
 
   // Select an existing zone via tabs and hydrate
   const handleConventionChange = useCallback(
@@ -493,8 +523,6 @@ export default function ZoneSetup({ initialZone = null }) {
   }, [cityOptions, usedCitiesSet, selectedLabelSet])
 
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
-
-  const zoneOptions = useMemo(() => (zones || []).map(z => ({ id: z._id || z.id, label: z.name, raw: z })), [zones])
 
   const buildPayloadFromRows = useCallback(() => {
     const name = rows[0]?.zone || getZoneLabel(convention, nextZoneIndex)
@@ -583,11 +611,10 @@ export default function ZoneSetup({ initialZone = null }) {
 
         {/* Zone selector tabs */}
         <Tabs
-          value={tabIndex}
+          value={Math.min(tabIndex, Math.max(0, (dedupedZoneOptions?.length || 1) - 1))}
           onChange={(_e, idx) => {
             setTabIndex(idx)
-            const item = zoneOptions[idx]
-
+            const item = dedupedZoneOptions[idx]
             if (item) {
               setSelectedZoneId(item.id)
               if (item.raw) hydrateFromApi(item.raw)
@@ -596,8 +623,8 @@ export default function ZoneSetup({ initialZone = null }) {
           variant='scrollable'
           scrollButtons='auto'
         >
-          {(zoneOptions || []).map((z, i) => (
-            <Tab key={z.id || i} label={z.label} />
+          {(dedupedZoneOptions || []).map((z, i) => (
+            <Tab key={`zone-${z.id || z.label || i}`} label={z.label} />
           ))}
         </Tabs>
 
@@ -718,7 +745,7 @@ export default function ZoneSetup({ initialZone = null }) {
                 </TableRow>
               ) : (
                 rows.map((row, idx) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={idx}>
                     <TableCell>
                       <TextField
                         fullWidth
