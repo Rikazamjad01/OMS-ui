@@ -91,11 +91,15 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Zone options derived from store; keep above effects that depend on them
   const zoneOptions = useMemo(() => (zones || []).map(z => ({ id: z._id || z.id, label: z.name, raw: z })), [zones])
+
   const dedupedZoneOptions = useMemo(() => {
     const seen = new Set()
+
     const list = []
+
     ;(zoneOptions || []).forEach(z => {
       const key = z.id || z.label
+
       if (!key) return
       if (seen.has(key)) return
       seen.add(key)
@@ -182,6 +186,7 @@ export default function ZoneSetup({ initialZone = null }) {
           zone: currentZoneLabel,
           hasCustomZone: newRows.length === 0, // first row becomes a zone boundary if none exists
           city,
+
           // Inherit priorities from the header row of this zone
           priority1: inheritedP1,
           priority2: inheritedP2,
@@ -444,6 +449,7 @@ export default function ZoneSetup({ initialZone = null }) {
   useEffect(() => {
     if (!initialZone && !selectedZoneId && (dedupedZoneOptions || []).length > 0 && rows.length === 0) {
       const first = dedupedZoneOptions[0]
+
       setSelectedZoneId(first.id)
       if (first.raw) hydrateFromApi(first.raw)
       setTabIndex(0)
@@ -453,6 +459,7 @@ export default function ZoneSetup({ initialZone = null }) {
   // Keep tabIndex in sync with selectedZoneId using the deduped list
   useEffect(() => {
     const idx = (dedupedZoneOptions || []).findIndex(z => z.id === selectedZoneId)
+
     if (idx >= 0) {
       setTabIndex(idx)
     } else if ((dedupedZoneOptions || []).length > 0) {
@@ -615,6 +622,7 @@ export default function ZoneSetup({ initialZone = null }) {
           onChange={(_e, idx) => {
             setTabIndex(idx)
             const item = dedupedZoneOptions[idx]
+
             if (item) {
               setSelectedZoneId(item.id)
               if (item.raw) hydrateFromApi(item.raw)
