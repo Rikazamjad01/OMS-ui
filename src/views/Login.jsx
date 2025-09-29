@@ -37,6 +37,7 @@ import { loginThunk, selectError, selectIsAuthenticated, selectIsLoading } from 
 import { useDispatch, useSelector } from 'react-redux'
 import { Alert, Snackbar } from '@mui/material'
 import { clearError } from '@/redux-store/slices/authSlice'
+import { toast } from 'react-toastify'
 
 // Styled Custom Components
 const LoginIllustration = styled('img')(({ theme }) => ({
@@ -91,9 +92,13 @@ const Login = () => {
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit = async data => {
-    await dispatch(loginThunk({ email: data.email, password: data.password }))
+    const response = await dispatch(loginThunk({ email: data.email, password: data.password }))
       .unwrap()
       .catch(() => {})
+    if (response === false) {
+      toast.info('Password change required. Please change your password.')
+      router.push(getLocalizedUrl('/change-password', locale))
+    }
   }
 
   useEffect(() => {

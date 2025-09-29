@@ -194,7 +194,7 @@ const AddUserDrawer = props => {
                 type='email'
                 label='Email'
                 placeholder='johndoe@gmail.com'
-                disabled={authLoading}
+                disabled={authLoading || isEdit}
                 {...(errors.email && { error: true, helperText: 'This field is required.' })}
               />
             )}

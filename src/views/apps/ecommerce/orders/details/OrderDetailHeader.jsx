@@ -70,8 +70,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
         })
       ).unwrap()
 
-      if(response.status){
-
+      if (response.status) {
         setOrder(prev => ({ ...prev, orderStatus: 'cancelled' }))
 
         setSnackbar({
@@ -103,7 +102,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
       <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
         <div className='flex flex-col items-start gap-1'>
           <div className='flex items-center gap-2'>
-            <Typography variant='h5'>{`Order ${id}`}</Typography>
+            <Typography variant='h5'>{`Order ${order.name.split('').includes('#') ? order.name : `#${order.name}`}`}</Typography>
             <Chip
               variant='tonal'
               label={order?.orderStatus || 'Unknown'}
