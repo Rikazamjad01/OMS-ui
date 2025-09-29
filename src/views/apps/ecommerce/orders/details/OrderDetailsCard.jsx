@@ -64,8 +64,6 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const [globalFilter, setGlobalFilter] = useState('')
   const dispatch = useDispatch()
 
-  console.log(data, 'data in OrderTable')
-
   const columns = useMemo(
     () => [
       {
@@ -88,15 +86,11 @@ const OrderTable = ({ data, onSelectionChange }) => {
       },
       columnHelper.accessor('productName', {
         header: 'Product',
+        meta: { width: '250px' },
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <img
-              src={row.original.image?.src || '/images/placeholder.png'}
-              alt={""}
-              height={34}
-              className='rounded'
-            />
-            <div className='flex flex-col items-start'>
+            <img src={row.original.image?.src || '/images/placeholder.png'} alt={''} height={34} className='rounded' />
+            <div className='flex flex-col items-start  overflow-x-auto no-scrollbar' style={{ maxWidth: '250px' }}>
               <Typography variant='h6'>{row.original.title}</Typography>
               <Typography variant='body2'>{row.original.vendor}</Typography>
             </div>
@@ -163,7 +157,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }
 
       // Also dispatch to Redux
-      dispatch(setSelectedProducts(selectedProductIds))
+      // dispatch(setSelectedProducts(selectedProductIds))
     },
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
@@ -182,7 +176,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
           {table.getHeaderGroups().map(headerGroup => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map(header => (
-                <th key={header.id}>
+                <th key={header.id} style={{ maxWidth: header.column.columnDef.meta?.width }}>
                   {header.isPlaceholder ? null : (
                     <div
                       className={classnames({
@@ -216,7 +210,9 @@ const OrderTable = ({ data, onSelectionChange }) => {
             {table.getRowModel().rows.map(row => (
               <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  <td key={cell.id} style={{ maxWidth: cell.column.columnDef.meta?.width }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -227,13 +223,11 @@ const OrderTable = ({ data, onSelectionChange }) => {
   )
 }
 
-const OrderDetailsCard = ({ order }) => {
-  const [selectedProductIds, setSelectedProductIds] = useState([])
-  const [selectedProducts, setSelectedProducts] = useState([])
+const OrderDetailsCard = ({ order: initialOrder }) => {
+  const [order, setOrder] = useState(initialOrder)
   const [openEditModal, setOpenEditModal] = useState(false)
 
   console.log(order, 'order in OrderDetailsCard')
-
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
@@ -294,6 +288,15 @@ const OrderDetailsCard = ({ order }) => {
 
   console.log(orderProducts, 'orderData in OrderDetailsCard')
 
+  const handleUpsell = updatedProducts => {
+    // Update the order with new products/quantities
+    setOrder(prev => ({
+      ...prev,
+      line_items: updatedProducts
+    }))
+    setOpenEditModal(false)
+  }
+
   const typographyProps = (children, color, className) => ({
     children,
     color,
@@ -311,7 +314,7 @@ const OrderDetailsCard = ({ order }) => {
             dialog={EditOrderDialog}
             dialogProps={{
               order,
-              products: orderProducts, // Pass transformed products here
+              products: orderProducts // Pass transformed products here
             }}
           />
         }
@@ -358,7 +361,7 @@ const OrderDetailsCard = ({ order }) => {
         open={openEditModal}
         onClose={() => setOpenEditModal(false)}
         order={order}
-
+        onUpsell={handleUpsell}
       />
     </Card>
   )

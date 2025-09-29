@@ -1,28 +1,34 @@
+"use client"
+
 // MUI Imports
+import { useState } from 'react'
 import Grid from '@mui/material/Grid2'
-import Avatar from '@mui/material/Avatar'
 import Chip from '@mui/material/Chip'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
 
 // Component Imports
-import { Checkbox, LinearProgress } from '@mui/material'
+import { Checkbox, LinearProgress, MenuItem, TextField } from '@mui/material'
 
 import OptionMenu from '@core/components/option-menu'
-import Link from '@components/Link'
-import CustomIconButton from '@core/components/mui/IconButton'
-import ProjectTables from '../profile/ProjectsTables'
 import CustomAvatar from '@/@core/components/mui/Avatar'
 import BaseTable from '../baseTable/page'
 
 const Connections = ({ data }) => {
-  console.log(data, 'data in connections')
+  const [productFilter, setProductFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [amountFilter, setAmountFilter] = useState('')
 
   if (!Array.isArray(data)) {
     data = [data]
   }
+
+  const filteredData = data.filter(row => {
+    const matchProduct = productFilter ? row.name?.toLowerCase().includes(productFilter.toLowerCase()) : true
+    const matchStatus = statusFilter ? row.status === statusFilter : true
+    const matchAmount = amountFilter ? row.amount >= Number(amountFilter) : true
+
+    return matchProduct && matchStatus && matchAmount
+  })
 
   const orderColumns = [
     {
@@ -72,7 +78,9 @@ const Connections = ({ data }) => {
       header: 'Status of Commmission',
       cell: ({ row }) => (
         <div className='flex items-center gap-3'>
-          <Chip color='text.primary' varent='tonal' >{row.original.status || 'Pending'}</Chip>
+          <Chip color='text.primary' varent='tonal'>
+            {row.original.status || 'Pending'}
+          </Chip>
         </div>
       )
     },
@@ -108,7 +116,45 @@ const Connections = ({ data }) => {
     <Grid container spacing={6}>
       {data && (
         <Grid size={{ xs: 12 }}>
-          <BaseTable title='Daily Order List' data={data} columns={orderColumns} />
+          <BaseTable
+            title='Daily Order List'
+            data={filteredData}
+            columns={orderColumns}
+            extraFilters={
+              <div className='flex gap-3'>
+                {/* Product Name */}
+                <TextField
+                  label='Product Name'
+                  value={productFilter}
+                  onChange={e => setProductFilter(e.target.value)}
+                  className='min-w-[220px]'
+                />
+
+                {/* Status of Commission */}
+                <TextField
+                  select
+                  label='Commission Status'
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  className='min-w-[200px]'
+                >
+                  <MenuItem value=''>All</MenuItem>
+                  <MenuItem value='Pending'>Pending</MenuItem>
+                  <MenuItem value='Confirmed'>Confirmed</MenuItem>
+                  <MenuItem value='Cancelled'>Cancelled</MenuItem>
+                </TextField>
+
+                {/* Commission Amount */}
+                <TextField
+                  type='number'
+                  label='Min Commission Amount'
+                  value={amountFilter}
+                  onChange={e => setAmountFilter(e.target.value)}
+                  className='min-w-[150px]'
+                />
+              </div>
+            }
+          />
         </Grid>
       )}
     </Grid>

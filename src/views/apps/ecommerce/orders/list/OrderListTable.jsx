@@ -269,6 +269,8 @@ const OrderListTable = ({
   const dispatch = useDispatch()
   const pagination = useSelector(selectPagination)
 
+  console.log(pagination, 'pagination')
+
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
@@ -493,9 +495,7 @@ const OrderListTable = ({
         }
       })
 
-      if (result.status) {
-        closeTagEditor()
-      }
+      closeTagEditor()
     } catch (err) {
       setAlert({
         open: true,

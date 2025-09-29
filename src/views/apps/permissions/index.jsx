@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
 import DepartmentDialog from '@components/dialogs/department-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import CustomTextField from '@core/components/mui/TextField'
@@ -38,7 +39,6 @@ import TablePaginationComponent from '@components/TablePaginationComponent'
 import tableStyles from '@core/styles/table.module.css'
 
 // Redux
-import { useDispatch, useSelector } from 'react-redux'
 import { getAllDepartments } from '@/redux-store/slices/roleSlice'
 
 // Vars
@@ -100,7 +100,7 @@ const Permissions = () => {
 
   // Server-side pagination state (0-based page for UI)
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(9)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
 
   // Fetch departments on mount and whenever page/rowsPerPage change
   useEffect(() => {
@@ -204,21 +204,21 @@ const Permissions = () => {
     <>
       <Card>
         <CardContent className='flex flex-col gap-4 flex-wrap sm:flex-row items-start sm:items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            <Typography>Show</Typography>
-            <CustomTextField select value={rowsPerPage} onChange={handleChangeRowsPerPage} className='is-[70px]'>
-              <MenuItem value='5'>5</MenuItem>
-              <MenuItem value='7'>7</MenuItem>
-              <MenuItem value='9'>9</MenuItem>
-            </CustomTextField>
-          </div>
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={value => setGlobalFilter(String(value))}
+            placeholder='Search Departments'
+            className='max-sm:is-full'
+          />
           <div className='flex flex-col sm:flex-row flex-wrap gap-4 is-full sm:is-auto'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search Departments'
-              className='max-sm:is-full'
-            />
+            <div className='flex items-center gap-2'>
+              <CustomTextField select value={rowsPerPage} onChange={handleChangeRowsPerPage} className='is-[70px]'>
+                <MenuItem value='5'>5</MenuItem>
+                <MenuItem value='7'>7</MenuItem>
+                <MenuItem value='9'>9</MenuItem>
+              </CustomTextField>
+            </div>
+
             <OpenDialogOnElementClick
               element={Button}
               elementProps={buttonProps}

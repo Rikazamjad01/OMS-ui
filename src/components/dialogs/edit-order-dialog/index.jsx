@@ -34,7 +34,8 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
 
   const [products, setProducts] = useState([]) // products in this order
   const [showProductSelector, setShowProductSelector] = useState(false)
-  const [showProducts, setShowProducts] = useState(true)
+  const [originalProducts, setOriginalProducts] = useState([])
+  const [hasChanges, setHasChanges] = useState(false)
 
   // Merge order products + line_items when modal opens
   useEffect(() => {
@@ -48,11 +49,14 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
           quantity: lineItem?.quantity || 1,
           variant: lineItem?.variant_id
             ? { id: lineItem.variant_id } // use existing line_item variant
-            : defaultVariant || null
+            : defaultVariant || null,
+          fromOrder: true
         }
       })
 
       setProducts(mergedProducts)
+      setOriginalProducts(mergedProducts)
+      setHasChanges(false)
       dispatch(fetchProducts({ page: 1, limit: 100 })) // fetch all products for selection
     }
   }, [open, order, dispatch])
@@ -62,26 +66,59 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
   }
 
   const updateQuantity = (index, delta) => {
-    setProducts(prev =>
-      prev.map((p, i) => (i === index ? { ...p, quantity: Math.max(1, (p.quantity || 1) + delta) } : p))
-    )
+    setProducts(prev => {
+      const updated = prev.map((p, i) => (i === index ? { ...p, quantity: Math.max(1, (p.quantity || 1) + delta) } : p))
+
+      checkChanges(updated)
+      return updated
+    })
   }
 
   const updateProductField = (index, field, value) => {
-    setProducts(prev => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
+    setProducts(prev => {
+      const updated = prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+
+      checkChanges(updated)
+      return updated
+    })
   }
 
   const addNewProduct = product => {
     setProducts(prev => {
-      // Avoid duplicates
       if (prev.find(p => p.id === product.id)) return prev
+      const updated = [...prev, { ...product, quantity: 1, fromOrder: false }]
 
-      return [...prev, { ...product, quantity: 1 }]
+      checkChanges(updated)
+      return updated
     })
   }
 
   const deleteProduct = index => {
-    setProducts(prev => prev.filter((_, i) => i !== index))
+    setProducts(prev => {
+      const p = prev[index]
+
+      // protect original order product if it's the only one
+      const originalCount = prev.filter(p => p.fromOrder).length
+
+      if (p.fromOrder && originalCount <= 1) return prev
+
+      const updated = prev.filter((_, i) => i !== index)
+
+      checkChanges(updated)
+      return updated
+    })
+  }
+
+  const checkChanges = updatedProducts => {
+    const changed =
+      updatedProducts.length !== originalProducts.length ||
+      updatedProducts.some((p, i) => {
+        const orig = originalProducts.find(op => op.id === p.id)
+
+        return !orig || orig.quantity !== p.quantity
+      })
+
+    setHasChanges(changed)
   }
 
   const handleUpsell = () => {
@@ -148,7 +185,13 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                   <IconButton onClick={() => updateQuantity(index, +1)}>
                     <Add />
                   </IconButton>
-                  <Button variant='outlined' color='error' size='small' onClick={() => deleteProduct(index)}>
+                  <Button
+                    variant='outlined'
+                    color='error'
+                    size='small'
+                    onClick={() => deleteProduct(index)}
+                    disabled={product.fromOrder && products.filter(p => p.fromOrder).length <= 1}
+                  >
                     Delete
                   </Button>
                 </div>
@@ -187,7 +230,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                           <div className='w-10 h-10'>
                             <Image
                               src={product.image?.src || '/productPlaceholder.png'}
-                              alt={ 'Product'}
+                              alt={'Product'}
                               width={50}
                               height={50}
                               className='w-full h-full object-cover'
@@ -211,7 +254,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
         </DialogContent>
 
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' onClick={handleUpsell} type='submit'>
+          <Button variant='contained' onClick={handleUpsell} type='submit' disabled={!hasChanges}>
             Upsell Order
           </Button>
           <Button variant='tonal' color='secondary' type='reset' onClick={handleClose}>

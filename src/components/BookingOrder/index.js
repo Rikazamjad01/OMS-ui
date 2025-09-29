@@ -17,20 +17,19 @@ const BookingOrder = () => {
 
   // Parent-controlled params (decouple from redux pagination to avoid loops)
   const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(25)
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({})
 
   useEffect(() => {
     dispatch(
       fetchBookingOrder({
-        page: page,
-        limit: limit,
+        page: pagination.currentPage || 1,
+        limit: pagination.itemsPerPage || 25,
         search: search,
         filters: filters
       })
     )
-  }, [dispatch, page, limit, search, filters])
+  }, [dispatch, search, filters, pagination.currentPage, pagination.itemsPerPage])
 
   return (
     <Grid container spacing={6}>
@@ -43,15 +42,14 @@ const BookingOrder = () => {
           orderData={orders}
           loading={loading}
           error={error}
-          page={page}
-          limit={limit}
+          page={pagination.currentPage}
+          limit={pagination.itemsPerPage}
           total={pagination.total || 0}
           onPageChange={nextPage => {
-            setPage(nextPage)
+            dispatch(fetchBookingOrder({ page: nextPage, limit: pagination.itemsPerPage, search, filters }))
           }}
           onLimitChange={newLimit => {
-            setPage(1)
-            setLimit(newLimit)
+            dispatch(fetchBookingOrder({ page: 1, limit: newLimit, search, filters }))
           }}
           onSearchChange={q => {
             setPage(1)

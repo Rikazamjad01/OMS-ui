@@ -26,10 +26,13 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
-import cities from '@/data/cities/cities'
 import Autocomplete from '@mui/material/Autocomplete'
 import Chip from '@mui/material/Chip'
 import { useDispatch, useSelector } from 'react-redux'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 import {
   fetchZones,
   selectZones,
@@ -38,10 +41,7 @@ import {
   updateZone,
   removeCity
 } from '@/redux-store/slices/zonesSlice'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
+import cities from '@/data/cities/cities'
 
 const courierOptions = [
   { value: 'none', label: 'None' },
@@ -99,16 +99,20 @@ export default function ZoneSetup({ initialZone = null }) {
     draftRows => {
       // Propagate zone downwards: a row with hasCustomZone acts as a boundary/start
       let currentZone = null
+
       for (let i = 0; i < draftRows.length; i += 1) {
         const r = draftRows[i]
+
         if (r.hasCustomZone) {
           currentZone = r.zone
         }
+
         if (!r.hasCustomZone) {
           // If there is no current custom zone yet, initialize with first zone label
           if (!currentZone) {
             currentZone = getZoneLabel(convention, 1)
           }
+
           r.zone = currentZone
         }
       }
@@ -149,6 +153,7 @@ export default function ZoneSetup({ initialZone = null }) {
       // Append the remaining tokens as new rows under the same zone label
       for (let i = startIdx; i < tokens.length; i += 1) {
         const city = tokens[i]
+
         newRows.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           zone: currentZoneLabel,
@@ -173,9 +178,11 @@ export default function ZoneSetup({ initialZone = null }) {
   const addZoneBreak = useCallback(() => {
     setRows(prev => {
       const newRows = [...prev]
+
       // Insert a new blank row that starts a new zone block
       const newZoneIndex = nextZoneIndex + 1
       const label = getZoneLabel(convention, newZoneIndex)
+
       newRows.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         zone: label,
@@ -186,6 +193,7 @@ export default function ZoneSetup({ initialZone = null }) {
         priority3: 'none',
         priority4: 'none'
       })
+
       // Propagate zones below
       propagateZones(newRows)
       return newRows
@@ -207,14 +215,17 @@ export default function ZoneSetup({ initialZone = null }) {
     if (convention === 'regional') {
       for (const region of regionalSequence) {
         const candidate = `Zone ${region}`
+
         if (!existing.has(candidate.toLowerCase())) return candidate
       }
+
       // Fallback to numeric if all regional labels are taken
     }
 
     // Numeric or fallback path: find the smallest Zone N not used
     for (let i = 1; i <= (zones?.length || 0) + 50; i += 1) {
       const candidate = `Zone ${i}`
+
       if (!existing.has(candidate.toLowerCase())) return candidate
     }
 
@@ -225,6 +236,7 @@ export default function ZoneSetup({ initialZone = null }) {
   // Open a brand new zone editor, closing any currently opened zone
   const openNewZone = useCallback(() => {
     const label = generateUniqueZoneLabel()
+
     setSelectedZoneId('')
     setSelectedCities([])
     setRows([
@@ -256,8 +268,10 @@ export default function ZoneSetup({ initialZone = null }) {
         // Priority change => apply to all rows with same zone
         const priorityKeys = ['priority1', 'priority2', 'priority3', 'priority4']
         const changedPriorityKeys = Object.keys(updater).filter(k => priorityKeys.includes(k))
+
         if (changed && changedPriorityKeys.length > 0) {
           const zoneLabel = changed.zone
+
           for (const key of changedPriorityKeys) {
             for (let i = 0; i < draft.length; i += 1) {
               if (draft[i].zone === zoneLabel) {
@@ -276,6 +290,7 @@ export default function ZoneSetup({ initialZone = null }) {
   const setPriorityForAll = useCallback((key, value) => {
     setRows(prev => {
       const label = prev[0]?.zone
+
       return prev.map(r => (r.zone === label ? { ...r, [key]: value } : r))
     })
   }, [])
@@ -290,14 +305,17 @@ export default function ZoneSetup({ initialZone = null }) {
         setConventionLocked(false)
         return
       }
+
       const api = apiZone.data || apiZone // support either wrapper or direct object
       const zoneLabel = api.name || getZoneLabel(convention, 1)
       const nc = api.namingConvention || convention
+
       setConvention(nc)
       setConventionLocked(Boolean(api.namingConvention))
 
       // Map couriers -> priority fields
       const prMap = { priority1: 'none', priority2: 'none', priority3: 'none', priority4: 'none' }
+
       ;(api.couriers || []).forEach(c => {
         const key =
           c?.priority === 'PR1'
@@ -309,8 +327,10 @@ export default function ZoneSetup({ initialZone = null }) {
                 : c?.priority === 'PR4'
                   ? 'priority4'
                   : null
+
         if (key) {
           const mapped = apiCourierToKey[c?.courierName] || 'none'
+
           prMap[key] = mapped
         }
       })
@@ -346,6 +366,7 @@ export default function ZoneSetup({ initialZone = null }) {
       // Prepare next numeric index if needed
       if (nc === 'numeric') {
         const maybeIndex = Number(String(zoneLabel).replace(/[^\d]/g, ''))
+
         if (!Number.isNaN(maybeIndex) && maybeIndex >= 1) setNextZoneIndex(maybeIndex + 1)
       }
     },
@@ -371,16 +392,20 @@ export default function ZoneSetup({ initialZone = null }) {
         if (shouldCallApi) {
           await dispatch(removeCity({ id: selectedZoneId, city: cityName })).unwrap()
           setAlert({ open: true, message: 'City removed from zone', severity: 'success' })
+
           // Refresh zones and rehydrate currently selected zone using latest payload (not stale selector)
           const latestZones = await dispatch(fetchZones()).unwrap()
           const refreshed = (latestZones || []).find(z => (z._id || z.id) === selectedZoneId)
+
           if (refreshed) hydrateFromApi(refreshed)
         }
       } catch (e) {
         setAlert({ open: true, message: e?.message || 'Failed to remove city', severity: 'error' })
+
         // On failure, re-fetch to reconcile UI with server state from latest payload
         const latestZones = await dispatch(fetchZones()).unwrap()
         const refreshed = (latestZones || []).find(z => (z._id || z.id) === selectedZoneId)
+
         if (refreshed) hydrateFromApi(refreshed)
       }
     },
@@ -395,6 +420,7 @@ export default function ZoneSetup({ initialZone = null }) {
   useEffect(() => {
     if (!initialZone && !selectedZoneId && (zones || []).length > 0 && rows.length === 0) {
       const first = zones[0]
+
       setSelectedZoneId(first._id || first.id)
       hydrateFromApi(first)
       setTabIndex(0)
@@ -404,6 +430,7 @@ export default function ZoneSetup({ initialZone = null }) {
   // Keep tabIndex in sync with selectedZoneId
   useEffect(() => {
     const idx = (zones || []).findIndex(z => (z._id || z.id) === selectedZoneId)
+
     if (idx >= 0) setTabIndex(idx)
   }, [zones, selectedZoneId])
 
@@ -411,7 +438,9 @@ export default function ZoneSetup({ initialZone = null }) {
   const handleConventionChange = useCallback(
     e => {
       const value = e.target.value
+
       setConvention(value)
+
       // Reset zones to new convention and re-propagate
       setRows(prev => {
         const draft = prev.map((r, i) => {
@@ -419,8 +448,10 @@ export default function ZoneSetup({ initialZone = null }) {
           if (r.hasCustomZone) {
             return { ...r, zone: getZoneLabel(value, i + 1) }
           }
+
           return { ...r }
         })
+
         propagateZones(draft)
         return draft
       })
@@ -440,9 +471,11 @@ export default function ZoneSetup({ initialZone = null }) {
   // All cities used anywhere (from server + current rows) should be excluded from options
   const usedCitiesSet = useMemo(() => {
     const set = new Set()
+
     ;(zones || []).forEach(z => (z?.config?.cities || []).forEach(c => set.add(normalizeCity(c))))
     rows.forEach(r => {
       const n = normalizeCity(r.city)
+
       if (n) set.add(n)
     })
     return set
@@ -450,6 +483,7 @@ export default function ZoneSetup({ initialZone = null }) {
 
   const selectedLabelSet = useMemo(() => {
     const set = new Set()
+
     ;(selectedCities || []).forEach(c => set.add(normalizeCity(c)))
     return set
   }, [selectedCities, normalizeCity])
@@ -467,9 +501,11 @@ export default function ZoneSetup({ initialZone = null }) {
     const uniqueCities = Array.from(new Set(rows.map(r => normalizeCity(r.city)).filter(Boolean)))
     const head = rows[0] || {}
     const priorities = [head.priority1, head.priority2, head.priority3, head.priority4]
+
     const couriers = priorities
       .map((k, idx) => ({ key: k || 'none', pr: `PR${idx + 1}` }))
       .filter(p => p.key && p.key !== 'none')
+
     const couriersApi = couriers.map(p => ({ priority: p.pr, courierName: keyToApiCourier[p.key] || 'None' }))
 
     const payload = { name, cities: uniqueCities, couriers: couriersApi }
@@ -486,12 +522,15 @@ export default function ZoneSetup({ initialZone = null }) {
     try {
       setSaving(true)
       const payload = buildPayloadFromRows()
+
       if (!selectedZoneId) {
         // Create
         payload.namingConvention = convention
         const created = await dispatch(createZone(payload)).unwrap()
+
         setAlert({ open: true, message: 'Zone created successfully', severity: 'success' })
         await dispatch(fetchZones())
+
         // Hydrate created zone
         setSelectedZoneId(created?._id || created?.id || '')
         hydrateFromApi(created)
@@ -500,6 +539,7 @@ export default function ZoneSetup({ initialZone = null }) {
         const updated = await dispatch(
           updateZone({ id: selectedZoneId, cities: payload.cities, couriers: payload.couriers })
         ).unwrap()
+
         setAlert({ open: true, message: 'Zone updated successfully', severity: 'success' })
         await dispatch(fetchZones())
         hydrateFromApi(updated)
@@ -517,16 +557,20 @@ export default function ZoneSetup({ initialZone = null }) {
       <CardContent className='flex flex-col gap-6'>
         <Typography variant='h5'>Zone Setup</Typography>
 
-        <Grid container spacing={4} alignItems='center'>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <FormLabel component='legend'>Naming convention</FormLabel>
-            <RadioGroup row value={convention} onChange={handleConventionChange}>
+        <Grid container spacing={2} alignItems='center'>
+          {/* Radio Group full width */}
+          <Grid xs={12} md={10} className='flex items-center'>
+            <FormLabel component='legend' className='mr-4'>
+              Naming convention
+            </FormLabel>
+            <RadioGroup row value={convention} onChange={handleConventionChange} className='flex-grow'>
               <FormControlLabel value='numeric' control={<Radio />} label='Numeric' disabled={conventionLocked} />
               <FormControlLabel value='regional' control={<Radio />} label='Regional' disabled={conventionLocked} />
             </RadioGroup>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 6 }} className='flex gap-2 justify-end'>
+          {/* Button aligned right */}
+          <Grid xs={12} md={2} className='flex justify-end'>
             <Tooltip title='Start a new Zone block'>
               <Button variant='outlined' color='primary' onClick={openNewZone} startIcon={<AddIcon />}>
                 Add Zone
@@ -543,6 +587,7 @@ export default function ZoneSetup({ initialZone = null }) {
           onChange={(_e, idx) => {
             setTabIndex(idx)
             const item = zoneOptions[idx]
+
             if (item) {
               setSelectedZoneId(item.id)
               if (item.raw) hydrateFromApi(item.raw)
@@ -569,6 +614,7 @@ export default function ZoneSetup({ initialZone = null }) {
               getOptionDisabled={option => usedCitiesSet.has(option.label) || selectedLabelSet.has(option.label)}
               value={(selectedCities || []).map(c => {
                 const label = normalizeCity(c)
+
                 return { label, value: label }
               })}
               onChange={(_e, newValue) => setSelectedCities(newValue)}

@@ -1,16 +1,16 @@
 'use client'
 
 // MUI Imports
+import { useEffect } from 'react'
 import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
 import RoleCards from './RoleCards'
 import RolesTable from './RolesTable'
 import UserListTable from '../user/list/UserListTable'
-import { useDispatch, useSelector } from 'react-redux'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
-import { useEffect } from 'react'
 
 const Roles = ({ userData }) => {
   const dispatch = useDispatch()
@@ -21,6 +21,7 @@ const Roles = ({ userData }) => {
       page: 1,
       limit: 10
     }
+
     dispatch(getAlUsersThunk({ params, force: true }))
   }, [])
   return (
