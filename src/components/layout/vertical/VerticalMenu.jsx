@@ -277,6 +277,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               </MenuItem>
             </SubMenu>
           </SubMenu>
+          <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
+            {dictionary['navigation'].settings}
+          </MenuItem>
           {/* <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}> */}
           {/* <SubMenu label={dictionary['navigation'].login}>
               <MenuItem href={`/${locale}/pages/auth/login-v2`} target='_blank'>

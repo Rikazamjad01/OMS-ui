@@ -37,6 +37,7 @@ import {
 } from '@tanstack/react-table'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
 import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
@@ -50,7 +51,6 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import { useDispatch, useSelector } from 'react-redux'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
 
 // Styled Components
@@ -148,6 +148,7 @@ const UserListTable = ({ tableData }) => {
   useEffect(() => {
     const page = Math.max(1, Number(allUsersPagination.page) || 1)
     const limit = Math.max(1, Number(allUsersPagination.limit) || 10)
+
     if (!allUsers || allUsers.length === 0) {
       dispatch(getAlUsersThunk({ params: { page, limit } }))
     }
@@ -157,6 +158,7 @@ const UserListTable = ({ tableData }) => {
   // Sync component rows with Redux users
   useEffect(() => {
     const rows = mapApiUsersToRows(allUsers)
+
     setData(rows)
     setFilteredData(rows)
   }, [allUsers])
@@ -255,6 +257,7 @@ const UserListTable = ({ tableData }) => {
               onClick={() => {
                 // Find the full user object by id from Redux allUsers
                 const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+
                 setSelectedUser(full || null)
                 setEditUserOpen(true)
               }}
@@ -335,27 +338,28 @@ const UserListTable = ({ tableData }) => {
         {/* <CardHeader title='Filters' className='pbe-4' /> */}
         {/* <TableFilters setData={setFilteredData} tableData={data} /> */}
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
-          <CustomTextField
-            select
-            value={currentLimit}
-            onChange={e => {
-              const newLimit = Number(e.target.value) || currentLimit
-              // Reset to first page when limit changes
-              dispatch(getAlUsersThunk({ params: { page: 1, limit: newLimit }, force: true }))
-            }}
-            className='max-sm:is-full sm:is-[70px]'
-          >
-            <MenuItem value='10'>10</MenuItem>
-            <MenuItem value='25'>25</MenuItem>
-            <MenuItem value='50'>50</MenuItem>
-          </CustomTextField>
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={value => setGlobalFilter(String(value))}
+            placeholder='Search User'
+            className='max-sm:is-full'
+          />
           <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search User'
-              className='max-sm:is-full'
-            />
+            <CustomTextField
+              select
+              value={currentLimit}
+              onChange={e => {
+                const newLimit = Number(e.target.value) || currentLimit
+
+                // Reset to first page when limit changes
+                dispatch(getAlUsersThunk({ params: { page: 1, limit: newLimit }, force: true }))
+              }}
+              className='max-sm:is-full sm:is-[70px]'
+            >
+              <MenuItem value='10'>10</MenuItem>
+              <MenuItem value='25'>25</MenuItem>
+              <MenuItem value='50'>50</MenuItem>
+            </CustomTextField>
             <Button
               color='secondary'
               variant='tonal'
@@ -429,7 +433,7 @@ const UserListTable = ({ tableData }) => {
             )}
           </table>
         </div>
-        <TablePagination
+        {/* <TablePagination
           component={() => (
             <TablePaginationComponent
               table={table}
@@ -449,7 +453,17 @@ const UserListTable = ({ tableData }) => {
           }}
           onRowsPerPageChange={e => {
             const newLimit = Number(e.target.value) || currentLimit
+
             dispatch(getAlUsersThunk({ params: { page: 1, limit: newLimit }, force: true }))
+          }}
+        /> */}
+        <TablePaginationComponent
+          table={table}
+          count={totalCount}
+          rowsPerPage={currentLimit}
+          page={currentPageZeroBased}
+          onPageChange={(_, newPage) => {
+            dispatch(getAlUsersThunk({ params: { page: newPage + 1, limit: currentLimit }, force: true }))
           }}
         />
       </Card>

@@ -1,24 +1,23 @@
 'use client'
 
-// Next Imports
-import { useEffect } from 'react'
-
+import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-
 import { useDispatch, useSelector } from 'react-redux'
-
-// Component Imports
-import UserProfile from '@views/pages/user-profile'
+import Cookies from 'js-cookie'
 
 // Redux Thunk
 import { fetchUser } from '@/redux-store/slices/user'
 
-const ProfileTab = dynamic(() => import('@views/pages/user-profile/profile/index'))
-const TeamsTab = dynamic(() => import('@views/pages/user-profile/teams/index'))
-const ProjectsTab = dynamic(() => import('@views/pages/user-profile/projects/index'))
-const ConnectionsTab = dynamic(() => import('@views/pages/user-profile/connections/index'))
+// Component Imports
+import UserProfile from '@views/pages/user-profile'
 
-// Vars
+// Dynamic Tabs
+const ProfileTab = dynamic(() => import('@views/pages/user-profile/profile'))
+const TeamsTab = dynamic(() => import('@views/pages/user-profile/teams'))
+const ProjectsTab = dynamic(() => import('@views/pages/user-profile/projects'))
+const ConnectionsTab = dynamic(() => import('@views/pages/user-profile/connections'))
+
+// Tabs content
 const tabContentList = data => ({
   profile: <ProfileTab data={data?.user} />,
   teams: <TeamsTab data={data?.user} />,
@@ -29,25 +28,40 @@ const tabContentList = data => ({
 const ProfilePage = () => {
   const dispatch = useDispatch()
   const { data, loading, error } = useSelector(state => state.user)
+  const [cookieUser, setCookieUser] = useState(null)
 
   useEffect(() => {
-    dispatch(fetchUser('68cac6d577b7c1e22585e7c2'))
+    const raw = Cookies.get('user')
+
+    console.log(JSON.parse(raw), 'raw')
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(raw))
+
+        setCookieUser(parsed)
+
+        // optional: fetch fresh data from API using ID
+        dispatch(fetchUser(parsed._id))
+      } catch (err) {
+        console.error('Error parsing cookie:', err)
+      }
+    }
   }, [dispatch])
 
-
-  const userData = data?.user
+  const userData = cookieUser || data?.user
 
   useEffect(() => {
     if (userData) {
-      console.log('User profile response:', userData) // 👈 log the response
+      console.log('User profile response:', userData)
     }
   }, [userData])
 
   if (loading) return <p>Loading...</p>
   if (error) return <p>Error: {error}</p>
-  if (!data) return <p>No user data found</p>
+  if (!userData) return <p>No user data found</p>
 
-  return <UserProfile data={userData} tabContentList={tabContentList(data)} />
+  return <UserProfile data={userData} tabContentList={tabContentList({ user: userData })} />
 }
 
 export default ProfilePage
