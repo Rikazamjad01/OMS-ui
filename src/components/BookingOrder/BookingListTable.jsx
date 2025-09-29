@@ -69,6 +69,7 @@ import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
+import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -315,7 +316,7 @@ const BookingListTable = ({
       const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds]
 
       const result = await dispatch(
-        updateBookingOrdersStatusThunk({
+        updateOrdersStatusThunk({
           orderIds: idsArray,
           status: newStatus
         })
@@ -809,7 +810,7 @@ const BookingListTable = ({
                     const defaultCourier = inferCourierKey(firstSelected?.platform)
 
                     return {
-                      orderIds: selectedIds,
+                      orderIds: selectedIds.length > 0 ? selectedIds : [row.original.id],
                       courier: defaultCourier,
                       reason: ''
                     }
@@ -824,7 +825,10 @@ const BookingListTable = ({
                         mp: 'M&P',
                         tcs: 'TCS'
                       }
-                      const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                      const freshSelectedIds = (() => {
+                        const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                        return ids.length > 0 ? ids : [row.original.id]
+                      })()
                       const body = {
                         orderId: freshSelectedIds.map(id => String(id)),
                         courier: courierApiMap[payload.courier] || payload.courier,

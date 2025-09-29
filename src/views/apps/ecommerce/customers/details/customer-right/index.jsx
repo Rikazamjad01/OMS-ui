@@ -12,7 +12,7 @@ import Grid from '@mui/material/Grid2'
 // Component Imports
 import CustomTabList from '@core/components/mui/TabList'
 
-const CustomerRight = ({  tabContentList }) => {
+const CustomerRight = ({ tabContentList }) => {
   // States
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -27,7 +27,12 @@ const CustomerRight = ({  tabContentList }) => {
           <Grid size={{ xs: 12 }}>
             <CustomTabList onChange={handleChange} variant='scrollable' pill='true'>
               <Tab icon={<i className='bx-user' />} value='overview' label='Overview' iconPosition='start' />
-              {/* <Tab icon={<i className='bx-map' />} value='addressBilling' label='Address & Billing' iconPosition='start'/> */}
+              {/* <Tab
+                icon={<i className='bx-map' />}
+                value='addressBilling'
+                label='Address & Billing'
+                iconPosition='start'
+              /> */}
               {/* <Tab icon={<i className='bx-lock-alt' />} value='security' label='Security' iconPosition='start' /> */}
               {/* <Tab icon={<i className='bx-bell' />} value='notifications' label='Notifications' iconPosition='start' /> */}
             </CustomTabList>

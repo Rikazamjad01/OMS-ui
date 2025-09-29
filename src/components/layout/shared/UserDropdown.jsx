@@ -33,6 +33,7 @@ import { useSettings } from '@core/hooks/useSettings'
 import { getLocalizedUrl } from '@/utils/i18n'
 import { clearError, logoutThunk, selectError, selectIsLoading } from '@/redux-store/slices/authSlice'
 import { useDispatch, useSelector } from 'react-redux'
+import cookies from 'js-cookie'
 
 // Styled component for badge content
 const BadgeContentSpan = styled('span')({
@@ -89,7 +90,7 @@ const UserDropdown = () => {
       // toastService.error((err as Error).message)
     }
   }
-
+  const user = JSON.parse(cookies.get('user'))
   return (
     <>
       <Badge
@@ -126,11 +127,11 @@ const UserDropdown = () => {
               <ClickAwayListener onClickAway={e => handleDropdownClose(e)}>
                 <MenuList>
                   <div className='flex items-center plb-2 pli-5 gap-2' tabIndex={-1}>
-                    <CustomAvatar size={40} alt={'John Doe'} src={'https://i.pravatar.cc/150?img=1'} />
+                    <CustomAvatar size={40} alt={user?.firstName + ' ' + user?.lastName} src={user?.image} />
                     <div className='flex items-start flex-col'>
-                      <Typography variant='h6'>{'John Doe'}</Typography>
+                      <Typography variant='h6'>{user?.firstName + ' ' + user?.lastName}</Typography>
                       <Typography variant='body2' color='text.disabled'>
-                        {'john.doe@example.com'}
+                        {user?.email}
                       </Typography>
                     </div>
                   </div>

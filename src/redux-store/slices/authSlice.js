@@ -26,11 +26,27 @@ export const loginThunk = createAsyncThunk('auth/login', async (credentials, { r
     }
     const response = await postRequest('auth/login', credentials)
     if (response.success) {
+      if (response.resetToken) {
+        cookies.set('resetToken', response.resetToken)
+        return false
+      }
       const user = response.user
       const token = response.tokens
       cookies.set('user', JSON.stringify(user))
       cookies.set('token', JSON.stringify(token))
       return user
+    }
+    return rejectWithValue(response.message)
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
+export const changePasswordThunk = createAsyncThunk('auth/changePassword', async (data, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('auth/change-password', data)
+    if (response.success) {
+      return response
     }
     return rejectWithValue(response.message)
   } catch (error) {
@@ -149,6 +165,11 @@ export const authSlice = createSlice({
         state.error = null
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
+        if (action.payload === false) {
+          state.isLoading = false
+          state.error = null
+          return
+        }
         state.user = action.payload
         state.isAuthenticated = true
         state.isLoading = false
@@ -211,6 +232,19 @@ export const authSlice = createSlice({
         state.error = null
       })
       .addCase(editUserThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.isLoading = false
+      })
+      .addCase(changePasswordThunk.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(changePasswordThunk.fulfilled, (state, action) => {
+        cookies.remove('resetToken')
+        state.isLoading = false
+        state.error = null
+      })
+      .addCase(changePasswordThunk.rejected, (state, action) => {
         state.error = action.payload
         state.isLoading = false
       })

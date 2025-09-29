@@ -14,14 +14,11 @@ import OrderComments from './orderComments'
 import { fetchOrderById, selectOrdersLoading, selectOrdersError, selectOrderById } from '@/redux-store/slices/order'
 
 const OrderDetails = ({ id }) => {
-
   const dispatch = useDispatch()
 
   const loading = useSelector(selectOrdersLoading)
   const error = useSelector(selectOrdersError)
-  const order = useSelector((state) => state.orders.selectedOrders)
-
-  console.log(order, 'order details')
+  const order = useSelector(state => state.orders.selectedOrders)
 
   // console.log(order, 'orders')
 
@@ -34,29 +31,28 @@ const OrderDetails = ({ id }) => {
   if (loading) return <p>Loading order...</p>
   if (error) return <p>Error: {error}</p>
   if (!order) return <p>No order found</p>
-
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <OrderDetailHeader order={order} id={id}/>
+        <OrderDetailHeader order={order} id={id} />
       </Grid>
       <Grid size={{ xs: 12, md: 8 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12 }}>
-            <OrderDetailsCard order={order}/>
+            <OrderDetailsCard order={order} />
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <ShippingActivity order={order}/>
+            <ShippingActivity order={order} />
           </Grid>
         </Grid>
       </Grid>
       <Grid size={{ xs: 12, md: 4 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12 }}>
-            <OrderComments order={order}/>
+            <OrderComments order={order} />
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <CustomerDetails order={order}/>
+            <CustomerDetails order={order} />
           </Grid>
         </Grid>
       </Grid>

@@ -93,7 +93,6 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 const columnHelper = createColumnHelper()
 
 const OrderListTable = ({ customerData }) => {
-
   // const customerId = customerData?.customer?.id || null
   // const lastOrderId = customerData?.customer?.last_order_id
 
@@ -103,7 +102,6 @@ const OrderListTable = ({ customerData }) => {
 
   // Hooks
   const { lang: locale } = useParams()
-
 
   // Transform orders data to match table format
   const tableData = useMemo(() => {
@@ -118,22 +116,23 @@ const OrderListTable = ({ customerData }) => {
         date: order.created_at,
         status: order.orderStatus,
         spent: order.current_total_price || '0.00',
+        name: order.name
       }))
     } else {
-      baseData = [{
-        id: customerData?.customer?.previousOrders?.id,
-        order: customerData?.customer?.previousOrders?.id,
-        date: customerData?.customer?.previousOrders?.created_at,
-        status: customerData?.customer?.previousOrders?.orderStatus,
-        spent: customerData?.customer?.previousOrders?.current_total_price || '0.00',
-      }]
+      baseData = [
+        {
+          id: customerData?.customer?.previousOrders?.id,
+          order: customerData?.customer?.previousOrders?.id,
+          date: customerData?.customer?.previousOrders?.created_at,
+          status: customerData?.customer?.previousOrders?.orderStatus,
+          spent: customerData?.customer?.previousOrders?.current_total_price || '0.00',
+          name: customerData?.customer?.previousOrders?.name
+        }
+      ]
     }
 
     return baseData
   }, [customerData])
-
-
-
 
   const columns = useMemo(
     () => [
@@ -144,7 +143,7 @@ const OrderListTable = ({ customerData }) => {
             component={Link}
             href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
             color='primary.main'
-          >{`${row.original.id}`}</Typography>
+          >{`${row.original.name}`}</Typography>
         )
       }),
       columnHelper.accessor('date', {
@@ -181,14 +180,6 @@ const OrderListTable = ({ customerData }) => {
                   icon: 'bx-show',
                   href: getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale),
                   linkProps: { className: 'flex items-center gap-2 is-full plb-2 pli-5' }
-                },
-                {
-                  text: 'Delete',
-                  icon: 'bx-trash',
-                  menuItemProps: {
-                    onClick: () => console.log('Delete order:', row.original.id),
-                    className: 'flex items-center'
-                  }
                 }
               ]}
             />
