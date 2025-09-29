@@ -26,8 +26,8 @@ const mapUserDataToOverview = data => {
       { property: 'Verified', value: data?.isVerified ? 'Yes' : 'No', icon: 'tabler-check' }
     ],
     description: [
-      { property: 'Department Description', value: data?.department?.description },
-      { property: 'Role Description', value: data?.role?.description }
+      { property: 'Department Description', value: data?.department?.description || 'N/A' },
+      { property: 'Role Description', value: data?.role?.description || 'N/A' }
     ],
     overview: [
       { property: 'Created At', value: new Date(data?.createdAt).toLocaleString() },

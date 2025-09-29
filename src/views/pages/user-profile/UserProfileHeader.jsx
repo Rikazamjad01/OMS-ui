@@ -7,11 +7,9 @@ import Button from '@mui/material/Button'
 
 const UserProfileHeader = ({ data }) => {
 
-  console.log(data, 'data in user profile header')
-
   return (
     <Card>
-      <CardMedia image={data?.coverImg} className='bs-[250px]' />
+      <CardMedia image={data?.coverImg || '/images/pages/profile-banner.png'} className='bs-[250px]' />
       <CardContent className='flex gap-6 justify-center flex-col items-center md:items-end md:flex-row !pt-0 md:justify-start'>
         <div className='flex rounded-bs-md mbs-[-40px] border-[5px] mis-[-5px] border-be-0  border-backgroundPaper bg-backgroundPaper'>
           <img height={120} width={120} src={'/images/avatars/placeholder.jpg'} className='rounded' alt='Profile Background' />

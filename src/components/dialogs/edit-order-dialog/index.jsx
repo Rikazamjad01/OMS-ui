@@ -21,7 +21,7 @@ import { Add, Remove } from '@mui/icons-material'
 
 // Redux
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { fetchOrderById, updateOrderProducts } from '@/redux-store/slices/order'
+import { fetchOrderById, fetchOrderByIds, updateOrderProducts } from '@/redux-store/slices/order'
 
 // Component Imports
 import DialogCloseButton from '../DialogCloseButton'
@@ -31,11 +31,17 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
   const allProducts = useSelector(selectProducts)
   const loading = useSelector(selectProductsLoading)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isUpselling, setIsUpselling] = useState(false)
 
   const [products, setProducts] = useState([]) // products in this order
   const [showProductSelector, setShowProductSelector] = useState(false)
   const [originalProducts, setOriginalProducts] = useState([])
   const [hasChanges, setHasChanges] = useState(false)
+
+  const filteredProducts = allProducts.filter(product =>
+    product.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   // Merge order products + line_items when modal opens
   useEffect(() => {
@@ -122,15 +128,19 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
   }
 
   const handleUpsell = () => {
+    setIsUpselling(true)
     dispatch(updateOrderProducts({ orderId: order.id, products }))
       .unwrap()
       .then(() => {
-        dispatch(fetchOrderById(order.id))
-        setSnackbar({ open: true, message: 'Order updated successfully!', severity: 'success' })
+        dispatch(fetchOrderByIds(order.id))
         setOpen(false)
+
+        if (onSuccess) {
+          onSuccess('Order updated successfully!')
+        }
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed to update order: ' + err, severity: 'error' }))
-    handleClose()
+      .finally(() => setIsUpselling(false))
   }
 
   const handleSnackbarClose = () => {
@@ -190,7 +200,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                     color='error'
                     size='small'
                     onClick={() => deleteProduct(index)}
-                    disabled={product.fromOrder && products.filter(p => p.fromOrder).length <= 1}
+                    disabled={product.fromOrder && products.length === 1}
                   >
                     Delete
                   </Button>
@@ -198,36 +208,43 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
               </Grid>
             ))}
 
-            <div className='flex w-full justify-between'>
-              <Grid size={{ xs: 12 }}>
-                <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)}>
-                  + Add Product
-                </Button>
-              </Grid>
+            <Grid item xs={12} my={5} className='flex gap-4 justify-between w-full'>
+              <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)} className='py-4'>
+                + Add Product
+              </Button>
               {showProductSelector && (
-                <Grid size={{ xs: 12 }} className='mb-4 flex justify-end'>
+                <div className='flex gap-2'>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      placeholder='Search products...'
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </Grid>
                   <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)}>
                     Hide Products
                   </Button>
-                </Grid>
+                </div>
               )}
-            </div>
+            </Grid>
 
             {/* Product Selector List */}
             {showProductSelector && (
-              <Grid size={{ xs: 12 }} className='mt-4 h-60 overflow-y-scroll no-scrollbar'>
-                {loading ? (
-                  <Typography>Loading products...</Typography>
-                ) : (
-                  <Grid container spacing={2}>
-                    {allProducts.map(product => (
+              <Grid size={{ xs: 12 }} className='max-h-60 overflow-y-scroll border rounded p-2'>
+                <>
+                  {loading ? (
+                    <Typography>Loading products...</Typography>
+                  ) : filteredProducts.length === 0 ? (
+                    <Typography>No products found</Typography>
+                  ) : (
+                    filteredProducts.map(product => (
                       <Grid
                         key={product.id}
-                        size={{ xs: 12, sm: 6 }}
-                        className='border p-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 gap-2'
+                        className='border p-2 my-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 gap-2 rounded-lg'
                       >
                         <div className='flex gap-2'>
-                          <div className='w-10 h-10'>
+                          <div className='w-10 h-10 text-[8px]'>
                             <Image
                               src={product.image?.src || '/productPlaceholder.png'}
                               alt={'Product'}
@@ -237,26 +254,34 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
                             />
                           </div>
                           <div className='flex flex-col gap-y-4'>
-                            <Typography fontWeight={500}>{product.title}</Typography>
-                            <Typography>Price: {product.price}</Typography>
+                            <Typography fontWeight={500}>{product?.title}</Typography>
+                            <Typography>Price: {product?.price}</Typography>
                           </div>
                         </div>
-                        <Button variant='contained' size='small' onClick={() => addNewProduct(product)}>
-                          Select
-                        </Button>
+                        {products.find(p => p.id === product.id) ? (
+                          <Button variant='outlined' size='small' disabled className='flex items-center gap-1'>
+                            <i className='fa fa-check' />
+                            selected
+                          </Button>
+                        ) : (
+                          <Button variant='contained' size='small' onClick={() => addNewProduct(product)}>
+                            Select
+                          </Button>
+                        )}
                       </Grid>
-                    ))}
-                  </Grid>
-                )}
+                    ))
+                  )}
+                </>
               </Grid>
             )}
           </Grid>
         </DialogContent>
 
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' onClick={handleUpsell} type='submit' disabled={!hasChanges}>
-            Upsell Order
+          <Button variant='contained' onClick={handleUpsell} type='submit' disabled={!hasChanges || isUpselling}>
+            {isUpselling ? 'Upselling...' : 'Upsell Order'}
           </Button>
+
           <Button variant='tonal' color='secondary' type='reset' onClick={handleClose}>
             Cancel
           </Button>
