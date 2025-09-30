@@ -852,12 +852,6 @@ const BookingListTable = ({
         }
       },
       {
-        accessorKey: 'city',
-        header: 'City',
-        meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
-      },
-      {
         accessorKey: 'Amount',
         header: 'Amount',
         filterFn: amountRangeFilterFn,
@@ -866,6 +860,12 @@ const BookingListTable = ({
             {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
           </Typography>
         )
+      },
+      {
+        accessorKey: 'city',
+        header: 'City',
+        meta: { width: '180px' },
+        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
       },
       {
         accessorKey: 'awb',

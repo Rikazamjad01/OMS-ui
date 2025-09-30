@@ -9,6 +9,8 @@ import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -64,6 +66,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
   const dispatch = useDispatch()
+  const [editingDiscountRowId, setEditingDiscountRowId] = useState(null)
+  const [discountInput, setDiscountInput] = useState('')
 
   const columns = useMemo(
     () => [
@@ -108,7 +112,58 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }),
       columnHelper.accessor('discountedPrice', {
         header: 'Discounted Price',
-        cell: ({ row }) => <Typography>{formatPrice(row.original.discountedPrice)}</Typography>
+        cell: ({ row }) => {
+          const isEditing = editingDiscountRowId === row.original.id
+          if (isEditing) {
+            return (
+              <TextField
+                key={`discount-input-${row.original.id}`}
+                size='small'
+                type='number'
+                value={discountInput}
+                onChange={e => setDiscountInput(e.target.value)}
+                autoFocus
+                inputProps={{ min: 0, step: '1' }}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                onFocus={e => e.stopPropagation()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const parsed = Number(discountInput)
+                    if (Number.isNaN(parsed)) return
+                    // Call your API here to apply discount for this line item/order
+                    // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+                    setEditingDiscountRowId(null)
+                  } else if (e.key === 'Escape') {
+                    setEditingDiscountRowId(null)
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = Number(discountInput)
+                  if (Number.isNaN(parsed)) {
+                    setEditingDiscountRowId(null)
+                    return
+                  }
+                  // Call your API here to apply discount for this line item/order
+                  // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+                  setEditingDiscountRowId(null)
+                }}
+              />
+            )
+          }
+
+          return (
+            <Typography
+              className='cursor-pointer'
+              onClick={() => {
+                setEditingDiscountRowId(row.original.id)
+                setDiscountInput(String(row.original.discountedPrice ?? 0))
+              }}
+            >
+              {formatPrice(row.original.discountedPrice)}
+            </Typography>
+          )
+        }
       }),
       columnHelper.accessor('barCode', {
         header: 'Bar code',
@@ -119,7 +174,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
         cell: ({ row }) => <Typography>{`${row.original.weight} ${row.original.weight_unit}`}</Typography>
       })
     ],
-    []
+    [editingDiscountRowId, discountInput]
   )
 
   const table = useReactTable({
@@ -237,7 +292,6 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false })
-
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {

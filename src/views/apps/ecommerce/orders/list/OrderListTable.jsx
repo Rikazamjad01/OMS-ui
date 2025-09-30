@@ -432,7 +432,7 @@ const OrderListTable = ({
           : Array.isArray(order.tags)
             ? order.tags.filter(Boolean)
             : []
-
+      console.log(order.address, 'order.address')
       return {
         id: order.id,
         orderNumber: order?.name?.replace('#', ''),
@@ -449,6 +449,8 @@ const OrderListTable = ({
         methodLabel: names[0] || 'Unknown',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
+        phone: order?.address?.[0]?.phone || '',
+        address: order?.address?.[0]?.address1 || '',
         tags: parsedTags
       }
     })
@@ -615,7 +617,7 @@ const OrderListTable = ({
               >
                 {row.original.customer || '—'}
               </Typography>
-              <Typography variant='body2'>{row.original.email || '—'}</Typography>
+              <Typography variant='body2'>{row.original.phone || '—'}</Typography>
             </div>
           </div>
         )
@@ -741,6 +743,15 @@ const OrderListTable = ({
             {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
           </Typography>
         )
+      },
+      {
+        accessorKey: 'address',
+        header: 'Address',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const address = row.original.address
+          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+        }
       },
       {
         accessorKey: 'city',
