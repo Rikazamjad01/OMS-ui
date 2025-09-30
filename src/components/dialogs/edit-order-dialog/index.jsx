@@ -23,6 +23,9 @@ import { Add, Remove } from '@mui/icons-material'
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
 import { fetchOrderById, fetchOrderByIds, updateOrderProducts } from '@/redux-store/slices/order'
 
+import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
+import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
+
 // Component Imports
 import DialogCloseButton from '../DialogCloseButton'
 
@@ -278,9 +281,22 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
         </DialogContent>
 
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' onClick={handleUpsell} type='submit' disabled={!hasChanges || isUpselling}>
-            {isUpselling ? 'Upselling...' : 'Upsell Order'}
-          </Button>
+
+
+          <OpenDialogOnElementClick
+            element={Button}
+            elementProps={{
+              children: isUpselling ? 'Upselling...' : 'Upsell Order',
+              disabled: !hasChanges || isUpselling,
+              variant: 'contained'
+            }}
+            dialog={ConfirmationDialog}
+            dialogProps={{
+              type: 'upsell-order',
+              payload: { orderId: order.id, products },
+              onSuccess: () => handleUpsell() // run your actual API update only after confirmation
+            }}
+          />
 
           <Button variant='tonal' color='secondary' type='reset' onClick={handleClose}>
             Cancel

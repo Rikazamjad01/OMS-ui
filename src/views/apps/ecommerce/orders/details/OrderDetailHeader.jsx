@@ -63,8 +63,6 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
     return order.line_items.length > 1
   })()
 
-  console.log(selectedProductIds, 'selectedProductIds here')
-
   const handleCancelOrder = async () => {
     try {
       const response = await dispatch(

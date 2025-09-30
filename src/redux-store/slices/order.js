@@ -157,21 +157,18 @@ export const updateOrdersStatusThunk = createAsyncThunk(
     try {
       const response = await apiRequest(`orders/status/${status}`, {
         method: 'PATCH',
-        data: {
-          id: orderIds || []
-        },
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        data: { id: orderIds || [] },
+        headers: { 'Content-Type': 'application/json' }
       })
 
       if (!response.status) {
         return rejectWithValue(response.message)
       }
 
+      // Return the *intended* status we set
       return {
         orderIds,
-        status: response.status,
+        newStatus: status, // instead of overwriting with response.status
         message: response.message
       }
     } catch (error) {
@@ -391,25 +388,17 @@ const ordersSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
-      .addCase(updateOrdersStatusThunk.pending, state => {
-        // state.loading = false
-        state.error = null
-      })
       .addCase(updateOrdersStatusThunk.fulfilled, (state, action) => {
         state.loading = false
-        const { orderIds, status } = action.payload
+        const { orderIds, newStatus } = action.payload
 
         state.orders = state.orders.map(order =>
-          orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
+          orderIds.map(String).includes(String(order.id)) ? { ...order, status: newStatus } : order
         )
 
         if (state.selectedOrders && orderIds.map(String).includes(String(state.selectedOrders.id))) {
-          state.selectedOrders = { ...state.selectedOrders, status }
+          state.selectedOrders = { ...state.selectedOrders, status: newStatus }
         }
-      })
-      .addCase(updateOrdersStatusThunk.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.payload || action.error.message
       })
       .addCase(updateOrderProducts.pending, state => {
         // state.loading = true

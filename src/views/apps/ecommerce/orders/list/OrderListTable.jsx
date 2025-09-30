@@ -304,6 +304,7 @@ const OrderListTable = ({
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsOrderId, setDetailsOrderId] = useState(null)
+
   const openDetails = id => {
     setDetailsOrderId(id)
     setDetailsOpen(true)
@@ -432,6 +433,7 @@ const OrderListTable = ({
           : Array.isArray(order.tags)
             ? order.tags.filter(Boolean)
             : []
+
       console.log(order.address, 'order.address')
       return {
         id: order.id,
@@ -630,6 +632,7 @@ const OrderListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
+            
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium'
             >
@@ -652,6 +655,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -723,6 +727,7 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -750,6 +755,7 @@ const OrderListTable = ({
         meta: { width: '250px' },
         cell: ({ row }) => {
           const address = row.original.address
+
           return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
         }
       },
