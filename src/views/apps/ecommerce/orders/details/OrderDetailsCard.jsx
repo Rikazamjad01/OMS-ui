@@ -141,6 +141,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
       // Get the selected row IDs (these are the keys in newSelection)
       const selectedRowIds = Object.keys(newSelection).filter(id => newSelection[id]) // Only get selected rows (true values)
 
+      console.log(selectedRowIds, 'selectedRowIds in OrderTable')
+
       // Get the actual product data for the selected rows
       const selectedProducts = data.filter(item => {
         const itemIdString = item.id.toString()
@@ -158,7 +160,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }
 
       // Also dispatch to Redux
-      // dispatch(setSelectedProducts(selectedProductIds))
+      dispatch(setSelectedProducts(selectedProductIds))
     },
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,

@@ -228,9 +228,11 @@ export const createOrder = createAsyncThunk('orders/createOrder', async (orderDa
 export const changeCityThunk = createAsyncThunk('orders/changeCity', async ({ id, city }, { rejectWithValue }) => {
   try {
     const response = await postRequest('orders/change-city/city', { id, city }, 'patch')
+
     if (!response.status) {
       return rejectWithValue(response.message)
     }
+
     return { id, city }
   } catch (error) {
     return rejectWithValue(error.message)
@@ -458,6 +460,7 @@ const ordersSlice = createSlice({
       .addCase(changeCityThunk.fulfilled, (state, action) => {
         state.loading = false
         const { id, city } = action.payload
+
         state.orders = state.orders.map(order => (order.id === id ? { ...order, city } : order))
       })
       .addCase(changeCityThunk.rejected, (state, action) => {

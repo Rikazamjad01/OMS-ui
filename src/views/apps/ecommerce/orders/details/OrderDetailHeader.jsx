@@ -37,6 +37,8 @@ export const statusChipColor = {
 
 const OrderDetailHeader = ({ order: initialOrder, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
+
+  console.log(selectSelectedProducts, 'selectedProductIds in OrderDetailHeader')
   const dispatch = useDispatch()
   const { lang: locale } = useParams()
   const router = useRouter()
@@ -60,7 +62,9 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
 
     return order.line_items.length > 1
   })()
+
   console.log(selectedProductIds, 'selectedProductIds here')
+
   const handleCancelOrder = async () => {
     try {
       const response = await dispatch(

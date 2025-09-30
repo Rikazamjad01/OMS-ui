@@ -339,7 +339,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
             {/* Split order quantity stepper */}
             {isSplit && payload?.selectedLineItems?.length > 0 && (
               <div className='flex flex-col gap-4 mt-4'>
-                {payload.selectedLineItems.map(item => (
+                {payload.selectedLineItems.map((item, index) => (
                   <div
                     key={item.id ?? `line-${index}`}
                     className='flex flex-col justify-between items-center border rounded-lg px-4 py-2 shadow-sm'
