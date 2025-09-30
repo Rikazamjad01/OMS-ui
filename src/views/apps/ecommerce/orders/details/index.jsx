@@ -11,16 +11,16 @@ import ShippingActivity from './ShippingActivityCard'
 import CustomerDetails from './CustomerDetailsCard'
 import OrderComments from './orderComments'
 
-import { fetchOrderById, selectOrdersLoading, selectOrdersError, selectOrderById } from '@/redux-store/slices/order'
+import { fetchOrderById, selectOrderByIdLoading, selectOrdersError, selectOrderById } from '@/redux-store/slices/order'
 
 const OrderDetails = ({ id }) => {
   const dispatch = useDispatch()
 
-  const loading = useSelector(selectOrdersLoading)
+  const loading = useSelector(selectOrderByIdLoading)
   const error = useSelector(selectOrdersError)
   const order = useSelector(state => state.orders.selectedOrders)
 
-  // console.log(order, 'orders')
+  console.log(order, 'orders from Redux in OrderDetails')
 
   useEffect(() => {
     if (id) {
@@ -28,9 +28,15 @@ const OrderDetails = ({ id }) => {
     }
   }, [id, dispatch])
 
+  // Add this to refresh when order updates
+  useEffect(() => {
+    console.log('Order updated in Redux:', order)
+  }, [order])
+
   if (loading) return <p>Loading order...</p>
   if (error) return <p>Error: {error}</p>
   if (!order) return <p>No order found</p>
+
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
@@ -39,6 +45,7 @@ const OrderDetails = ({ id }) => {
       <Grid size={{ xs: 12, md: 8 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12 }}>
+            {/* Pass the order from Redux, not from props */}
             <OrderDetailsCard order={order} />
           </Grid>
           <Grid size={{ xs: 12 }}>

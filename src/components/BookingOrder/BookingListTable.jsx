@@ -29,7 +29,18 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues
 } from '@tanstack/react-table'
-import { Alert, Autocomplete, DialogActions, InputAdornment, Snackbar, TextField, MenuItem } from '@mui/material'
+import {
+  Alert,
+  Autocomplete,
+  DialogActions,
+  InputAdornment,
+  Snackbar,
+  TextField,
+  MenuItem,
+  Drawer,
+  Box,
+  IconButton
+} from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
 
@@ -70,6 +81,7 @@ import tableStyles from '@core/styles/table.module.css'
 import AmountRangePicker from '@/components/amountRangePicker/AmountRangePicker'
 import StatusCell from '@/components/statusCell/StatusCell'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
+import OrderDetails from '@/views/apps/ecommerce/orders/details'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
 import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
@@ -307,6 +319,15 @@ const BookingListTable = ({
     tags: []
   })
 
+  // Right-side details drawer state
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOrderId, setDetailsOrderId] = useState(null)
+
+  const openDetails = id => {
+    setDetailsOrderId(id)
+    setDetailsOpen(true)
+  }
+
   const openTagEditor = (orderId, currentTags = []) => {
     const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
 
@@ -347,7 +368,7 @@ const BookingListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchBookingOrder({ page: pagination.currentPage, limit, force: true }))
+      dispatch(fetchBookingOrders({ page: pagination.currentPage, limit, force: true }))
 
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
@@ -424,11 +445,14 @@ const BookingListTable = ({
         time: new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         customer: `${order?.first_name || ''} ${order?.last_name || ''}`.trim(),
         customerId: order?.customer,
+
         // dispatchStatus: order.courier?.dispatchStatus,
         email: order.email,
         payment: order.financial_status?.toLowerCase() || 'pending',
         platform: order.courier?.name || 'none', // note: lowercase 'platform'
-        status: order?.courier?.dispatchStatus === 'cancelled' ? 'cancelled' : order.orderStatus,
+        status: order.orderStatus,
+
+        // status: order?.courier?.dispatchStatus === 'cancelled' ? 'cancelled' : order.orderStatus,
         awb: order.courier?.awbLink || '',
         method: normalizePaymentMethod(shortFormNames),
         remarks: order.remarks,
@@ -557,9 +581,10 @@ const BookingListTable = ({
         header: 'Order #',
         cell: ({ row }) => (
           <Typography
-            component={Link}
-            href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
+            component='button'
+            onClick={() => openDetails(row.original.id)}
             color='primary.main'
+            className='cursor-pointer bg-transparent border-0 p-0'
           >
             #{row.original.orderNumber || '—'}
           </Typography>
@@ -587,27 +612,28 @@ const BookingListTable = ({
           )
         }
       },
-      {
-        accessorKey: 'customer',
-        header: 'Customer Name',
-        meta: { width: '250px' },
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            {getAvatar(row.original)}
-            <div className='flex flex-col'>
-              <Typography
-                variant='h6'
-                component={Link}
-                href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original.customerId}`, locale)}
-                className='hover:text-primary'
-              >
-                {row.original.customer || '—'}
-              </Typography>
-              <Typography variant='body2'>{row.original.email || '—'}</Typography>
-            </div>
-          </div>
-        )
-      },
+
+      // {
+      //   accessorKey: 'customer',
+      //   header: 'Customer Name',
+      //   meta: { width: '250px' },
+      //   cell: ({ row }) => (
+      //     <div className='flex items-center gap-3'>
+      //       {getAvatar(row.original)}
+      //       <div className='flex flex-col'>
+      //         <Typography
+      //           variant='h6'
+      //           component={Link}
+      //           href={getLocalizedUrl(`/apps/ecommerce/customers/details/${row.original.customerId}`, locale)}
+      //           className='hover:text-primary'
+      //         >
+      //           {row.original.customer || '—'}
+      //         </Typography>
+      //         <Typography variant='body2'>{row.original.email || '—'}</Typography>
+      //       </div>
+      //     </div>
+      //   )
+      // },
       {
         accessorKey: 'payment',
         header: 'Payment Status',
@@ -616,8 +642,8 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-              color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
-              className='font-medium'
+              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
+              className='font-medium '
             >
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
             </Typography>
@@ -635,15 +661,68 @@ const BookingListTable = ({
           }
 
           return (
-            <div className='flex items-center gap-1'>
-              {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
-              <Typography
-                color={`${courierPlatforms[row.original.platform]?.color || 'default'}.main`}
-                className='font-medium'
-              >
-                {courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown'}
-              </Typography>
-            </div>
+            <OpenDialogOnElementClick
+              element={Chip}
+              elementProps={{
+                label: courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown',
+                variant: 'outlined',
+                size: 'small',
+                className: 'cursor-pointer'
+              }}
+              dialog={EditCourierInfo}
+              dialogProps={{
+                data: (() => {
+                  const inferCourierKey = name => {
+                    if (!name) return 'none'
+                    const n = String(name).toLowerCase()
+
+                    if (n.includes('leopard')) return 'leopard'
+                    if (n.includes('daewoo')) return 'daewoo'
+                    if (n.includes('post')) return 'postEx'
+                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    if (n.includes('tcs')) return 'tcs'
+                    return 'none'
+                  }
+
+                  const defaultCourier = inferCourierKey(row.original.platform)
+
+                  return {
+                    orderIds: [row.original.id],
+                    courier: defaultCourier,
+                    reason: ''
+                  }
+                })(),
+                onSubmit: async (payload, controls) => {
+                  try {
+                    const courierApiMap = {
+                      none: 'None',
+                      leopard: 'Leopard',
+                      daewoo: 'Daewoo',
+                      postEx: 'PostEx',
+                      mp: 'M&P',
+                      tcs: 'TCS'
+                    }
+
+                    const body = {
+                      orderId: [String(row.original.id)],
+                      courier: courierApiMap[payload.courier] || payload.courier,
+                      reason: payload.reason
+                    }
+
+                    const res = await dispatch(courierAssignment(body)).unwrap()
+
+                    setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                    controls?.close()
+                    controls?.reset()
+                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                  } catch (err) {
+                    setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                  } finally {
+                    controls?.done?.()
+                  }
+                }
+              }}
+            />
           )
         }
       },
@@ -711,7 +790,10 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                      <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      <p key={i} className='text-gray-500'>
+                        {remark}
+                      </p>
                     ))
                   : '--'}
               </div>
@@ -768,12 +850,6 @@ const BookingListTable = ({
         }
       },
       {
-        accessorKey: 'city',
-        header: 'City',
-        meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
-      },
-      {
         accessorKey: 'Amount',
         header: 'Amount',
         filterFn: amountRangeFilterFn,
@@ -784,13 +860,20 @@ const BookingListTable = ({
         )
       },
       {
+        accessorKey: 'city',
+        header: 'City',
+        meta: { width: '180px' },
+        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
+      },
+      {
         accessorKey: 'awb',
         header: 'Airway Bill',
         meta: { width: '250px' },
         cell: ({ row }) => {
-          if (row.original?.status === 'cancelled') {
-            return <Chip label='Cancelled' variant='outlined' size='small' />
-          }
+          // if (row.original?.status === 'cancelled') {
+          //   return <Chip label='Cancelled' variant='outlined' size='small' />
+          // }
+
           if (row.original.platform === 'none') {
             return (
               <OpenDialogOnElementClick
@@ -805,9 +888,11 @@ const BookingListTable = ({
                 dialogProps={{
                   data: (() => {
                     const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+
                     const inferCourierKey = name => {
                       if (!name) return 'none'
                       const n = String(name).toLowerCase()
+
                       if (n.includes('leopard')) return 'leopard'
                       if (n.includes('daewoo')) return 'daewoo'
                       if (n.includes('post')) return 'postEx'
@@ -815,6 +900,7 @@ const BookingListTable = ({
                       if (n.includes('tcs')) return 'tcs'
                       return 'none'
                     }
+
                     const defaultCourier = inferCourierKey(firstSelected?.platform)
 
                     return {
@@ -833,16 +919,21 @@ const BookingListTable = ({
                         mp: 'M&P',
                         tcs: 'TCS'
                       }
+
                       const freshSelectedIds = (() => {
                         const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+
                         return ids.length > 0 ? ids : [row.original.id]
                       })()
+
                       const body = {
                         orderId: freshSelectedIds.map(id => String(id)),
                         courier: courierApiMap[payload.courier] || payload.courier,
                         reason: payload.reason
                       }
+
                       const res = await dispatch(courierAssignment(body)).unwrap()
+
                       setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
                       controls?.close()
                       controls?.reset()
@@ -858,6 +949,7 @@ const BookingListTable = ({
               />
             )
           }
+
           if (row.original.awb) {
             return (
               <div className='flex flex-col gap-1'>
@@ -913,8 +1005,10 @@ const BookingListTable = ({
                 {
                   text: 'View',
                   icon: 'bx-show',
-                  href: getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale),
-                  linkProps: { className: 'flex items-center gap-2 is-full plb-2 pli-5' }
+                  menuItemProps: {
+                    onClick: () => openDetails(row.original.id),
+                    className: 'flex items-center gap-2 is-full plb-2 pli-5'
+                  }
                 }
               ]}
             />
@@ -1032,12 +1126,12 @@ const BookingListTable = ({
   return (
     <Card>
       <CardContent className='w-full flex items-center justify-between'>
-      <div className='flex items-center gap-4 w-full'>
-        {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
+        <div className='flex items-center gap-4 w-full'>
+          {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
 
-        {/* <RangePicker
+          {/* <RangePicker
             status='success'
             value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
             onChange={dates => {
@@ -1057,20 +1151,20 @@ const BookingListTable = ({
             }}
           /> */}
 
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onChange={val => {
-            setGlobalFilter(String(val))
-            onSearchChange?.(val) // Add this line
-          }}
-          onEnter={val => {
-            setGlobalFilter(val)
-            onSearchChange?.(val)
-          }}
-          placeholder='Search Order'
-        />
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={val => {
+              setGlobalFilter(String(val))
+              onSearchChange?.(val) // Add this line
+            }}
+            onEnter={val => {
+              setGlobalFilter(val)
+              onSearchChange?.(val)
+            }}
+            placeholder='Search Order'
+          />
 
-        {/* <FilterModal
+          {/* <FilterModal
             open={openFilter}
             onClose={() => setOpenFilter(false)}
             initialFilters={rawFilters}
@@ -1087,109 +1181,109 @@ const BookingListTable = ({
               setOpenFilter(false)
             }}
           /> */}
-        {/* <DateRangePicker /> */}
+          {/* <DateRangePicker /> */}
 
-        {/* Add the Change Status button - only shows when orders are selected */}
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
-            dialog={EditCourierInfo}
-            size='small'
-            dialogProps={{
-              data: (() => {
-                const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+          {/* Add the Change Status button - only shows when orders are selected */}
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
+              dialog={EditCourierInfo}
+              size='small'
+              dialogProps={{
+                data: (() => {
+                  const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
 
-                const inferCourierKey = name => {
-                  if (!name) return 'none'
-                  const n = String(name).toLowerCase()
+                  const inferCourierKey = name => {
+                    if (!name) return 'none'
+                    const n = String(name).toLowerCase()
 
-                  if (n.includes('leopard')) return 'leopard'
-                  if (n.includes('daewoo')) return 'daewoo'
-                  if (n.includes('post')) return 'postEx'
-                  if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                  if (n.includes('tcs')) return 'tcs'
-                  return 'none'
-                }
-
-                const defaultCourier = inferCourierKey(firstSelected?.platform)
-
-                return {
-                  orderIds: selectedIds,
-                  courier: defaultCourier,
-                  reason: ''
-                }
-              })(),
-              onSubmit: async (payload, controls) => {
-                try {
-                  const courierApiMap = {
-                    none: 'None',
-                    leopard: 'Leopard',
-                    daewoo: 'Daewoo',
-                    postEx: 'PostEx',
-                    mp: 'M&P',
-                    tcs: 'TCS'
+                    if (n.includes('leopard')) return 'leopard'
+                    if (n.includes('daewoo')) return 'daewoo'
+                    if (n.includes('post')) return 'postEx'
+                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    if (n.includes('tcs')) return 'tcs'
+                    return 'none'
                   }
 
-                  const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+                  const defaultCourier = inferCourierKey(firstSelected?.platform)
 
-                  const body = {
-                    orderId: freshSelectedIds.map(id => String(id)),
-                    courier: courierApiMap[payload.courier] || payload.courier,
-                    reason: payload.reason
+                  return {
+                    orderIds: selectedIds,
+                    courier: defaultCourier,
+                    reason: ''
                   }
+                })(),
+                onSubmit: async (payload, controls) => {
+                  try {
+                    const courierApiMap = {
+                      none: 'None',
+                      leopard: 'Leopard',
+                      daewoo: 'Daewoo',
+                      postEx: 'PostEx',
+                      mp: 'M&P',
+                      tcs: 'TCS'
+                    }
 
-                  const res = await dispatch(courierAssignment(body)).unwrap()
+                    const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
 
-                  setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
-                  controls?.close()
-                  controls?.reset()
-                  setRowSelection({})
-                  await dispatch(fetchBookingOrders({ page, limit, force: true }))
-                } catch (err) {
-                  setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
-                } finally {
-                  controls?.done?.()
-                }
-              }
-            }}
-          />
-        )}
+                    const body = {
+                      orderId: freshSelectedIds.map(id => String(id)),
+                      courier: courierApiMap[payload.courier] || payload.courier,
+                      reason: payload.reason
+                    }
 
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            size='small'
-            dialogProps={{
-              type: 'download-load-sheet',
-              payload: { orderIds: selectedIds },
-              onSuccess: async ({ orderIds }) => {
-                try {
-                  const res = await dispatch(downloadLoadSheet({ orderIds })).unwrap()
-                  const data = res?.data || res
-                  const base64 = data?.base64
-                  const filename = data?.filename || 'loadsheet.pdf'
-                  const mimeType = data?.mimeType || 'application/pdf'
+                    const res = await dispatch(courierAssignment(body)).unwrap()
 
-                  if (base64) {
-                    const link = document.createElement('a')
-
-                    link.href = `data:${mimeType};base64,${base64}`
-                    link.download = filename
-                    document.body.appendChild(link)
-                    link.click()
-                    link.remove()
+                    setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                    controls?.close()
+                    controls?.reset()
+                    setRowSelection({})
+                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                  } catch (err) {
+                    setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                  } finally {
+                    controls?.done?.()
                   }
-                } catch (e) {
-                  console.error('Failed to download load sheet', e)
                 }
-              }
-            }}
-          />
-        )}
-        {/* {selectedCount >= 2 ? (
+              }}
+            />
+          )}
+
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              size='small'
+              dialogProps={{
+                type: 'download-load-sheet',
+                payload: { orderIds: selectedIds },
+                onSuccess: async ({ orderIds }) => {
+                  try {
+                    const res = await dispatch(downloadLoadSheet({ orderIds })).unwrap()
+                    const data = res?.data || res
+                    const base64 = data?.base64
+                    const filename = data?.filename || 'loadsheet.pdf'
+                    const mimeType = data?.mimeType || 'application/pdf'
+
+                    if (base64) {
+                      const link = document.createElement('a')
+
+                      link.href = `data:${mimeType};base64,${base64}`
+                      link.download = filename
+                      document.body.appendChild(link)
+                      link.click()
+                      link.remove()
+                    }
+                  } catch (e) {
+                    console.error('Failed to download load sheet', e)
+                  }
+                }
+              }}
+            />
+          )}
+          {/* {selectedCount >= 2 ? (
           <OpenDialogOnElementClick
             element={Button}
             elementProps={{ children: 'Merge orders', color: 'secondary', variant: 'tonal' }}
@@ -1216,15 +1310,15 @@ const BookingListTable = ({
           </Button>
         )} */}
 
-        {selectedCount >= 1 && (
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
-            dialog={ConfirmationDialog}
-            dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
-            size='small'
-          />
-        )}
+          {selectedCount >= 1 && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
+              dialog={ConfirmationDialog}
+              dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: selectedIds } }}
+              size='small'
+            />
+          )}
         </div>
 
         <div className='flex max-sm:flex-col sm:items-center gap-4'>
@@ -1536,6 +1630,22 @@ const BookingListTable = ({
           {alert.message}
         </Alert>
       </Snackbar>
+      {/* Right-side Drawer for order details */}
+      <Drawer
+        anchor='right'
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: '80vw' } } }}
+      >
+        <Box className='p-4 overflow-auto' sx={{ height: '100%' }}>
+          <div className='flex justify-end'>
+            <IconButton onClick={() => setDetailsOpen(false)} aria-label='Close'>
+              <i className='bx-x text-2xl' />
+            </IconButton>
+          </div>
+          {detailsOrderId ? <OrderDetails id={detailsOrderId} /> : null}
+        </Box>
+      </Drawer>
     </Card>
   )
 }

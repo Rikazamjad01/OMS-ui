@@ -9,6 +9,8 @@ import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -29,6 +31,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 
 // Component Imports
+import { Alert, Snackbar } from '@mui/material'
 import Link from '@components/Link'
 
 // Style Imports
@@ -63,6 +66,18 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
   const dispatch = useDispatch()
+  const [editingDiscountRowId, setEditingDiscountRowId] = useState(null)
+  const [discountInput, setDiscountInput] = useState('')
+
+  // Ensure editing state is cleared if the row disappears (e.g., after cancel or data refresh)
+  useEffect(() => {
+    if (editingDiscountRowId == null) return
+    const exists = Array.isArray(data) && data.some(r => String(r.id) === String(editingDiscountRowId))
+    if (!exists) {
+      setEditingDiscountRowId(null)
+      setDiscountInput('')
+    }
+  }, [data, editingDiscountRowId])
 
   const columns = useMemo(
     () => [
@@ -107,7 +122,58 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }),
       columnHelper.accessor('discountedPrice', {
         header: 'Discounted Price',
-        cell: ({ row }) => <Typography>{formatPrice(row.original.discountedPrice)}</Typography>
+        cell: ({ row }) => {
+          const isEditing = editingDiscountRowId === row.original.id
+          if (isEditing) {
+            return (
+              <TextField
+                key={`discount-input-${row.original.id}`}
+                size='small'
+                type='number'
+                value={discountInput ?? ''}
+                onChange={e => setDiscountInput(e.target.value ?? '')}
+                autoFocus
+                inputProps={{ min: 0, step: '1' }}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                onFocus={e => e.stopPropagation()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const parsed = Number(discountInput)
+                    if (Number.isNaN(parsed)) return
+                    // Call your API here to apply discount for this line item/order
+                    // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+                    setEditingDiscountRowId(null)
+                  } else if (e.key === 'Escape') {
+                    setEditingDiscountRowId(null)
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = Number(discountInput)
+                  if (Number.isNaN(parsed)) {
+                    setEditingDiscountRowId(null)
+                    return
+                  }
+                  // Call your API here to apply discount for this line item/order
+                  // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+                  setEditingDiscountRowId(null)
+                }}
+              />
+            )
+          }
+
+          return (
+            <Typography
+              className='cursor-pointer'
+              onClick={() => {
+                setEditingDiscountRowId(row.original.id)
+                setDiscountInput(String(row.original.discountedPrice ?? 0))
+              }}
+            >
+              {formatPrice(row.original.discountedPrice)}
+            </Typography>
+          )
+        }
       }),
       columnHelper.accessor('barCode', {
         header: 'Bar code',
@@ -118,7 +184,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
         cell: ({ row }) => <Typography>{`${row.original.weight} ${row.original.weight_unit}`}</Typography>
       })
     ],
-    []
+    [editingDiscountRowId, discountInput]
   )
 
   const table = useReactTable({
@@ -140,6 +206,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
       // Get the selected row IDs (these are the keys in newSelection)
       const selectedRowIds = Object.keys(newSelection).filter(id => newSelection[id]) // Only get selected rows (true values)
 
+      console.log(selectedRowIds, 'selectedRowIds in OrderTable')
+
       // Get the actual product data for the selected rows
       const selectedProducts = data.filter(item => {
         const itemIdString = item.id.toString()
@@ -157,7 +225,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
       }
 
       // Also dispatch to Redux
-      // dispatch(setSelectedProducts(selectedProductIds))
+      dispatch(setSelectedProducts(selectedProductIds))
     },
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
@@ -224,10 +292,16 @@ const OrderTable = ({ data, onSelectionChange }) => {
 }
 
 const OrderDetailsCard = ({ order: initialOrder }) => {
-  const [order, setOrder] = useState(initialOrder)
-  const [openEditModal, setOpenEditModal] = useState(false)
+  const dispatch = useDispatch()
 
-  console.log(order, 'order in OrderDetailsCard')
+  // Use Redux state directly instead of local state
+  const order = useSelector(state => state.orders.selectedOrders)
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [selectedProducts, setSelectedProducts] = useState([])
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false })
 
   // Handle selection changes
   const handleSelectionChange = (selectedIds, selectedProductsData) => {
@@ -288,15 +362,6 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
   console.log(orderProducts, 'orderData in OrderDetailsCard')
 
-  const handleUpsell = updatedProducts => {
-    // Update the order with new products/quantities
-    setOrder(prev => ({
-      ...prev,
-      line_items: updatedProducts
-    }))
-    setOpenEditModal(false)
-  }
-
   const typographyProps = (children, color, className) => ({
     children,
     color,
@@ -314,7 +379,10 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             dialog={EditOrderDialog}
             dialogProps={{
               order,
-              products: orderProducts // Pass transformed products here
+              products: orderProducts, // Pass transformed products here
+              onSuccess: (message, severity = 'success') => {
+                setSnackbar({ open: true, message, severity })
+              }
             }}
           />
         }
@@ -356,13 +424,16 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
           </div>
         </div>
       </CardContent>
-
-      <EditOrderModal
-        open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
-        order={order}
-        onUpsell={handleUpsell}
-      />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} variant='filled' sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

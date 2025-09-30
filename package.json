@@ -11,6 +11,7 @@
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "build:icons": "tsx src/assets/iconify-icons/bundle-icons-css.mjs",
+    "prebuild": "npm run build:icons",
     "removeI18n": "tsx src/remove-translation-scripts/index.js"
   },
   "dependencies": {
@@ -85,6 +86,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@iconify/iconify": "^3.1.1",
     "@iconify/json": "2.2.286",
     "@iconify/tools": "4.1.1",
     "@iconify/utils": "2.2.1",

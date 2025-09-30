@@ -33,8 +33,6 @@ const ProfilePage = () => {
   useEffect(() => {
     const raw = Cookies.get('user')
 
-    console.log(JSON.parse(raw), 'raw')
-
     if (raw) {
       try {
         const parsed = JSON.parse(decodeURIComponent(raw))
@@ -50,12 +48,6 @@ const ProfilePage = () => {
   }, [dispatch])
 
   const userData = cookieUser || data?.user
-
-  useEffect(() => {
-    if (userData) {
-      console.log('User profile response:', userData)
-    }
-  }, [userData])
 
   if (loading) return <p>Loading...</p>
   if (error) return <p>Error: {error}</p>

@@ -26,6 +26,7 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
 import Autocomplete from '@mui/material/Autocomplete'
 import Chip from '@mui/material/Chip'
 import { useDispatch, useSelector } from 'react-redux'
@@ -48,7 +49,7 @@ const courierOptions = [
   { value: 'leopard', label: 'Leopard' },
   { value: 'daewoo', label: 'Daewoo' },
   { value: 'postEx', label: 'PostEx' },
-  { value: 'mp', label: 'M&P' },
+  { value: 'm&p', label: 'M&P' },
   { value: 'tcs', label: 'TCS' }
 ]
 
@@ -56,7 +57,7 @@ const apiCourierToKey = {
   Leopard: 'leopard',
   Daewoo: 'daewoo',
   PostEx: 'postEx',
-  'M&P': 'mp',
+  'M&P': 'm&p',
   TCS: 'tcs',
   None: 'none'
 }
@@ -88,6 +89,8 @@ export default function ZoneSetup({ initialZone = null }) {
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [saving, setSaving] = useState(false)
   const [tabIndex, setTabIndex] = useState(0)
+  const [prioritiesEditable, setPrioritiesEditable] = useState(false)
+  const [editingRowId, setEditingRowId] = useState('')
 
   // Zone options derived from store; keep above effects that depend on them
   const zoneOptions = useMemo(() => (zones || []).map(z => ({ id: z._id || z.id, label: z.name, raw: z })), [zones])
@@ -525,9 +528,14 @@ export default function ZoneSetup({ initialZone = null }) {
     return set
   }, [selectedCities, normalizeCity])
 
-  const filteredCityOptions = useMemo(() => {
-    return cityOptions.filter(opt => !usedCitiesSet.has(opt.label) && !selectedLabelSet.has(opt.label))
-  }, [cityOptions, usedCitiesSet, selectedLabelSet])
+  // const filteredCityOptions = useMemo(() => {
+  //   return cityOptions.filter(opt => !usedCitiesSet.has(opt.label) || !selectedLabelSet.has(opt.label))
+  // }, [cityOptions, usedCitiesSet, selectedLabelSet])
+  console.log(rows, 'rows here')
+  console.log(cityOptions, 'cityOptions here')
+  const filteredCityOptions = cityOptions.filter(
+    opt => !rows.some(row => row.city.toLowerCase() === opt.label.toLowerCase())
+  )
 
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
 
@@ -605,7 +613,12 @@ export default function ZoneSetup({ initialZone = null }) {
           </Grid>
 
           {/* Button aligned right */}
-          <Grid xs={12} md={2} className='flex justify-end'>
+          <Grid xs={12} md={2} className='flex justify-end gap-2'>
+            <Tooltip title='Toggle priority editing for this zone'>
+              <Button variant='outlined' color='secondary' onClick={() => setPrioritiesEditable(p => !p)}>
+                {prioritiesEditable ? 'Lock Priority' : 'Change Priority'}
+              </Button>
+            </Tooltip>
             <Tooltip title='Start a new Zone block'>
               <Button variant='outlined' color='primary' onClick={openNewZone} startIcon={<AddIcon />}>
                 Add Zone
@@ -649,10 +662,9 @@ export default function ZoneSetup({ initialZone = null }) {
               getOptionDisabled={option => usedCitiesSet.has(option.label) || selectedLabelSet.has(option.label)}
               value={(selectedCities || []).map(c => {
                 const label = normalizeCity(c)
-
                 return { label, value: label }
               })}
-              onChange={(_e, newValue) => setSelectedCities(newValue)}
+              onChange={(_e, newValue) => setSelectedCities(newValue || [])}
               filterSelectedOptions
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
@@ -685,12 +697,19 @@ export default function ZoneSetup({ initialZone = null }) {
                     size='small'
                     value={rows[0]?.priority1 || 'none'}
                     onChange={e => setPriorityForAll('priority1', e.target.value)}
+                    disabled={!prioritiesEditable}
                   >
-                    {courierOptions.map(opt => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
+                    {courierOptions.map(opt => {
+                      const p2 = rows[0]?.priority2
+                      const p3 = rows[0]?.priority3
+                      const p4 = rows[0]?.priority4
+                      const taken = [p2, p3, p4].includes(opt.value)
+                      return (
+                        <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
+                          {opt.label}
+                        </MenuItem>
+                      )
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell>
@@ -701,12 +720,19 @@ export default function ZoneSetup({ initialZone = null }) {
                     size='small'
                     value={rows[0]?.priority2 || 'none'}
                     onChange={e => setPriorityForAll('priority2', e.target.value)}
+                    disabled={!prioritiesEditable}
                   >
-                    {courierOptions.map(opt => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
+                    {courierOptions.map(opt => {
+                      const p1 = rows[0]?.priority1
+                      const p3 = rows[0]?.priority3
+                      const p4 = rows[0]?.priority4
+                      const taken = [p1, p3, p4].includes(opt.value)
+                      return (
+                        <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
+                          {opt.label}
+                        </MenuItem>
+                      )
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell>
@@ -717,12 +743,19 @@ export default function ZoneSetup({ initialZone = null }) {
                     size='small'
                     value={rows[0]?.priority3 || 'none'}
                     onChange={e => setPriorityForAll('priority3', e.target.value)}
+                    disabled={!prioritiesEditable}
                   >
-                    {courierOptions.map(opt => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
+                    {courierOptions.map(opt => {
+                      const p1 = rows[0]?.priority1
+                      const p2 = rows[0]?.priority2
+                      const p4 = rows[0]?.priority4
+                      const taken = [p1, p2, p4].includes(opt.value)
+                      return (
+                        <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
+                          {opt.label}
+                        </MenuItem>
+                      )
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell>
@@ -733,12 +766,19 @@ export default function ZoneSetup({ initialZone = null }) {
                     size='small'
                     value={rows[0]?.priority4 || 'none'}
                     onChange={e => setPriorityForAll('priority4', e.target.value)}
+                    disabled={!prioritiesEditable}
                   >
-                    {courierOptions.map(opt => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
+                    {courierOptions.map(opt => {
+                      const p1 = rows[0]?.priority1
+                      const p2 = rows[0]?.priority2
+                      const p3 = rows[0]?.priority3
+                      const taken = [p1, p2, p3].includes(opt.value)
+                      return (
+                        <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
+                          {opt.label}
+                        </MenuItem>
+                      )
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell align='right'>Actions</TableCell>
@@ -755,21 +795,32 @@ export default function ZoneSetup({ initialZone = null }) {
                 rows.map((row, idx) => (
                   <TableRow key={idx}>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        label='Zone'
-                        value={row.zone}
-                        onChange={e => updateRow(row.id, { zone: e.target.value })}
-                      />
+                      <Typography className='font-medium'>{row.zone}</Typography>
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        label='City'
-                        placeholder='Enter city'
-                        value={row.city}
-                        onChange={e => updateRow(row.id, { city: e.target.value })}
-                      />
+                      {editingRowId === row.id ? (
+                        <Autocomplete
+                          autoFocus
+                          fullWidth
+                          disableClearable
+                          options={filteredCityOptions}
+                          getOptionLabel={option => option.label}
+                          isOptionEqualToValue={(option, value) => option.value === value.value}
+                          getOptionDisabled={option => usedCitiesSet.has(option.label)}
+                          defaultValue={{ label: normalizeCity(row.city), value: normalizeCity(row.city) }}
+                          onChange={(_e, newValue) => {
+                            const label = newValue?.label || ''
+                            if (label) updateRow(row.id, { city: label })
+                            setEditingRowId('')
+                          }}
+                          onBlur={() => setEditingRowId('')}
+                          renderInput={params => (
+                            <TextField {...params} fullWidth label='Edit city' placeholder='Search city' />
+                          )}
+                        />
+                      ) : (
+                        <Typography className='font-medium'>{normalizeCity(row.city) || '-'}</Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip label={row.priority1 || 'none'} size='small' />
@@ -784,6 +835,11 @@ export default function ZoneSetup({ initialZone = null }) {
                       <Chip label={row.priority4 || 'none'} size='small' />
                     </TableCell>
                     <TableCell align='right'>
+                      <Tooltip title='Edit city'>
+                        <IconButton color='primary' onClick={() => setEditingRowId(row.id)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title='Delete row'>
                         <IconButton color='error' onClick={() => deleteRow(row.id)}>
                           <DeleteIcon />

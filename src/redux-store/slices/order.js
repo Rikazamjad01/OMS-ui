@@ -135,6 +135,22 @@ export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (o
   }
 })
 
+export const fetchOrderByIds = createAsyncThunk('orders/fetchOrderByIds', async (orderId, { rejectWithValue }) => {
+  try {
+    const response = await getRequest(`orders/${orderId}`)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    const order = response.data || {}
+
+    return order
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
 export const updateOrdersStatusThunk = createAsyncThunk(
   'orders/updateStatus',
   async ({ orderIds, status }, { rejectWithValue }) => {
@@ -156,6 +172,7 @@ export const updateOrdersStatusThunk = createAsyncThunk(
       return {
         orderIds,
         status: response.status,
+        newStatus: status,
         message: response.message
       }
     } catch (error) {
@@ -195,28 +212,40 @@ export const updateOrderProducts = createAsyncThunk(
   }
 )
 
-export const createOrder = createAsyncThunk(
-  'orders/createOrder',
-  async (orderData, { rejectWithValue }) => {
-    try {
-      const response = await postRequest('orders', orderData) // POST /orders
+export const createOrder = createAsyncThunk('orders/createOrder', async (orderData, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('orders', orderData) // POST /orders
 
-      if (!response.status) {
-        return rejectWithValue(response.message)
-      }
-
-      return response.data // backend should return the created order
-    } catch (error) {
-      return rejectWithValue(error.message)
+    if (!response.status) {
+      return rejectWithValue(response.message)
     }
+
+    return response.data // backend should return the created order
+  } catch (error) {
+    return rejectWithValue(error.message)
   }
-)
+})
+
+export const changeCityThunk = createAsyncThunk('orders/changeCity', async ({ id, city }, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('orders/change-city/city', { id, city }, 'patch')
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    return { id, city }
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
 
 const ordersSlice = createSlice({
   name: 'orders',
   initialState: {
     orders: [],
     loading: false,
+    orderIdLoading: false,
     error: null,
     selectedOrders: null,
     selectedCustomer: null,
@@ -290,7 +319,12 @@ const ordersSlice = createSlice({
   extraReducers: builder => {
     builder
       .addCase(fetchOrders.pending, state => {
-        state.loading = true
+        if (state.orders.length == 0) {
+          state.loading = true
+        } else {
+          state.loading = false
+        }
+
         state.error = null
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
@@ -341,14 +375,26 @@ const ordersSlice = createSlice({
         }
       })
       .addCase(fetchOrderById.pending, state => {
-        state.loading = true
+        state.orderIdLoading = true
         state.error = null
       })
       .addCase(fetchOrderById.fulfilled, (state, action) => {
-        state.loading = false
+        state.orderIdLoading = false
         state.selectedOrders = action.payload // store fetched order details
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
+        state.orderIdLoading = false
+        state.error = action.payload
+      })
+      .addCase(fetchOrderByIds.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(fetchOrderByIds.fulfilled, (state, action) => {
+        state.loading = false
+        state.selectedOrders = action.payload // store fetched order details
+      })
+      .addCase(fetchOrderByIds.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
@@ -358,10 +404,11 @@ const ordersSlice = createSlice({
       })
       .addCase(updateOrdersStatusThunk.fulfilled, (state, action) => {
         state.loading = false
-        const { orderIds, status } = action.payload
+        const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-          orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
+          // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
+          orderIds.includes(order.id) ? { ...order, status } : order
         )
 
         if (state.selectedOrders && orderIds.map(String).includes(String(state.selectedOrders.id))) {
@@ -414,6 +461,20 @@ const ordersSlice = createSlice({
         state.loading = false
         state.error = action.payload || action.error.message
       })
+      .addCase(changeCityThunk.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(changeCityThunk.fulfilled, (state, action) => {
+        state.loading = false
+        const { id, city } = action.payload
+
+        state.orders = state.orders.map(order => (order.id === id ? { ...order, city } : order))
+      })
+      .addCase(changeCityThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
   }
 })
 
@@ -437,6 +498,7 @@ export const selectOrdersLoading = state => state.orders.loading
 export const selectOrdersError = state => state.orders.error
 export const selectPagination = state => state.orders.pagination
 export const selectCustomer = state => state.orders.selectedCustomer
+export const selectOrderByIdLoading = state => state.orders.orderIdLoading
 export const selectSelectedProductIds = state => state.orders.selectedProductIds
 
 export const selectCustomerById = (state, customerId) => {

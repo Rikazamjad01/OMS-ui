@@ -127,8 +127,13 @@ const UserListTable = ({ tableData }) => {
 
     return users.map(user => {
       const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email || 'Unknown'
-      const roleName = (user.role?.name || 'subscriber').toLowerCase()
-      const departmentName = user.department?.name || 'standard'
+
+      // Handle role mapping - check for roleName first (from createUserThunk), then role.name, then fallback
+      const roleName = (user.roleName || user.role?.name || 'subscriber').toLowerCase()
+
+      // Handle department mapping - check for departmentName first (from createUserThunk), then department.name, then fallback
+      const departmentName = user.departmentName || user.department?.name || 'standard'
+
       const status = user.isVerified ? 'active' : user.passwordMustChange ? 'pending' : 'inactive'
       const billing = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''
 
@@ -216,7 +221,7 @@ const UserListTable = ({ tableData }) => {
         )
       }),
       columnHelper.accessor('currentPlan', {
-        header: 'Plan',
+        header: 'Department',
         cell: ({ row }) => (
           <Typography className='capitalize' color='text.primary'>
             {row.original.currentPlan}
@@ -224,7 +229,7 @@ const UserListTable = ({ tableData }) => {
         )
       }),
       columnHelper.accessor('billing', {
-        header: 'Billing',
+        header: 'Created at',
         cell: ({ row }) => <Typography>{row.original.billing}</Typography>
       }),
       columnHelper.accessor('status', {

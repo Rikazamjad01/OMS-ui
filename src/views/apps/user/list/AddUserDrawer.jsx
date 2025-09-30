@@ -104,24 +104,10 @@ const AddUserDrawer = props => {
       roleId: data.role, // _id
       departmentId: data.department // _id
     }
-    await dispatch(createUserThunk(payload))
-    // For UI preview in table (no backend call here), add a local row
-    const newUser = {
-      id: (userData?.length && userData?.length + 1) || 1,
-      avatar: `/images/avatars/${Math.floor(Math.random() * 20) + 1}.png`,
-      fullName,
-      username: data.email,
-      email: data.email,
-      role: (roles.find(r => r._id === data.role)?.name || 'subscriber').toLowerCase(),
-      currentPlan: departments.find(d => d._id === data.department)?.name || 'standard',
-      status: 'active',
-      company: formData.company,
-      country: formData.country,
-      contact: formData.contact,
-      billing: userData?.[Math.floor(Math.random() * 50) + 1]?.billing ?? 'Auto Debit'
-    }
+    const result = await dispatch(createUserThunk(payload))
 
-    setData([...(userData ?? []), newUser])
+    // The Redux store will automatically update with the new user from the API response
+    // No need to manually add to local data since we're using Redux state
     handleClose()
     setFormData(initialData)
     resetForm({ firstName: '', lastName: '', email: '', role: '', department: '' })
