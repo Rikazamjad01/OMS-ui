@@ -32,6 +32,9 @@ import {
 import {
   Alert,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   DialogActions,
   InputAdornment,
   Snackbar,
@@ -55,8 +58,10 @@ import {
   fetchOrders,
   updateOrderCommentsAndRemarks,
   selectPagination,
-  updateOrdersStatusThunk
+  updateOrdersStatusThunk,
+  changeCityThunk
 } from '@/redux-store/slices/order'
+import cities from '@/data/cities/cities'
 
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -169,6 +174,13 @@ const getTagColor = tag => {
 
   return chipColors[hash % chipColors.length]
 }
+
+// Build city options similar to zoneSetup
+const cityOptions = (cities || []).map(c =>
+  typeof c === 'string'
+    ? { label: c, value: c }
+    : { label: c?.name || c?.label || '', value: c?.value || c?.name || c?.label || '' }
+)
 
 const mapFiltersToApiFormat = localFilters => {
   const apiFilters = {}
@@ -736,21 +748,56 @@ const OrderListTable = ({
         meta: { width: '180px' },
         cell: ({ row }) => {
           const city = row.original.city
+          const [open, setOpen] = useState(false)
+          const [selectedCity, setSelectedCity] = useState(null)
+
+          const normalizedCity = typeof city === 'string' ? city : city?.label || ''
+
+          const onSubmit = async () => {
+            if (!selectedCity?.label) return
+            await dispatch(changeCityThunk({ id: row.original.id, city: selectedCity.label }))
+            setOpen(false)
+          }
 
           return (
-            <div className='flex flex-col gap-1'>
-              {/* First row: current city value */}
-              <Typography className='font-medium text-gray-800'>{city}</Typography>
+            <>
+              <Typography
+                className='font-medium text-gray-800 cursor-pointer hover:text-primary'
+                onClick={() => {
+                  setSelectedCity(
+                    selectedCity || (normalizedCity ? { label: normalizedCity, value: normalizedCity } : null)
+                  )
+                  setOpen(true)
+                }}
+              >
+                {normalizedCity || '—'}
+              </Typography>
 
-              {/* Second row: "+ Add City" button */}
-              <Chip
-                label={city ? 'Confirm City' : '+ Add City'}
-                variant='outlined'
-                size='small'
-                onClick={() => openCityEditor(row.original.id, city)}
-                className='cursor-pointer'
-              />
-            </div>
+              <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+                <DialogTitle>Select City</DialogTitle>
+                <DialogContent>
+                  <Autocomplete
+                    fullWidth
+                    options={cityOptions}
+                    value={selectedCity}
+                    onChange={(_e, newValue) => setSelectedCity(newValue)}
+                    getOptionLabel={option => option.label}
+                    isOptionEqualToValue={(option, value) => option.value === value.value}
+                    renderInput={params => (
+                      <TextField {...params} fullWidth label='City' placeholder='Search cities and select' />
+                    )}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant='contained' onClick={onSubmit} disabled={!selectedCity?.label}>
+                    Submit
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </>
           )
         }
       },

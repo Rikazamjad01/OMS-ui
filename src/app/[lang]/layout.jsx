@@ -26,8 +26,7 @@ import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
   title: 'Sukoon Wellness',
-  description:
-    'Sukoon Wellness is a platform where you can buy high quality of Oils for your wellness needs.'
+  description: 'Sukoon Wellness is a platform where you can buy high quality of Oils for your wellness needs.'
 }
 
 const RootLayout = async props => {

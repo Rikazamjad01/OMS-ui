@@ -151,7 +151,6 @@ export const fetchOrderByIds = createAsyncThunk('orders/fetchOrderByIds', async 
   }
 })
 
-
 export const updateOrdersStatusThunk = createAsyncThunk(
   'orders/updateStatus',
   async ({ orderIds, status }, { rejectWithValue }) => {
@@ -212,22 +211,31 @@ export const updateOrderProducts = createAsyncThunk(
   }
 )
 
-export const createOrder = createAsyncThunk(
-  'orders/createOrder',
-  async (orderData, { rejectWithValue }) => {
-    try {
-      const response = await postRequest('orders', orderData) // POST /orders
+export const createOrder = createAsyncThunk('orders/createOrder', async (orderData, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('orders', orderData) // POST /orders
 
-      if (!response.status) {
-        return rejectWithValue(response.message)
-      }
-
-      return response.data // backend should return the created order
-    } catch (error) {
-      return rejectWithValue(error.message)
+    if (!response.status) {
+      return rejectWithValue(response.message)
     }
+
+    return response.data // backend should return the created order
+  } catch (error) {
+    return rejectWithValue(error.message)
   }
-)
+})
+
+export const changeCityThunk = createAsyncThunk('orders/changeCity', async ({ id, city }, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('orders/change-city/city', { id, city }, 'patch')
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+    return { id, city }
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -440,6 +448,19 @@ const ordersSlice = createSlice({
         state.pagination.total = (state.pagination.total || 0) + 1
       })
       .addCase(createOrder.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(changeCityThunk.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(changeCityThunk.fulfilled, (state, action) => {
+        state.loading = false
+        const { id, city } = action.payload
+        state.orders = state.orders.map(order => (order.id === id ? { ...order, city } : order))
+      })
+      .addCase(changeCityThunk.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })
