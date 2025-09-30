@@ -137,10 +137,6 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
       .then(() => {
         dispatch(fetchOrderByIds(order.id))
         setOpen(false)
-
-        if (onSuccess) {
-          onSuccess('Order updated successfully!')
-        }
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed to update order: ' + err, severity: 'error' }))
       .finally(() => setIsUpselling(false))

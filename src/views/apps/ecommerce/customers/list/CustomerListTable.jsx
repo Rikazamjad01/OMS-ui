@@ -111,8 +111,6 @@ const CustomerListTable = () => {
   const tableRows = useSelector(selectCustomersTableRows)
   const pagination = useSelector(selectCustomersPagination)
 
-  console.log(pagination.page, 'pagination')
-
   // States
   const [customerUserOpen, setCustomerUserOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
@@ -127,7 +125,7 @@ const CustomerListTable = () => {
       fetchCustomers({
         page: pagination.page,
         perPage: pagination.perPage,
-        search: globalFilter || '' // Add search parameter
+        search: globalFilter || ''
       })
     )
   }, [dispatch, pagination.page, pagination.perPage, globalFilter])

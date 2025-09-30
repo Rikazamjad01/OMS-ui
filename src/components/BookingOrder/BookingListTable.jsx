@@ -368,7 +368,7 @@ const BookingListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchBookingOrder({ page: pagination.currentPage, limit, force: true }))
+      dispatch(fetchBookingOrders({ page: pagination.currentPage, limit, force: true }))
 
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
@@ -791,7 +791,7 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                    
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -1163,7 +1163,8 @@ const BookingListTable = ({
               setGlobalFilter(val)
               onSearchChange?.(val)
             }}
-            placeholder='Search Order'
+            placeholder='Search in booking order'
+            delay={5000}
           />
 
           {/* <FilterModal

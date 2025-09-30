@@ -15,6 +15,7 @@ const api = axios.create({
 const getHeaders = () => {
   const tokens = Cookies.get('token')
   const token = JSON.parse(tokens || '{}')?.accessToken
+  
   // const token =
   //   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM4MmI4ZjZhNDg1MTg3NTJkMDg4MmYiLCJqdGkiOiI3OTU0Nzg4Y2FiZDU5MjgzNWI3MGU5ODE1ZDRiYzg0ZDkwNGUzMDM0ZjM3ZWI1OTlhYjg4YTQ2YzIwYjcxY2IzIiwiaWF0IjoxNzU4MTAzOTkxLCJleHAiOjE3NjU4Nzk5OTF9.ut51S-UVfkpvl_9pw58GDy-gOcKW-CA3dqPOWMpemMA'
 
@@ -117,13 +118,11 @@ export const getProducts = async (params = {}) => {
 
 // Merge two orders
 export const mergeOrders = async orderIds => {
-  if (orderIds.length !== 2) {
-    throw new Error('Merge requires exactly 2 orders')
-  }
 
   return postRequest('orders/merge_order', {
     order1Id: orderIds[0],
-    order2Id: orderIds[1]
+    order2Id: orderIds[1],
+    orderIds: orderIds
   })
 }
 

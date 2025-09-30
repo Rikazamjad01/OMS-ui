@@ -157,18 +157,22 @@ export const updateOrdersStatusThunk = createAsyncThunk(
     try {
       const response = await apiRequest(`orders/status/${status}`, {
         method: 'PATCH',
-        data: { id: orderIds || [] },
-        headers: { 'Content-Type': 'application/json' }
+        data: {
+          id: orderIds || []
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
 
       if (!response.status) {
         return rejectWithValue(response.message)
       }
 
-      // Return the *intended* status we set
       return {
         orderIds,
-        newStatus: status, // instead of overwriting with response.status
+        status: response.status,
+        newStatus: status,
         message: response.message
       }
     } catch (error) {
@@ -241,6 +245,7 @@ const ordersSlice = createSlice({
   initialState: {
     orders: [],
     loading: false,
+    orderIdLoading: false,
     error: null,
     selectedOrders: null,
     selectedCustomer: null,
@@ -314,7 +319,12 @@ const ordersSlice = createSlice({
   extraReducers: builder => {
     builder
       .addCase(fetchOrders.pending, state => {
-        state.loading = true
+        if (state.orders.length == 0) {
+          state.loading = true
+        } else {
+          state.loading = false
+        }
+
         state.error = null
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
@@ -365,15 +375,15 @@ const ordersSlice = createSlice({
         }
       })
       .addCase(fetchOrderById.pending, state => {
-        state.loading = true
+        state.orderIdLoading = true
         state.error = null
       })
       .addCase(fetchOrderById.fulfilled, (state, action) => {
-        state.loading = false
+        state.orderIdLoading = false
         state.selectedOrders = action.payload // store fetched order details
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
-        state.loading = false
+        state.orderIdLoading = false
         state.error = action.payload
       })
       .addCase(fetchOrderByIds.pending, state => {
@@ -388,17 +398,27 @@ const ordersSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+      .addCase(updateOrdersStatusThunk.pending, state => {
+        // state.loading = false
+        state.error = null
+      })
       .addCase(updateOrdersStatusThunk.fulfilled, (state, action) => {
         state.loading = false
-        const { orderIds, newStatus } = action.payload
+        const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-          orderIds.map(String).includes(String(order.id)) ? { ...order, status: newStatus } : order
+          
+          // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
+          orderIds.includes(order.id) ? { ...order, status } : order
         )
 
         if (state.selectedOrders && orderIds.map(String).includes(String(state.selectedOrders.id))) {
-          state.selectedOrders = { ...state.selectedOrders, status: newStatus }
+          state.selectedOrders = { ...state.selectedOrders, status }
         }
+      })
+      .addCase(updateOrdersStatusThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
       })
       .addCase(updateOrderProducts.pending, state => {
         // state.loading = true
@@ -479,6 +499,7 @@ export const selectOrdersLoading = state => state.orders.loading
 export const selectOrdersError = state => state.orders.error
 export const selectPagination = state => state.orders.pagination
 export const selectCustomer = state => state.orders.selectedCustomer
+export const selectOrderByIdLoading = state => state.orders.orderIdLoading
 export const selectSelectedProductIds = state => state.orders.selectedProductIds
 
 export const selectCustomerById = (state, customerId) => {

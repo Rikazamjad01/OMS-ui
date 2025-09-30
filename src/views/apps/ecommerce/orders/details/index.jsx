@@ -11,12 +11,12 @@ import ShippingActivity from './ShippingActivityCard'
 import CustomerDetails from './CustomerDetailsCard'
 import OrderComments from './orderComments'
 
-import { fetchOrderById, selectOrdersLoading, selectOrdersError, selectOrderById } from '@/redux-store/slices/order'
+import { fetchOrderById, selectOrderByIdLoading, selectOrdersError, selectOrderById } from '@/redux-store/slices/order'
 
 const OrderDetails = ({ id }) => {
   const dispatch = useDispatch()
 
-  const loading = useSelector(selectOrdersLoading)
+  const loading = useSelector(selectOrderByIdLoading)
   const error = useSelector(selectOrdersError)
   const order = useSelector(state => state.orders.selectedOrders)
 

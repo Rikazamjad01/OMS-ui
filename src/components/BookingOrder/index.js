@@ -25,8 +25,9 @@ const BookingOrder = () => {
       fetchBookingOrder({
         page: pagination.currentPage || 1,
         limit: pagination.itemsPerPage || 25,
-        search: search,
-        filters: filters
+        search,
+        filters,
+        force: true
       })
     )
   }, [dispatch, search, filters, pagination.currentPage, pagination.itemsPerPage])

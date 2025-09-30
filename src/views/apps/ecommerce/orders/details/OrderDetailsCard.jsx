@@ -69,6 +69,17 @@ const OrderTable = ({ data, onSelectionChange }) => {
   const [editingDiscountRowId, setEditingDiscountRowId] = useState(null)
   const [discountInput, setDiscountInput] = useState('')
 
+  // Ensure editing state is cleared if the row disappears (e.g., after cancel or data refresh)
+  useEffect(() => {
+    if (editingDiscountRowId == null) return
+    const exists = Array.isArray(data) && data.some(r => String(r.id) === String(editingDiscountRowId))
+
+    if (!exists) {
+      setEditingDiscountRowId(null)
+      setDiscountInput('')
+    }
+  }, [data, editingDiscountRowId])
+
   const columns = useMemo(
     () => [
       {
@@ -121,8 +132,8 @@ const OrderTable = ({ data, onSelectionChange }) => {
                 key={`discount-input-${row.original.id}`}
                 size='small'
                 type='number'
-                value={discountInput}
-                onChange={e => setDiscountInput(e.target.value)}
+                value={discountInput ?? ''}
+                onChange={e => setDiscountInput(e.target.value ?? '')}
                 autoFocus
                 inputProps={{ min: 0, step: '1' }}
                 onClick={e => e.stopPropagation()}
@@ -375,9 +386,6 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             dialogProps={{
               order,
               products: orderProducts, // Pass transformed products here
-              onSuccess: (message, severity = 'success') => {
-                setSnackbar({ open: true, message, severity })
-              }
             }}
           />
         }
