@@ -12,7 +12,14 @@ import Typography from '@mui/material/Typography'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 
-import { fetchOrderById, selectSelectedProductIds, updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import {
+  fetchOrderById,
+  fetchOrders,
+  selectSelectedProductIds,
+  selectPagination,
+  updateOrdersStatusThunk,
+  fetchOrderByIds
+} from '@/redux-store/slices/order'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import { selectSelectedProducts } from '@/redux-store/slices/products'
@@ -37,7 +44,7 @@ export const statusChipColor = {
 
 const OrderDetailHeader = ({ order: initialOrder, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
-
+  const pagination = useSelector(selectPagination)
   console.log(selectSelectedProducts, 'selectedProductIds in OrderDetailHeader')
   const dispatch = useDispatch()
   const { lang: locale } = useParams()
@@ -84,8 +91,8 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
         })
       }
 
-      dispatch(fetchOrderById(id))
-
+      dispatch(fetchOrderByIds(id))
+      dispatch(fetchOrders({ page: pagination.page, limit: pagination.limit, force: true }))
       // dispatch(fetchOrders({ page: pagination.page, limit: pagination.limit }))
     } catch (err) {
       // console.error('Cancel failed:', err)

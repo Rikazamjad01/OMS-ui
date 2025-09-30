@@ -284,7 +284,7 @@ const OrderListTable = ({
   loading = false,
   error = null,
   page,
-  limit,
+  limit = 25,
   onPageChange,
   onLimitChange,
   onSearchChange,
@@ -1124,9 +1124,9 @@ const OrderListTable = ({
         <div className='flex max-sm:flex-col sm:items-center gap-4'>
           <CustomTextField
             select
-            value={limit}
+            value={limit ?? 25}
             onChange={async e => {
-              const newLimit = Number(e.target.value)
+              const newLimit = Number(e.target.value) || 25
 
               // console.log('newLimit', newLimit)
               onLimitChange?.(newLimit)
@@ -1418,8 +1418,8 @@ const OrderListTable = ({
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={pagination.itemsPerPage || limit} // Use the limit prop directly, not pagination.itemsPerPage
-        onRowsPerPageChange={e => onLimitChange(Number(e.target.value))}
+        rowsPerPage={Number(pagination.itemsPerPage || limit || 25)} // Ensure controlled value
+        onRowsPerPageChange={e => onLimitChange?.(Number(e.target.value) || 25)}
         rowsPerPageOptions={[25, 50, 100]}
       />
 

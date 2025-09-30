@@ -19,7 +19,7 @@ import classnames from 'classnames'
 import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
-import { fetchOrderById, splitOrderProductSetting } from '@/redux-store/slices/order'
+import { fetchOrderById, fetchOrderByIds, splitOrderProductSetting } from '@/redux-store/slices/order'
 import { generateAirwayBill, fetchBookingOrder } from '@/redux-store/slices/bookingSlice'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
@@ -103,7 +103,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
 
         if (response.status) {
           // dispatch(splitOrderProductSetting(enrichedResponse))
-          dispatch(fetchOrderById(orderId))
+          dispatch(fetchOrderByIds(orderId))
         }
       } else if (isDownloadLoadSheet) {
         onSuccess?.(payload) // Call site can trigger the actual download
