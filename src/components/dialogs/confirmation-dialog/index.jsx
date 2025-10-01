@@ -20,7 +20,7 @@ import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
 import { fetchOrderById, fetchOrderByIds, splitOrderProductSetting } from '@/redux-store/slices/order'
-import { generateAirwayBill, fetchBookingOrder } from '@/redux-store/slices/bookingSlice'
+import { generateAirwayBill, fetchBookingOrder, fetchBookingOrders } from '@/redux-store/slices/bookingSlice'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
@@ -29,6 +29,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [resultTitle, setResultTitle] = useState(null)
   const [resultSubtitle, setResultSubtitle] = useState(null)
   const [awbResult, setAwbResult] = useState(null) // { successes: string[], failures: [{id,error,status}] }
+  const [submitting, setSubmitting] = useState(false)
 
   const dispatch = useDispatch()
 
@@ -36,6 +37,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [quantities, setQuantities] = useState({})
   const isMerge = type === 'merge-orders' || type === 'merge-order'
   const isSplit = type === 'split-order'
+  const isUpsell = type === 'upsell-order'
   const isGenerateAwb = type === 'generate-airway-bill'
   const isGenerateAirwayBill = type === 'generate-airway-bill'
   const isDownloadLoadSheet = type === 'download-load-sheet'
@@ -65,19 +67,17 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   }
 
   const handleConfirmation = async value => {
-    // Close the first dialog either way
-    setOpen(false)
-
     if (!value) {
       setUserInput(false)
       setResultTitle(null)
       setResultSubtitle(null)
       setSecondDialog(true)
-
+      setOpen(false)
       return
     }
 
     try {
+      setSubmitting(true)
       if (isMerge) {
         const ids = payload?.orderIds ?? []
 
@@ -138,13 +138,21 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         }
 
         // Refresh bookings list
-        dispatch(fetchBookingOrder({ page: 1, limit: 25, force: true }))
+        dispatch(fetchBookingOrders({ page: 1, limit: 25, force: true }))
       } else if (type === 'confirm-city') {
         const { orderId, city } = payload
 
         if (!orderId || !city) throw new Error('Order ID and city are required.')
 
         await dispatch(confirmCity({ orderId, city })).unwrap()
+      } else if (isUpsell) {
+        const orderId = payload?.orderId
+        const products = payload?.products
+
+        if (!orderId || !products) throw new Error('Order ID and products are required for upsell.')
+
+        // Let parent handle actual API dispatch
+        onSuccess?.(payload)
       }
 
       // Success
@@ -161,6 +169,9 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
       setResultSubtitle(msg)
       setSecondDialog(true)
       onError?.(err)
+    } finally {
+      setSubmitting(false)
+      setOpen(false)
     }
   }
 
@@ -192,6 +203,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Generate Airway Bill for selected orders?'
       case 'confirm-city':
         return `Do you want to confirm "${payload?.city}" city for this order?`
+      case 'upsell-order':
+        return 'Do you really want to upsell this order?'
       default:
         return 'Are you sure?'
     }
@@ -221,6 +234,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Generate AWB'
       case 'confirm-city':
         return 'Yes, Confirm City!'
+      case 'upsell-order':
+        return 'Yes, Upsell Order!'
       default:
         return 'Yes'
     }
@@ -254,6 +269,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return userInput ? 'AWB Generation Result' : 'AWB Generation Result'
       case 'confirm-city':
         return 'City Confirmed'
+      case 'upsell-order':
+        return 'Upsell Processed'
       default:
         return 'Done'
     }
@@ -285,6 +302,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return resultSubtitle || (userInput ? 'AWB generated successfully.' : 'Some AWBs failed.')
         case 'confirm-city':
           return 'City confirmed successfully.'
+        case 'upsell-order':
+          return 'Order upsell process initiated.'
         default:
           return 'Operation completed successfully.'
       }
@@ -313,6 +332,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Airway Bill Generation Cancelled'
         case 'confirm-city':
           return 'City Confirmation Cancelled'
+        case 'upsell-order':
+          return 'Order Upsell Cancelled'
         default:
           return 'Action Cancelled'
       }
@@ -393,14 +414,27 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           </Wrapper>
         </DialogContent>
         <DialogActions className='flex justify-center gap-4 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' onClick={() => handleConfirmation(true)} className='max-sm:is-full'>
-            {getConfirmButtonLabel()}
+          <Button
+            variant='contained'
+            onClick={() => handleConfirmation(true)}
+            className='max-sm:is-full'
+            disabled={submitting}
+          >
+            {submitting ? (
+              <span className='flex items-center gap-2'>
+                <i className='bx-loader-alt animate-spin' />
+                Processing...
+              </span>
+            ) : (
+              getConfirmButtonLabel()
+            )}
           </Button>
           <Button
             variant='tonal'
             color='secondary'
             onClick={() => handleConfirmation(false)}
             className='max-sm:is-full'
+            disabled={submitting}
           >
             Cancel
           </Button>
