@@ -15,6 +15,9 @@ import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import TablePagination from '@mui/material/TablePagination'
+import Drawer from '@mui/material/Drawer'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -44,6 +47,7 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+import OrderDetails from '@/views/apps/ecommerce/orders/details'
 
 export const paymentStatus = {
   paid: { text: 'Paid', color: 'success' },
@@ -99,6 +103,8 @@ const OrderListTable = ({ customerData }) => {
   // States
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOrderId, setDetailsOrderId] = useState(null)
 
   // Hooks
   const { lang: locale } = useParams()
@@ -140,9 +146,14 @@ const OrderListTable = ({ customerData }) => {
         header: 'Order',
         cell: ({ row }) => (
           <Typography
-            component={Link}
-            href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
+            component='p'
+            // href={getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale)}
             color='primary.main'
+            onClick={() => {
+              setDetailsOrderId(row.original.id)
+              setDetailsOpen(true)
+            }}
+            className='cursor-pointer'
           >{`${row.original.name}`}</Typography>
         )
       }),
@@ -178,8 +189,13 @@ const OrderListTable = ({ customerData }) => {
                 {
                   text: 'View',
                   icon: 'bx-show',
-                  href: getLocalizedUrl(`/apps/ecommerce/orders/details/${row.original.id}`, locale),
-                  linkProps: { className: 'flex items-center gap-2 is-full plb-2 pli-5' }
+                  menuItemProps: {
+                    onClick: () => {
+                      setDetailsOrderId(row.original.id)
+                      setDetailsOpen(true)
+                    },
+                    className: 'flex items-center gap-2 is-full plb-2 pli-5'
+                  }
                 }
               ]}
             />
@@ -293,6 +309,22 @@ const OrderListTable = ({ customerData }) => {
           table.setPageIndex(page)
         }}
       />
+      {/* Right-side Drawer for order details */}
+      <Drawer
+        anchor='right'
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: '80vw' } } }}
+      >
+        <Box className='p-4 overflow-auto' sx={{ height: '100%' }}>
+          <div className='flex justify-end'>
+            <IconButton onClick={() => setDetailsOpen(false)} aria-label='Close'>
+              <i className='bx-x text-2xl' />
+            </IconButton>
+          </div>
+          {detailsOrderId ? <OrderDetails id={detailsOrderId} /> : null}
+        </Box>
+      </Drawer>
     </Card>
   )
 }

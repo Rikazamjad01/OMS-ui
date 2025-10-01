@@ -277,8 +277,6 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
         </DialogContent>
 
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
-
-
           <OpenDialogOnElementClick
             element={Button}
             elementProps={{

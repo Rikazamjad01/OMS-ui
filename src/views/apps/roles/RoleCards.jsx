@@ -17,19 +17,23 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { getAllRoles } from '@/redux-store/slices/roleSlice'
 import Cookies from 'js-cookie'
+import { checkPermission } from '@/hooks/Permissions'
 
 const RoleCards = () => {
   // Vars
+  const canEditRole = checkPermission('role.update')
+
   const typographyProps = {
     children: 'Edit Role',
     component: Link,
     color: 'primary.main',
-    onClick: e => e.preventDefault()
+    onClick: e => e.preventDefault(),
+    disabled: !canEditRole
   }
 
   const permissionsString = Cookies.get('user')
   const user = JSON.parse(permissionsString)
-  const permissions = user?.permissions || []
+  const canAddRole = checkPermission('role.create')
 
   const CardProps = {
     className: 'cursor-pointer bs-full',
@@ -43,7 +47,7 @@ const RoleCards = () => {
         <Grid size={{ xs: 6 }}>
           <CardContent>
             <div className='flex flex-col items-end gap-4 text-right'>
-              <Button variant='contained' size='small'>
+              <Button variant='contained' size='small' disabled={!canAddRole}>
                 Add New Role
               </Button>
               <Typography>
@@ -93,6 +97,7 @@ const RoleCards = () => {
                       elementProps={typographyProps}
                       dialog={RoleDialog}
                       dialogProps={{ title: role?.name, role }}
+                      disabled={canEditRole}
                     />
                   </div>
                 </div>

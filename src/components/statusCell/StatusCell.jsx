@@ -9,23 +9,23 @@ const StatusCell = ({ row, onStatusChange }) => {
   const [statusArray, setStatusArray] = useState(orderStatusArray)
   const open = Boolean(anchorEl)
   useEffect(() => {
-    if (row.original.status.toLowerCase() == 'pending') {
+    if ((row.original.status || '').toLowerCase() == 'pending') {
       setStatusArray(
         orderStatusArray.filter(
           status => status.value == 'confirmed' || status.value == 'processing' || status.value == 'cancelled'
         )
       )
     }
-    if (row.original.status.toLowerCase() == 'confirmed') {
+    if ((row.original.status || '').toLowerCase() == 'confirmed') {
       setStatusArray(orderStatusArray.filter(status => status.value == 'onWay' || status.value == 'processing'))
     }
-    if (row.original.status.toLowerCase() == 'processing') {
+    if ((row.original.status || '').toLowerCase() == 'processing') {
       setStatusArray(orderStatusArray.filter(status => status.value == 'onWay'))
     }
-    if (row.original.status.toLowerCase() == 'cancelled') {
+    if ((row.original.status || '').toLowerCase() == 'cancelled') {
       setStatusArray(orderStatusArray.filter(status => status.value == 'pending'))
     }
-    if (row.original.status.toLowerCase() == 'onway') {
+    if ((row.original.status || '').toLowerCase() == 'onway') {
       setStatusArray([])
     }
   }, [row.original.status])
@@ -46,9 +46,9 @@ const StatusCell = ({ row, onStatusChange }) => {
   return (
     <>
       <Chip
-        label={statusChipColor[row.original.status]?.text || row.original.status}
+        label={statusChipColor[row.original.status || '']?.text || row.original.status}
         // color={'black'}
-        color={statusChipColor[row.original.status]?.color || 'primary'}
+        color={statusChipColor[row.original.status || '']?.color || 'primary'}
         variant='tonal'
         size='small'
         className='text-black'
@@ -62,7 +62,7 @@ const StatusCell = ({ row, onStatusChange }) => {
             <MenuItem key={status.value} onClick={() => handleStatusChange(status.value)}>
               <Chip
                 label={status.label}
-                color={statusChipColor[status.value]?.color || 'primary'}
+                color={statusChipColor[status.value || '']?.color || 'primary'}
                 variant='tonal'
                 size='small'
               />
