@@ -114,59 +114,25 @@ export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
   label: statusChipColor[key].text
 }))
 
-export const pakistanCities = {
-  karachi: { text: 'Karachi', color: 'primary', colorClassName: 'text-primary' },
-  lahore: { text: 'Lahore', color: 'secondary', colorClassName: 'text-secondary' },
-  islamabad: { text: 'Islamabad', color: 'success', colorClassName: 'text-success' },
-  faisalabad: { text: 'Faisalabad', color: 'warning', colorClassName: 'text-warning' },
-  rawalpindi: { text: 'Rawalpindi', color: 'info', colorClassName: 'text-info' },
-  multan: { text: 'Multan', color: 'error', colorClassName: 'text-error' },
-  peshawar: { text: 'Peshawar', color: 'primary', colorClassName: 'text-primary' },
-  quetta: { text: 'Quetta', color: 'secondary', colorClassName: 'text-secondary' },
-  sialkot: { text: 'Sialkot', color: 'success', colorClassName: 'text-success' },
-  gujranwala: { text: 'Gujranwala', color: 'warning', colorClassName: 'text-warning' },
-  hyderabad: { text: 'Hyderabad', color: 'info', colorClassName: 'text-info' },
-  sukkur: { text: 'Sukkur', color: 'error', colorClassName: 'text-error' },
-  bahawalpur: { text: 'Bahawalpur', color: 'primary', colorClassName: 'text-primary' },
-  abbottabad: { text: 'Abbottabad', color: 'secondary', colorClassName: 'text-secondary' },
-  mianwali: { text: 'Mianwali', color: 'success', colorClassName: 'text-success' },
-  jhang: { text: 'Jhang', color: 'warning', colorClassName: 'text-warning' },
-  deraGhaziKhan: { text: 'Dera Ghazi Khan', color: 'info', colorClassName: 'text-info' },
-  larkana: { text: 'Larkana', color: 'error', colorClassName: 'text-error' },
-  swat: { text: 'Swat', color: 'primary', colorClassName: 'text-primary' },
-  gilgit: { text: 'Gilgit', color: 'secondary', colorClassName: 'text-secondary' },
-  kasur: { text: 'Kasur', color: 'success', colorClassName: 'text-success' },
-  sheikhupura: { text: 'Sheikhupura', color: 'warning', colorClassName: 'text-warning' },
-  okara: { text: 'Okara', color: 'info', colorClassName: 'text-info' },
-  hafizabad: { text: 'Hafizabad', color: 'error', colorClassName: 'text-error' },
-  narowal: { text: 'Narowal', color: 'primary', colorClassName: 'text-primary' },
-  khushab: { text: 'Khushab', color: 'secondary', colorClassName: 'text-secondary' },
-  vehari: { text: 'Vehari', color: 'success', colorClassName: 'text-success' },
-  sargodha: { text: 'Sargodha', color: 'warning', colorClassName: 'text-warning' },
-  chiniot: { text: 'Chiniot', color: 'info', colorClassName: 'text-info' },
-  khairpur: { text: 'Khairpur', color: 'error', colorClassName: 'text-error' },
-  nawabshah: { text: 'Nawabshah', color: 'primary', colorClassName: 'text-primary' },
-  mirpurkhas: { text: 'Mirpurkhas', color: 'secondary', colorClassName: 'text-secondary' },
-  gwadar: { text: 'Gwadar', color: 'success', colorClassName: 'text-success' },
-  khuzdar: { text: 'Khuzdar', color: 'warning', colorClassName: 'text-warning' },
-  deraIsmailKhan: { text: 'Dera Ismail Khan', color: 'info', colorClassName: 'text-info' },
-  mardan: { text: 'Mardan', color: 'error', colorClassName: 'text-error' },
-  charsadda: { text: 'Charsadda', color: 'primary', colorClassName: 'text-primary' },
-  kohat: { text: 'Kohat', color: 'secondary', colorClassName: 'text-secondary' },
-  muzaffarabad: { text: 'Muzaffarabad', color: 'success', colorClassName: 'text-success' },
-  skardu: { text: 'Skardu', color: 'warning', colorClassName: 'text-warning' },
-  bannu: { text: 'Bannu', color: 'info', colorClassName: 'text-info' },
-  Nowshera: { text: 'Nowshera', color: 'error', colorClassName: 'text-error' },
-  kandhkot: { text: 'Kandhkot', color: 'primary', colorClassName: 'text-primary' },
-  khanewal: { text: 'Khanewal', color: 'secondary', colorClassName: 'text-secondary' },
-  chitral: { text: 'Chitral', color: 'success', colorClassName: 'text-success' },
-  kotli: { text: 'Kotli', color: 'warning', colorClassName: 'text-warning' },
-  hayderabad: { text: 'Hayderabad', color: 'info', colorClassName: 'text-info' },
-  Rkniwal: { text: 'Rkniwal', color: 'error', colorClassName: 'text-error' },
-  Pattoki: { text: 'Pattoki', color: 'primary', colorClassName: 'text-primary' }
+const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
+
+function convertCities(cities = []) {
+  return cities.reduce((acc, name, index) => {
+    if (!name) return acc
+
+    const key = name.toLowerCase().replace(/\s+/g, '_')
+
+    acc[key] = {
+      text: name,
+      color: chipColors[index % chipColors.length], // rotate colors
+      colorClassName: `text-${chipColors[index % chipColors.length]}`
+    }
+
+    return acc
+  }, {})
 }
 
-const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info']
+export const pakistanCities = convertCities(cities)
 
 const getTagColor = tag => {
   if (!tag) return 'default'
@@ -251,7 +217,7 @@ export const normalizePaymentMethod = (names = []) => {
 // }
 
 /* -------------------------- small components ------------------------ */
-const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, onEnter, ...props }) => {
+const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnter, ...props }) => {
   const [value, setValue] = useState(initialValue ?? '')
 
   useEffect(() => {
@@ -294,8 +260,6 @@ const OrderListTable = ({
   const dispatch = useDispatch()
   const pagination = useSelector(selectPagination)
 
-  console.log(pagination, 'pagination')
-
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
@@ -304,6 +268,7 @@ const OrderListTable = ({
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsOrderId, setDetailsOrderId] = useState(null)
+
   const openDetails = id => {
     setDetailsOrderId(id)
     setDetailsOpen(true)
@@ -432,7 +397,7 @@ const OrderListTable = ({
           : Array.isArray(order.tags)
             ? order.tags.filter(Boolean)
             : []
-      console.log(order.address, 'order.address')
+
       return {
         id: order.id,
         orderNumber: order?.name?.replace('#', ''),
@@ -475,13 +440,13 @@ const OrderListTable = ({
       </CustomAvatar>
     )
   }
+  console.log(tagsMap, '---tagsMap---')
 
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
 
-    if (!tagPayload || !tagPayload.trim()) {
+    if (!tagPayload) {
       setAlert({ open: true, message: 'Tag cannot be empty.', severity: 'error' })
-
       return
     }
 
@@ -489,19 +454,28 @@ const OrderListTable = ({
 
     if (!orderId) return
 
-    if (!tagPayload) {
-      // console.warn('No tag to update, skipping request.')
-
-      return
-    }
-
     try {
       setLoadings(true)
+
+      setTagsMap(prev => {
+        const previousTags = prev[orderId] ?? []
+
+        // const merged = Array.from(new Set([...previousTags, tagPayload]))
+
+        // Immediately update UI
+        return {
+          ...prev,
+          [orderId]: newTag
+        }
+      })
+
+      // Send the full tag list (previous + new) to backend
+      const updatedTags = tagsMap[orderId] ? Array.from(new Set([...tagsMap[orderId], tagPayload])) : [tagPayload]
 
       const result = await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: tagPayload
+          tags: updatedTags.join(',') // or send as array if your API accepts
         })
       ).unwrap()
 
@@ -511,25 +485,6 @@ const OrderListTable = ({
         severity: 'success'
       })
 
-      // Normalize to array for UI display, but it's still just one tag
-      const normalizedTags =
-        typeof result.tags === 'string'
-          ? result.tags
-              .split(/[,|\n]+/)
-              .map(t => t.trim())
-              .filter(Boolean)
-          : [tagPayload]
-
-      setTagsMap(prev => {
-        const previousTags = prev[orderId] ?? []
-        const merged = Array.from(new Set([...previousTags, ...normalizedTags]))
-
-        return {
-          ...prev,
-          [orderId]: merged
-        }
-      })
-
       closeTagEditor()
     } catch (err) {
       setAlert({
@@ -537,8 +492,6 @@ const OrderListTable = ({
         message: err?.message || 'Failed to update tag.',
         severity: 'error'
       })
-
-      // console.error('Failed to update tag:', err)
     } finally {
       setLoadings(false)
     }
@@ -750,6 +703,7 @@ const OrderListTable = ({
         meta: { width: '250px' },
         cell: ({ row }) => {
           const address = row.original.address
+
           return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
         }
       },
@@ -786,7 +740,7 @@ const OrderListTable = ({
 
               <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
                 <DialogTitle>Select City</DialogTitle>
-                <DialogContent>
+                <DialogContent className='pt-2'>
                   <Autocomplete
                     fullWidth
                     options={cityOptions}
@@ -816,15 +770,12 @@ const OrderListTable = ({
         accessorKey: 'tags',
         header: 'Tags',
         meta: { width: '250px' },
-        cell: ({ row }) => {
-          const originalTags = Array.isArray(row.original.tags)
-            ? row.original.tags
-            : row.original.tags
-              ? [row.original.tags]
-              : []
 
-          const displayedTags = tagsMap[row.original.id] ?? originalTags
-          const hasTags = displayedTags && displayedTags.length > 0
+        cell: ({ row }) => {
+          const originalTags = Array.isArray(row.original.tags) ? row.original.tags : []
+
+          // const displayedTags = tagsMap[row.original.id] ?? originalTags
+          const hasTags = originalTags.length > 0
 
           return (
             <div className='flex flex-col gap-1'>
@@ -839,7 +790,7 @@ const OrderListTable = ({
                 }}
               >
                 {hasTags ? (
-                  displayedTags.map((tag, i) => (
+                  originalTags.map((tag, i) => (
                     <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
                   ))
                 ) : (
@@ -853,7 +804,7 @@ const OrderListTable = ({
                   label='+ Add Tag'
                   variant='outlined'
                   size='small'
-                  onClick={() => openTagEditor(row.original.id, displayedTags)}
+                  onClick={() => openTagEditor(row.original.id, originalTags)}
                 />
               </div>
             </div>
@@ -927,22 +878,25 @@ const OrderListTable = ({
   const table = useReactTable({
     data,
     columns,
-    state: { rowSelection, globalFilter, columnFilters },
+
+    // state: { rowSelection, globalFilter, columnFilters },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
-    onColumnFiltersChange: setColumnFilters,
-    filterFns: {
-      dateRange: dateRangeFilterFn,
-      amountRange: amountRangeFilterFn
-    },
+
+    // onColumnFiltersChange: setColumnFilters,
+    // filterFns: {
+    //   dateRange: dateRangeFilterFn,
+    //   amountRange: amountRangeFilterFn
+    // },
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    globalFilterFn: fuzzyFilter,
+
+    // getFacetedRowModel: getFacetedRowModel(),
+    // getFilteredRowModel: getFilteredRowModel(),
+    // getFacetedUniqueValues: getFacetedUniqueValues(),
+    // getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    // globalFilterFn: fuzzyFilter,
     manualPagination: true
 
     // pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
@@ -1029,6 +983,7 @@ const OrderListTable = ({
               onSearchChange?.(val)
             }}
             placeholder='Search Order'
+            debounce={1000}
           />
 
           {/* <FilterModal
@@ -1303,14 +1258,7 @@ const OrderListTable = ({
             value.map((option, index) => {
               const props = getTagProps({ index })
 
-              return (
-                <Chip
-                  {...props}
-                  key={option.value || index} // override key
-                  variant='outlined'
-                  label={option.label}
-                />
-              )
+              return <Chip {...props} key={option.value || index} variant='outlined' label={option.label} />
             })
           }
           renderInput={params => <TextField {...params} fullWidth placeholder='City' label='City' size='medium' />}

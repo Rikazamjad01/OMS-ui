@@ -52,6 +52,8 @@ import { getLocalizedUrl } from '@/utils/i18n'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
+import { checkPermission } from '@/hooks/Permissions'
+import { toast } from 'react-toastify'
 
 // Styled Components
 const Icon = styled('i')({})
@@ -261,10 +263,15 @@ const UserListTable = ({ tableData }) => {
             <IconButton
               onClick={() => {
                 // Find the full user object by id from Redux allUsers
-                const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+                if (canEditUser) {
+                  const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
 
-                setSelectedUser(full || null)
-                setEditUserOpen(true)
+                  setSelectedUser(full || null)
+                  setEditUserOpen(true)
+                } else {
+                  toast.error('You are not authorized to edit this user')
+                  return
+                }
               }}
             >
               <i className='bx-edit text-textSecondary text-[22px]' />
@@ -336,7 +343,8 @@ const UserListTable = ({ tableData }) => {
   const currentPageZeroBased = Math.max(0, Number(allUsersPagination.page) - 1 || 0)
   const currentLimit = Math.max(1, Number(allUsersPagination.limit) || 10)
   const totalCount = Math.max(0, Number(allUsersPagination.total) || 0)
-
+  const canAddUser = checkPermission('user.create')
+  const canEditUser = checkPermission('user.update')
   return (
     <>
       <Card>
@@ -378,6 +386,7 @@ const UserListTable = ({ tableData }) => {
               startIcon={<i className='bx-plus' />}
               onClick={() => setAddUserOpen(!addUserOpen)}
               className='max-sm:is-full'
+              disabled={!canAddUser}
             >
               Add New User
             </Button>

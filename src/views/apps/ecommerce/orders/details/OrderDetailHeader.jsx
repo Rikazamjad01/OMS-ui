@@ -45,7 +45,7 @@ export const statusChipColor = {
 const OrderDetailHeader = ({ order: initialOrder, id }) => {
   const selectedProductIds = useSelector(selectSelectedProductIds)
   const pagination = useSelector(selectPagination)
-  console.log(selectSelectedProducts, 'selectedProductIds in OrderDetailHeader')
+
   const dispatch = useDispatch()
   const { lang: locale } = useParams()
   const router = useRouter()
@@ -54,7 +54,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
 
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: 'Hello everyonwedfad',
+    message: 'Hello everyone',
     severity: 'success'
   })
 
@@ -69,8 +69,6 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
 
     return order.line_items.length > 1
   })()
-
-  console.log(selectedProductIds, 'selectedProductIds here')
 
   const handleCancelOrder = async () => {
     try {
@@ -93,6 +91,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
 
       dispatch(fetchOrderByIds(id))
       dispatch(fetchOrders({ page: pagination.page, limit: pagination.limit, force: true }))
+
       // dispatch(fetchOrders({ page: pagination.page, limit: pagination.limit }))
     } catch (err) {
       // console.error('Cancel failed:', err)

@@ -1,5 +1,5 @@
-import { getRequest, postRequest } from '@/utils/api'
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { getRequest, postRequest } from '@/utils/api'
 
 const initialState = {
   bookingOrder: [],
@@ -27,12 +27,14 @@ export const fetchBookingOrder = createAsyncThunk(
         currentData.length > 0 &&
         state.booking.pagination.currentPage === page &&
         state.booking.pagination.itemsPerPage === limit &&
-        JSON.stringify(state.booking.lastFilters) === JSON.stringify(filters)
+        JSON.stringify(state.booking.lastFilters) === JSON.stringify(filters) &&
+        state.booking.lastSearch === search
       ) {
         return null // Indicate no fetch needed
       }
 
       const filterParams = {}
+
       console.log('filters', filters)
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
@@ -83,7 +85,8 @@ export const fetchBookingOrder = createAsyncThunk(
         page: data.pagination?.page || page,
         limit: data.pagination?.limit || limit,
         orderStats: data.pagination,
-        filters // Store the filters used for this request
+        filters, // Store the filters used for this request
+        search,
       }
     } catch (error) {
       return rejectWithValue(error.message)
@@ -111,6 +114,7 @@ export const fetchBookingOrders = createAsyncThunk(
       }
 
       const filterParams = {}
+
       console.log('filters', filters)
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
@@ -174,9 +178,11 @@ export const courierAssignment = createAsyncThunk(
   async ({ orderId, courier, reason }, { rejectWithValue }) => {
     try {
       const response = await postRequest(`booking/assign-courier`, { orderId, courier, reason })
+
       if (!response.status) {
         return rejectWithValue(response.message)
       }
+
       return response.data
     } catch (error) {
       return rejectWithValue(error.message)
@@ -189,9 +195,11 @@ export const generateAirwayBill = createAsyncThunk(
   async ({ orderIds }, { rejectWithValue }) => {
     try {
       const response = await postRequest('booking/generate-awb', { loadSheetId: orderIds })
+
       if (!response.status) {
         return rejectWithValue(response.message)
       }
+
       return response.data
     } catch (error) {
       return rejectWithValue(error.message)
@@ -202,7 +210,9 @@ export const generateAirwayBill = createAsyncThunk(
 export const downloadLoadSheet = createAsyncThunk('download-load-sheet', async ({ orderIds }, { rejectWithValue }) => {
   try {
     const response = await postRequest('booking/download-load-sheet', { loadSheets: orderIds })
+
     console.log(response, 'response')
+
     if (!response.status) {
       return rejectWithValue(response.message)
     }
@@ -216,9 +226,11 @@ export const downloadLoadSheet = createAsyncThunk('download-load-sheet', async (
 export const cancelAwb = createAsyncThunk('cancel-awb', async ({ trackNumber }, { rejectWithValue }) => {
   try {
     const response = await postRequest('booking/cancel-awb', { trackNumber })
+
     if (!response.status) {
       return rejectWithValue(response.message)
     }
+
     return response.data
   } catch (error) {
     return rejectWithValue(error.message)
@@ -245,7 +257,9 @@ export const bookingSlice = createSlice({
           }
           state.lastFilters = action.payload.filters || {}
           state.orderStats = action.payload.orderStats
+          state.lastSearch = action.payload.search || ''
         }
+
         state.error = null
         state.loading = false
       })
@@ -268,6 +282,7 @@ export const bookingSlice = createSlice({
           state.lastFilters = action.payload.filters || {}
           state.orderStats = action.payload.orderStats
         }
+
         state.error = null
         state.loading = false
       })
@@ -282,10 +297,13 @@ export const bookingSlice = createSlice({
       .addCase(courierAssignment.fulfilled, (state, action) => {
         state.loading = false
         const payload = action.payload
+
         if (!payload) return
         const updatedList = Array.isArray(payload?.orders) ? payload.orders : Array.isArray(payload) ? payload : null
+
         if (updatedList) {
           const byId = new Map(updatedList.map(o => [o.id, o]))
+
           state.orders = (state.orders || []).map(o => (byId.has(o.id) ? byId.get(o.id) : o))
         } else if (payload.id) {
           state.orders = (state.orders || []).map(o => (o.id === payload.id ? payload : o))

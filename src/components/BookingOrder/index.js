@@ -25,12 +25,12 @@ const BookingOrder = () => {
       fetchBookingOrder({
         page: pagination.currentPage || 1,
         limit: pagination.itemsPerPage || 25,
-        search: search,
-        filters: filters
+        search,
+        filters,
+        force: true
       })
     )
   }, [dispatch, search, filters, pagination.currentPage, pagination.itemsPerPage])
-
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>

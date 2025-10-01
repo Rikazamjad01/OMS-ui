@@ -15,7 +15,8 @@ export const fetchOrders = createAsyncThunk(
         !force &&
         currentData.length > 0 &&
         state.orders.pagination.currentPage === page &&
-        JSON.stringify(state.orders.lastFilters) === JSON.stringify(filters)
+        JSON.stringify(state.orders.lastFilters) === JSON.stringify(filters) &&
+        state.orders.lastSearch === (search || '')
       ) {
         return null // Indicate no fetch needed
       }
@@ -250,6 +251,7 @@ const ordersSlice = createSlice({
     selectedOrders: null,
     selectedCustomer: null,
     lastFilters: {}, // Store last used filters
+    lastSearch: '', // Store last used search
     pagination: {
       currentPage: 1,
       itemsPerPage: 25,
@@ -338,6 +340,7 @@ const ordersSlice = createSlice({
             total: action.payload.total // Backend should return correct total
           }
           state.lastFilters = action.payload.filters || {}
+          state.lastSearch = action.meta.arg.search || ''
           state.orderStats = action.payload.orderStats
         }
       })
@@ -407,6 +410,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
+
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )

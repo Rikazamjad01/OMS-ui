@@ -14,7 +14,6 @@ import {
   IconButton,
   Typography,
   TextField,
-  MenuItem,
   Autocomplete
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
@@ -48,7 +47,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
   const dispatch = useDispatch()
   const allProducts = useSelector(selectProducts)
   const loading = useSelector(selectProductsLoading)
-
+  const [loadings, setLoading] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -71,7 +70,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
   const [showProductSelector, setShowProductSelector] = useState(false)
 
   const filteredProducts = allProducts.filter(product =>
-    product.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (product.title || '').toLowerCase().includes((searchQuery || '').toLowerCase())
   )
 
   const shipping_lines_data = [
@@ -129,6 +128,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
   }
 
   const handleCreateOrder = () => {
+    setLoading(true)
     if (products.length === 0) {
       setSnackbar({
         open: true,
@@ -161,6 +161,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed: ' + err, severity: 'error' }))
+      .finally(() => setLoading(false))
   }
 
   return (
@@ -334,13 +335,12 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                 <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)}>
                   Hide Products
                 </Button>
-                <Grid item xs={12} >
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     placeholder='Search products...'
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-
                   />
                 </Grid>
               </div>
@@ -383,8 +383,8 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         </DialogContent>
 
         <DialogActions>
-          <Button variant='contained' onClick={handleCreateOrder}>
-            Create Order
+          <Button disabled={loadings} variant='contained' onClick={handleCreateOrder}>
+            {loadings ? 'Creating Order...' : 'Create Order'}
           </Button>
           <Button variant='tonal' color='secondary' onClick={handleClose}>
             Cancel
