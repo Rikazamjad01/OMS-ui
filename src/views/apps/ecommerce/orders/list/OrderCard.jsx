@@ -19,9 +19,9 @@ const OrderCard = ({ orderStats }) => {
   // Map API response to stats array
   const statsData = [
     { key: 'total', title: 'Total Orders', icon: 'bx-calendar' },
-    { key: 'completed', title: 'Completed Orders', icon: 'bx-check-double' },
-    { key: 'pending', title: 'Pending Orders', icon: 'bx-wallet' },
-    { key: 'cancelled', title: 'Cancelled Orders', icon: 'bx-error-alt' }
+    { key: 'confirmed', title: 'Confirmed Orders', icon: 'bx-check-double' },
+    { key: 'processing', title: 'Processing Orders', icon: 'bx-wallet' },
+    { key: 'onWay', title: 'On Way Orders', icon: 'bx-error-alt' }
   ].map(item => ({
     ...item,
     value: orderStats?.[item.key] ?? 0
@@ -65,6 +65,5 @@ const OrderCard = ({ orderStats }) => {
     </Card>
   )
 }
-
 
 export default OrderCard

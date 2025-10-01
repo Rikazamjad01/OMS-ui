@@ -25,6 +25,9 @@ const StatusCell = ({ row, onStatusChange }) => {
     if (row.original.status.toLowerCase() == 'cancelled') {
       setStatusArray(orderStatusArray.filter(status => status.value == 'pending'))
     }
+    if (row.original.status.toLowerCase() == 'onway') {
+      setStatusArray([])
+    }
   }, [row.original.status])
   const handleClick = event => {
     setAnchorEl(event.currentTarget)

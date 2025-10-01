@@ -333,7 +333,7 @@ const BookingListTable = ({
 
     setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
   }
-
+  console.log(orderData, 'orders in booking list table. here. ')
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
 
   const updateOrdersStatus = async (orderIds, newStatus) => {
@@ -559,13 +559,15 @@ const BookingListTable = ({
     () => [
       {
         id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-          />
-        ),
+        header: ({ table }) => {
+          return (
+            <Checkbox
+              checked={table.getIsAllRowsSelected()}
+              indeterminate={table.getIsSomeRowsSelected()}
+              onChange={table.getToggleAllRowsSelectedHandler()}
+            />
+          )
+        },
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
@@ -642,7 +644,6 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium '
             >
@@ -791,7 +792,6 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -1063,22 +1063,11 @@ const BookingListTable = ({
   const table = useReactTable({
     data,
     columns,
-    state: { rowSelection, globalFilter, columnFilters },
+    state: { rowSelection },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
-    onColumnFiltersChange: setColumnFilters,
-    filterFns: {
-      dateRange: dateRangeFilterFn,
-      amountRange: amountRangeFilterFn
-    },
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    globalFilterFn: fuzzyFilter,
     manualPagination: true
 
     // pageCount: total > 0 && limit > 0 ? Math.ceil(total / limit) : -1,
@@ -1164,7 +1153,7 @@ const BookingListTable = ({
               onSearchChange?.(val)
             }}
             placeholder='Search in booking order'
-            delay={5000}
+            delay={1000}
           />
 
           {/* <FilterModal
