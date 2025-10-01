@@ -43,10 +43,11 @@ import {
 } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
+import dayjs from 'dayjs'
+import cities from '@/data/cities/cities'
 
 // import { DateRangePicker } from '@mui/lab'
 
-import dayjs from 'dayjs'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
 import TagEditDialog from '@/components/tagEdit/TagEditDialog'
@@ -111,13 +112,8 @@ export const courierPlatforms = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  completed: { color: 'primary', text: 'Completed' },
   processing: { color: 'info', text: 'Processing' },
-  pending: { color: 'warning', text: 'Pending' },
-  cancelled: { color: 'secondary', text: 'Cancelled' },
-  delivered: { color: 'primary', text: 'Delivered' },
-  onWay: { color: 'warning', text: 'On Way' },
-  returned: { color: 'error', text: 'Returned' }
+  onWay: { color: 'warning', text: 'On Way' }
 }
 
 export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
@@ -125,59 +121,25 @@ export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
   label: statusChipColor[key].text
 }))
 
-export const pakistanCities = {
-  karachi: { text: 'Karachi', color: 'primary', colorClassName: 'text-primary' },
-  lahore: { text: 'Lahore', color: 'secondary', colorClassName: 'text-secondary' },
-  islamabad: { text: 'Islamabad', color: 'success', colorClassName: 'text-success' },
-  faisalabad: { text: 'Faisalabad', color: 'warning', colorClassName: 'text-warning' },
-  rawalpindi: { text: 'Rawalpindi', color: 'info', colorClassName: 'text-info' },
-  multan: { text: 'Multan', color: 'error', colorClassName: 'text-error' },
-  peshawar: { text: 'Peshawar', color: 'primary', colorClassName: 'text-primary' },
-  quetta: { text: 'Quetta', color: 'secondary', colorClassName: 'text-secondary' },
-  sialkot: { text: 'Sialkot', color: 'success', colorClassName: 'text-success' },
-  gujranwala: { text: 'Gujranwala', color: 'warning', colorClassName: 'text-warning' },
-  hyderabad: { text: 'Hyderabad', color: 'info', colorClassName: 'text-info' },
-  sukkur: { text: 'Sukkur', color: 'error', colorClassName: 'text-error' },
-  bahawalpur: { text: 'Bahawalpur', color: 'primary', colorClassName: 'text-primary' },
-  abbottabad: { text: 'Abbottabad', color: 'secondary', colorClassName: 'text-secondary' },
-  mianwali: { text: 'Mianwali', color: 'success', colorClassName: 'text-success' },
-  jhang: { text: 'Jhang', color: 'warning', colorClassName: 'text-warning' },
-  deraGhaziKhan: { text: 'Dera Ghazi Khan', color: 'info', colorClassName: 'text-info' },
-  larkana: { text: 'Larkana', color: 'error', colorClassName: 'text-error' },
-  swat: { text: 'Swat', color: 'primary', colorClassName: 'text-primary' },
-  gilgit: { text: 'Gilgit', color: 'secondary', colorClassName: 'text-secondary' },
-  kasur: { text: 'Kasur', color: 'success', colorClassName: 'text-success' },
-  sheikhupura: { text: 'Sheikhupura', color: 'warning', colorClassName: 'text-warning' },
-  okara: { text: 'Okara', color: 'info', colorClassName: 'text-info' },
-  hafizabad: { text: 'Hafizabad', color: 'error', colorClassName: 'text-error' },
-  narowal: { text: 'Narowal', color: 'primary', colorClassName: 'text-primary' },
-  khushab: { text: 'Khushab', color: 'secondary', colorClassName: 'text-secondary' },
-  vehari: { text: 'Vehari', color: 'success', colorClassName: 'text-success' },
-  sargodha: { text: 'Sargodha', color: 'warning', colorClassName: 'text-warning' },
-  chiniot: { text: 'Chiniot', color: 'info', colorClassName: 'text-info' },
-  khairpur: { text: 'Khairpur', color: 'error', colorClassName: 'text-error' },
-  nawabshah: { text: 'Nawabshah', color: 'primary', colorClassName: 'text-primary' },
-  mirpurkhas: { text: 'Mirpurkhas', color: 'secondary', colorClassName: 'text-secondary' },
-  gwadar: { text: 'Gwadar', color: 'success', colorClassName: 'text-success' },
-  khuzdar: { text: 'Khuzdar', color: 'warning', colorClassName: 'text-warning' },
-  deraIsmailKhan: { text: 'Dera Ismail Khan', color: 'info', colorClassName: 'text-info' },
-  mardan: { text: 'Mardan', color: 'error', colorClassName: 'text-error' },
-  charsadda: { text: 'Charsadda', color: 'primary', colorClassName: 'text-primary' },
-  kohat: { text: 'Kohat', color: 'secondary', colorClassName: 'text-secondary' },
-  muzaffarabad: { text: 'Muzaffarabad', color: 'success', colorClassName: 'text-success' },
-  skardu: { text: 'Skardu', color: 'warning', colorClassName: 'text-warning' },
-  bannu: { text: 'Bannu', color: 'info', colorClassName: 'text-info' },
-  Nowshera: { text: 'Nowshera', color: 'error', colorClassName: 'text-error' },
-  kandhkot: { text: 'Kandhkot', color: 'primary', colorClassName: 'text-primary' },
-  khanewal: { text: 'Khanewal', color: 'secondary', colorClassName: 'text-secondary' },
-  chitral: { text: 'Chitral', color: 'success', colorClassName: 'text-success' },
-  kotli: { text: 'Kotli', color: 'warning', colorClassName: 'text-warning' },
-  hayderabad: { text: 'Hayderabad', color: 'info', colorClassName: 'text-info' },
-  Rkniwal: { text: 'Rkniwal', color: 'error', colorClassName: 'text-error' },
-  Pattoki: { text: 'Pattoki', color: 'primary', colorClassName: 'text-primary' }
+const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
+
+function convertCities(cities = []) {
+  return cities.reduce((acc, name, index) => {
+    if (!name) return acc
+
+    const key = name.toLowerCase().replace(/\s+/g, '_')
+
+    acc[key] = {
+      text: name,
+      color: chipColors[index % chipColors.length], // rotate colors
+      colorClassName: `text-${chipColors[index % chipColors.length]}`
+    }
+
+    return acc
+  }, {})
 }
 
-const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info']
+export const pakistanCities = convertCities(cities)
 
 const getTagColor = tag => {
   if (!tag) return 'default'
@@ -256,7 +218,7 @@ export const normalizePaymentMethod = (names = []) => {
 // }
 
 /* -------------------------- small components ------------------------ */
-const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, onEnter, ...props }) => {
+const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnter, ...props }) => {
   const [value, setValue] = useState(initialValue ?? '')
 
   useEffect(() => {
@@ -299,8 +261,6 @@ const BookingListTable = ({
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
   const pagination = useSelector(selectBookingOrdersPagination)
-
-  console.log(pagination, 'pagination')
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [editCourierData, setEditCourierData] = useState({ open: false, courier: null, remarks: '' })
@@ -465,25 +425,25 @@ const BookingListTable = ({
     })
   }, [orderData])
 
-  const getAvatar = ({ avatar, customer }) => {
-    const initials = getInitials(customer)
+  // const getAvatar = ({ avatar, customer }) => {
+  //   const initials = getInitials(customer)
 
-    if (avatar) return <CustomAvatar src={avatar} skin='light' size={34} />
+  //   if (avatar) return <CustomAvatar src={avatar} skin='light' size={34} />
 
-    if (initials) {
-      return (
-        <CustomAvatar skin='light' size={34} className='bg-primary text-white'>
-          {initials}
-        </CustomAvatar>
-      )
-    }
+  //   if (initials) {
+  //     return (
+  //       <CustomAvatar skin='light' size={34} className='bg-primary text-white'>
+  //         {initials}
+  //       </CustomAvatar>
+  //     )
+  //   }
 
-    return (
-      <CustomAvatar skin='light' size={34} className='bg-primary text-white'>
-        <i className='bx-user' />
-      </CustomAvatar>
-    )
-  }
+  //   return (
+  //     <CustomAvatar skin='light' size={34} className='bg-primary text-white'>
+  //       <i className='bx-user' />
+  //     </CustomAvatar>
+  //   )
+  // }
 
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
@@ -642,7 +602,7 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-
+            
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium '
             >
@@ -1164,7 +1124,7 @@ const BookingListTable = ({
               onSearchChange?.(val)
             }}
             placeholder='Search in booking order'
-            delay={5000}
+            debounce={1000}
           />
 
           {/* <FilterModal
