@@ -92,8 +92,6 @@ const Projects = ({ data }) => {
     }
   ]
 
-  console.log(data, 'data in projects')
-
   return (
     <Grid container spacing={6}>
       {data && (
@@ -109,7 +107,6 @@ const Projects = ({ data }) => {
                 size='medium'
                 onChange={e => {
                   // You can lift state up and trigger API/filtering here
-                  console.log('Filter incentive amount:', e.target.value)
                 }}
               />
             }
