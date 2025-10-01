@@ -31,7 +31,6 @@ const BookingOrder = () => {
       })
     )
   }, [dispatch, search, filters, pagination.currentPage, pagination.itemsPerPage])
-
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>

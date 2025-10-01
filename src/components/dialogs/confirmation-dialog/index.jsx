@@ -20,7 +20,7 @@ import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
 import { fetchOrderById, fetchOrderByIds, splitOrderProductSetting } from '@/redux-store/slices/order'
-import { generateAirwayBill, fetchBookingOrder } from '@/redux-store/slices/bookingSlice'
+import { generateAirwayBill, fetchBookingOrder, fetchBookingOrders } from '@/redux-store/slices/bookingSlice'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
   // States
@@ -29,6 +29,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [resultTitle, setResultTitle] = useState(null)
   const [resultSubtitle, setResultSubtitle] = useState(null)
   const [awbResult, setAwbResult] = useState(null) // { successes: string[], failures: [{id,error,status}] }
+  const [submitting, setSubmitting] = useState(false)
 
   const dispatch = useDispatch()
 
@@ -66,19 +67,17 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   }
 
   const handleConfirmation = async value => {
-    // Close the first dialog either way
-    setOpen(false)
-
     if (!value) {
       setUserInput(false)
       setResultTitle(null)
       setResultSubtitle(null)
       setSecondDialog(true)
-
+      setOpen(false)
       return
     }
 
     try {
+      setSubmitting(true)
       if (isMerge) {
         const ids = payload?.orderIds ?? []
 
@@ -139,7 +138,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         }
 
         // Refresh bookings list
-        dispatch(fetchBookingOrder({ page: 1, limit: 25, force: true }))
+        dispatch(fetchBookingOrders({ page: 1, limit: 25, force: true }))
       } else if (type === 'confirm-city') {
         const { orderId, city } = payload
 
@@ -170,6 +169,9 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
       setResultSubtitle(msg)
       setSecondDialog(true)
       onError?.(err)
+    } finally {
+      setSubmitting(false)
+      setOpen(false)
     }
   }
 
@@ -412,14 +414,27 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           </Wrapper>
         </DialogContent>
         <DialogActions className='flex justify-center gap-4 sm:pbe-16 sm:pli-16'>
-          <Button variant='contained' onClick={() => handleConfirmation(true)} className='max-sm:is-full'>
-            {getConfirmButtonLabel()}
+          <Button
+            variant='contained'
+            onClick={() => handleConfirmation(true)}
+            className='max-sm:is-full'
+            disabled={submitting}
+          >
+            {submitting ? (
+              <span className='flex items-center gap-2'>
+                <i className='bx-loader-alt animate-spin' />
+                Processing...
+              </span>
+            ) : (
+              getConfirmButtonLabel()
+            )}
           </Button>
           <Button
             variant='tonal'
             color='secondary'
             onClick={() => handleConfirmation(false)}
             className='max-sm:is-full'
+            disabled={submitting}
           >
             Cancel
           </Button>

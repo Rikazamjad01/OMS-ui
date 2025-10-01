@@ -16,7 +16,7 @@ export const fetchOrders = createAsyncThunk(
         currentData.length > 0 &&
         state.orders.pagination.currentPage === page &&
         JSON.stringify(state.orders.lastFilters) === JSON.stringify(filters) &&
-        search === state.orders.lastSearch
+        state.orders.lastSearch === (search || '')
       ) {
         return null // Indicate no fetch needed
       }
@@ -251,6 +251,7 @@ const ordersSlice = createSlice({
     selectedOrders: null,
     selectedCustomer: null,
     lastFilters: {}, // Store last used filters
+    lastSearch: '', // Store last used search
     pagination: {
       currentPage: 1,
       itemsPerPage: 25,

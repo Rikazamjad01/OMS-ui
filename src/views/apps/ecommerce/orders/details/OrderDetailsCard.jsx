@@ -385,7 +385,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             dialog={EditOrderDialog}
             dialogProps={{
               order,
-              products: orderProducts, // Pass transformed products here
+              products: orderProducts // Pass transformed products here
             }}
           />
         }

@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Next Imports
 import { useParams, useRouter } from 'next/navigation'
@@ -31,9 +31,16 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import { clearError, logoutThunk, selectError, selectIsLoading } from '@/redux-store/slices/authSlice'
+import {
+  clearError,
+  logoutThunk,
+  selectError,
+  selectIsLoading,
+  selectUser,
+  setUser
+} from '@/redux-store/slices/authSlice'
 import { useDispatch, useSelector } from 'react-redux'
-import cookies from 'js-cookie'
+// import cookies from 'js-cookie'
 
 // Styled component for badge content
 const BadgeContentSpan = styled('span')({
@@ -53,6 +60,7 @@ const UserDropdown = () => {
   const anchorRef = useRef(null)
   const error = useSelector(selectError)
   const isLoading = useSelector(selectIsLoading)
+  const user = useSelector(selectUser)
   // Hooks
   const router = useRouter()
   // const { data: session } = useSession()
@@ -62,6 +70,10 @@ const UserDropdown = () => {
   const handleDropdownOpen = () => {
     !open ? setOpen(true) : setOpen(false)
   }
+
+  useEffect(() => {
+    dispatch(setUser())
+  }, [])
 
   const handleDropdownClose = (event, url) => {
     if (url) {
@@ -78,10 +90,11 @@ const UserDropdown = () => {
   const handleUserLogout = async () => {
     try {
       // Sign out from the app
+      handleDropdownClose()
       // await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
       await dispatch(logoutThunk())
       if (!error) {
-        router.push('/login')
+        router.replace('/login')
       }
     } catch (error) {
       console.error(error)
@@ -90,7 +103,7 @@ const UserDropdown = () => {
       // toastService.error((err as Error).message)
     }
   }
-  const user = JSON.parse(cookies.get('user'))
+  // const user = JSON.parse(cookies.get('user'))
   return (
     <>
       <Badge
