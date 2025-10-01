@@ -293,6 +293,7 @@ const BookingListTable = ({
 
     setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
   }
+
   console.log(orderData, 'orders in booking list table. here. ')
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
 
@@ -604,7 +605,6 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium '
             >
