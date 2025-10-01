@@ -73,6 +73,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
   useEffect(() => {
     if (editingDiscountRowId == null) return
     const exists = Array.isArray(data) && data.some(r => String(r.id) === String(editingDiscountRowId))
+
     if (!exists) {
       setEditingDiscountRowId(null)
       setDiscountInput('')
@@ -124,6 +125,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
         header: 'Discounted Price',
         cell: ({ row }) => {
           const isEditing = editingDiscountRowId === row.original.id
+
           if (isEditing) {
             return (
               <TextField
@@ -140,7 +142,9 @@ const OrderTable = ({ data, onSelectionChange }) => {
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     const parsed = Number(discountInput)
+
                     if (Number.isNaN(parsed)) return
+
                     // Call your API here to apply discount for this line item/order
                     // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
                     setEditingDiscountRowId(null)
@@ -150,10 +154,12 @@ const OrderTable = ({ data, onSelectionChange }) => {
                 }}
                 onBlur={() => {
                   const parsed = Number(discountInput)
+
                   if (Number.isNaN(parsed)) {
                     setEditingDiscountRowId(null)
                     return
                   }
+
                   // Call your API here to apply discount for this line item/order
                   // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
                   setEditingDiscountRowId(null)
@@ -380,9 +386,6 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             dialogProps={{
               order,
               products: orderProducts, // Pass transformed products here
-              onSuccess: (message, severity = 'success') => {
-                setSnackbar({ open: true, message, severity })
-              }
             }}
           />
         }

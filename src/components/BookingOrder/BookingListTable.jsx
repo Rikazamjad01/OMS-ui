@@ -642,6 +642,7 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
+
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium '
             >
@@ -790,6 +791,7 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -1161,7 +1163,8 @@ const BookingListTable = ({
               setGlobalFilter(val)
               onSearchChange?.(val)
             }}
-            placeholder='Search Order'
+            placeholder='Search in booking order'
+            delay={5000}
           />
 
           {/* <FilterModal

@@ -36,6 +36,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const [quantities, setQuantities] = useState({})
   const isMerge = type === 'merge-orders' || type === 'merge-order'
   const isSplit = type === 'split-order'
+  const isUpsell = type === 'upsell-order'
   const isGenerateAwb = type === 'generate-airway-bill'
   const isGenerateAirwayBill = type === 'generate-airway-bill'
   const isDownloadLoadSheet = type === 'download-load-sheet'
@@ -145,6 +146,14 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         if (!orderId || !city) throw new Error('Order ID and city are required.')
 
         await dispatch(confirmCity({ orderId, city })).unwrap()
+      } else if (isUpsell) {
+        const orderId = payload?.orderId
+        const products = payload?.products
+
+        if (!orderId || !products) throw new Error('Order ID and products are required for upsell.')
+
+        // Let parent handle actual API dispatch
+        onSuccess?.(payload)
       }
 
       // Success
@@ -192,6 +201,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Generate Airway Bill for selected orders?'
       case 'confirm-city':
         return `Do you want to confirm "${payload?.city}" city for this order?`
+      case 'upsell-order':
+        return 'Do you really want to upsell this order?'
       default:
         return 'Are you sure?'
     }
@@ -221,6 +232,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Generate AWB'
       case 'confirm-city':
         return 'Yes, Confirm City!'
+      case 'upsell-order':
+        return 'Yes, Upsell Order!'
       default:
         return 'Yes'
     }
@@ -254,6 +267,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return userInput ? 'AWB Generation Result' : 'AWB Generation Result'
       case 'confirm-city':
         return 'City Confirmed'
+      case 'upsell-order':
+        return 'Upsell Processed'
       default:
         return 'Done'
     }
@@ -285,6 +300,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return resultSubtitle || (userInput ? 'AWB generated successfully.' : 'Some AWBs failed.')
         case 'confirm-city':
           return 'City confirmed successfully.'
+        case 'upsell-order':
+          return 'Order upsell process initiated.'
         default:
           return 'Operation completed successfully.'
       }
@@ -313,6 +330,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'Airway Bill Generation Cancelled'
         case 'confirm-city':
           return 'City Confirmation Cancelled'
+        case 'upsell-order':
+          return 'Order Upsell Cancelled'
         default:
           return 'Action Cancelled'
       }

@@ -407,6 +407,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
+          
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
