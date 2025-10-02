@@ -106,13 +106,13 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
       }
 
       // Return the updated order data
-      // return {
-      //   orderId,
-      //   comments: response.data?.comments || '',
-      //   remarks: response.data?.remarks || '',
-      //   tags: response.data?.tags || '',
-      //   status: response?.status
-      // }
+      return {
+        orderId,
+        comments: response.data?.comments || '',
+        remarks: response.data?.remarks || '',
+        tags: response.data?.tags || '',
+        status: response?.status
+      }
       return response.data?.comments || ''
     } catch (error) {
       return rejectWithValue(error.message)
@@ -349,8 +349,6 @@ const ordersSlice = createSlice({
         state.error = action.payload
       })
       .addCase(updateOrderCommentsAndRemarks.fulfilled, (state, action) => {
-        // state.selectedOrders.comments = action.payload
-
         const { orderId, comments, remarks, tags } = action.payload
         const orderIndex = state.orders.findIndex(order => order.id === orderId)
 
@@ -359,21 +357,20 @@ const ordersSlice = createSlice({
 
           const updatedOrder = {
             ...existingOrder,
-            comments: [
-              ...(existingOrder.comments || []),
-              ...(typeof comments === 'string' ? comments.split('\n').filter(c => c.trim()) : comments || [])
-            ],
-            remarks: [
-              ...(existingOrder.remarks || []),
-              ...(typeof remarks === 'string' ? remarks.split('\n').filter(r => r.trim()) : remarks || [])
-            ],
-            tags: Array.isArray(tags) ? tags.join(', ') : tags || existingOrder.tags || ''
+            comments: comments,
+            remarks: remarks,
+            tags: tags
           }
 
           state.orders[orderIndex] = updatedOrder
 
           if (state.selectedOrders?.id === orderId) {
-            state.selectedOrders = updatedOrder
+            state.selectedOrders = {
+              ...state.selectedOrders, // keep all existing fields
+              comments: updatedOrder.comments,
+              remarks: updatedOrder.remarks,
+              tags: updatedOrder.tags
+            }
           }
         }
       })
@@ -410,7 +407,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-
+          
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )

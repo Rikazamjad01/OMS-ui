@@ -85,7 +85,7 @@ import TablePaginationComponent from '@/components/TablePaginationComponent'
 import OrderDetails from '@/views/apps/ecommerce/orders/details'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
-import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import { updateOrderCommentsAndRemarks, updateOrdersStatusThunk } from '@/redux-store/slices/order'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -449,9 +449,8 @@ const BookingListTable = ({
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
 
-    if (!tagPayload || !tagPayload.trim()) {
+    if (!tagPayload) {
       setAlert({ open: true, message: 'Tag cannot be empty.', severity: 'error' })
-
       return
     }
 
@@ -459,58 +458,46 @@ const BookingListTable = ({
 
     if (!orderId) return
 
-    if (!tagPayload) {
-      // console.warn('No tag to update, skipping request.')
-
-      return
-    }
-
     try {
       setLoadings(true)
 
-      const result = await dispatch(
+      // ✅ Get previous tags from tagsMap OR from orderData
+      const previousTags =
+        tagsMap[orderId] ??
+        orderData.find(order => order.id === orderId)?.tags ??
+        []
+
+      // ✅ Push new tag, ensuring uniqueness
+      const updatedTags = Array.from(
+        new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean))
+      )
+
+      // ✅ Update UI immediately
+      setTagsMap(prev => ({
+        ...prev,
+        [orderId]: updatedTags
+      }))
+
+      // ✅ Send clean comma-separated string to backend
+      await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: tagPayload
+          tags: updatedTags.join(',')
         })
       ).unwrap()
 
       setAlert({
         open: true,
-        message: result?.message || 'Tag updated successfully.',
+        message: 'Tag updated successfully.',
         severity: 'success'
       })
-
-      // Normalize to array for UI display, but it's still just one tag
-      const normalizedTags =
-        typeof result.tags === 'string'
-          ? result.tags
-              .split(/[,|\n]+/)
-              .map(t => t.trim())
-              .filter(Boolean)
-          : [tagPayload]
-
-      setTagsMap(prev => {
-        const previousTags = prev[orderId] ?? []
-        const merged = Array.from(new Set([...previousTags, ...normalizedTags]))
-
-        return {
-          ...prev,
-          [orderId]: merged
-        }
-      })
-
-      if (result.status) {
-        closeTagEditor()
-      }
+      closeTagEditor()
     } catch (err) {
       setAlert({
         open: true,
         message: err?.message || 'Failed to update tag.',
         severity: 'error'
       })
-
-      // console.error('Failed to update tag:', err)
     } finally {
       setLoadings(false)
     }
@@ -605,7 +592,6 @@ const BookingListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium '
             >
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
@@ -753,7 +739,6 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
                       </p>
