@@ -74,7 +74,7 @@ async function updateNextConfig() {
 
   const redirect = `return [{
     source: '/',
-    destination: '/dashboards/sales',
+    destination: '/apps/ecommerce/orders/list',
     permanent: true
   }]`
 
