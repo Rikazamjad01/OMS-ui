@@ -297,9 +297,9 @@ const OrderListTable = ({
   })
 
   const openTagEditor = (orderId, currentTags = []) => {
-    const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
+    const tags = Array.isArray(currentTags) ? currentTags : (currentTags || '').split(',').map(t => t.trim())
 
-    setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
+    setTagModal({ open: true, orderId, tags })
   }
 
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
@@ -391,9 +391,9 @@ const OrderListTable = ({
       const parsedTags =
         typeof order.tags === 'string'
           ? order.tags
-              .split(',')
+              .split(',') // backend gives comma-separated
               .map(t => t.trim())
-              .filter(Boolean) // "a,b" → ["a","b"]
+              .filter(Boolean)
           : Array.isArray(order.tags)
             ? order.tags.filter(Boolean)
             : []
@@ -440,7 +440,6 @@ const OrderListTable = ({
       </CustomAvatar>
     )
   }
-  console.log(tagsMap, '---tagsMap---')
 
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
@@ -457,34 +456,36 @@ const OrderListTable = ({
     try {
       setLoadings(true)
 
-      setTagsMap(prev => {
-        const previousTags = prev[orderId] ?? []
+      // ✅ Get previous tags from tagsMap OR from orderData
+      const previousTags =
+        tagsMap[orderId] ??
+        orderData.find(order => order.id === orderId)?.tags ??
+        []
 
-        // const merged = Array.from(new Set([...previousTags, tagPayload]))
+      // ✅ Push new tag, ensuring uniqueness
+      const updatedTags = Array.from(
+        new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean))
+      )
 
-        // Immediately update UI
-        return {
-          ...prev,
-          [orderId]: newTag
-        }
-      })
+      // ✅ Update UI immediately
+      setTagsMap(prev => ({
+        ...prev,
+        [orderId]: updatedTags
+      }))
 
-      // Send the full tag list (previous + new) to backend
-      const updatedTags = tagsMap[orderId] ? Array.from(new Set([...tagsMap[orderId], tagPayload])) : [tagPayload]
-
-      const result = await dispatch(
+      // ✅ Send clean comma-separated string to backend
+      await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: updatedTags.join(',') // or send as array if your API accepts
+          tags: updatedTags.join(',')
         })
       ).unwrap()
 
       setAlert({
         open: true,
-        message: result?.message || 'Tag updated successfully.',
+        message: 'Tag updated successfully.',
         severity: 'success'
       })
-
       closeTagEditor()
     } catch (err) {
       setAlert({
@@ -583,6 +584,7 @@ const OrderListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
+
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium'
             >
@@ -605,6 +607,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -676,6 +679,7 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -772,39 +776,38 @@ const OrderListTable = ({
         meta: { width: '250px' },
 
         cell: ({ row }) => {
-          const originalTags = Array.isArray(row.original.tags) ? row.original.tags : []
+          const orderId = row.original.id
 
-          // const displayedTags = tagsMap[row.original.id] ?? originalTags
-          const hasTags = originalTags.length > 0
+          // Prefer updated tags from tagsMap, else fall back to parsed original
+          const displayedTags = tagsMap[orderId] ?? row.original.tags
+          const hasTags = displayedTags.length > 0
 
           return (
             <div className='flex flex-col gap-1'>
-              {/* First row: Tags */}
               <div
                 className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
-                onClick={() => openTagEditor(row.original.id, displayedTags)}
+                onClick={() => openTagEditor(orderId, displayedTags)}
                 role='button'
                 tabIndex={0}
                 onKeyDown={e => {
-                  if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
+                  if (e.key === 'Enter') openTagEditor(orderId, displayedTags)
                 }}
               >
                 {hasTags ? (
-                  originalTags.map((tag, i) => (
+                  displayedTags.map((tag, i) => (
                     <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
                   ))
                 ) : (
-                  <> </>
+                  <></>
                 )}
               </div>
 
-              {/* Second row: "+" button */}
               <div>
                 <Chip
                   label='+ Add Tag'
                   variant='outlined'
                   size='small'
-                  onClick={() => openTagEditor(row.original.id, originalTags)}
+                  onClick={() => openTagEditor(orderId, displayedTags)}
                 />
               </div>
             </div>

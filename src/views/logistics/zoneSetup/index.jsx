@@ -111,6 +111,22 @@ export default function ZoneSetup({ initialZone = null }) {
     return list
   }, [zoneOptions])
 
+  const dynamicTabs = useMemo(() => {
+    const list = [...dedupedZoneOptions]
+
+    // If we're in "creating new zone" mode (no selectedZoneId and we have rows),
+    // show a trailing "new" tab using the first row's zone label.
+    if (!selectedZoneId && rows.length > 0) {
+      list.push({
+        id: '__new__',
+        label: rows[0]?.zone || 'New Zone',
+        raw: undefined
+      })
+    }
+
+    return list
+  }, [dedupedZoneOptions, selectedZoneId, rows])
+
   // Load zones on mount
   useEffect(() => {
     dispatch(fetchZones())
@@ -269,6 +285,9 @@ export default function ZoneSetup({ initialZone = null }) {
   const openNewZone = useCallback(() => {
     const label = generateUniqueZoneLabel()
 
+    console.log('Opening new zone with label:', label)
+
+    // Clear the selected zone ID to indicate new zone creation
     setSelectedZoneId('')
     setSelectedCities([])
     setRows([
@@ -283,7 +302,10 @@ export default function ZoneSetup({ initialZone = null }) {
         priority4: 'none'
       }
     ])
-  }, [generateUniqueZoneLabel])
+
+    // Set tabIndex to indicate we're creating a new zone (beyond existing tabs)
+    setTabIndex(dedupedZoneOptions.length)
+  }, [generateUniqueZoneLabel, dedupedZoneOptions.length])
 
   const updateRow = useCallback(
     (rowId, updater) => {
@@ -450,7 +472,13 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Auto-open the first zone by default when arriving on the page
   useEffect(() => {
-    if (!initialZone && !selectedZoneId && (dedupedZoneOptions || []).length > 0 && rows.length === 0) {
+    if (
+      !initialZone &&
+      !selectedZoneId &&
+      (dedupedZoneOptions || []).length > 0 &&
+      rows.length === 0 &&
+      tabIndex < dedupedZoneOptions.length
+    ) {
       const first = dedupedZoneOptions[0]
 
       setSelectedZoneId(first.id)
@@ -461,18 +489,28 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Keep tabIndex in sync with selectedZoneId using the deduped list
   useEffect(() => {
-    const idx = (dedupedZoneOptions || []).findIndex(z => z.id === selectedZoneId)
+    const findId = selectedZoneId || '__new__';
+    const idx = (dynamicTabs || []).findIndex(z => z.id === findId);
 
     if (idx >= 0) {
-      setTabIndex(idx)
-    } else if ((dedupedZoneOptions || []).length > 0) {
-      setTabIndex(0)
-      setSelectedZoneId(dedupedZoneOptions[0].id)
-    } else {
-      setTabIndex(0)
-      setSelectedZoneId('')
+      setTabIndex(idx);
+      return;
     }
-  }, [dedupedZoneOptions, selectedZoneId])
+
+    const firstExistingIdx = (dynamicTabs || []).findIndex(z => z.id !== '__new__');
+
+    if (firstExistingIdx >= 0) {
+      setTabIndex(firstExistingIdx);
+      setSelectedZoneId(dynamicTabs[firstExistingIdx].id);
+    } else if ((dynamicTabs || []).length > 0) {
+      // only the new tab exists
+      setTabIndex(dynamicTabs.length - 1);
+      setSelectedZoneId('');
+    } else {
+      setTabIndex(0);
+      setSelectedZoneId('');
+    }
+  }, [dynamicTabs, selectedZoneId])
 
   // Select an existing zone via tabs and hydrate
   const handleConventionChange = useCallback(
@@ -532,7 +570,9 @@ export default function ZoneSetup({ initialZone = null }) {
   //   return cityOptions.filter(opt => !usedCitiesSet.has(opt.label) || !selectedLabelSet.has(opt.label))
   // }, [cityOptions, usedCitiesSet, selectedLabelSet])
   console.log(rows, 'rows here')
-  console.log(cityOptions, 'cityOptions here')
+
+  // console.log(cityOptions, 'cityOptions here')
+
   const filteredCityOptions = cityOptions.filter(
     opt => !rows.some(row => row.city.toLowerCase() === opt.label.toLowerCase())
   )
@@ -540,7 +580,12 @@ export default function ZoneSetup({ initialZone = null }) {
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
 
   const buildPayloadFromRows = useCallback(() => {
-    const name = rows[0]?.zone || getZoneLabel(convention, nextZoneIndex)
+    // For new zones, use the zone name from the first row
+    // For existing zones, use the current selected zone's name
+    const name = selectedZoneId
+      ? zoneOptions.find(z => z.id === selectedZoneId)?.label
+      : rows[0]?.zone || getZoneLabel(convention, nextZoneIndex)
+
     const uniqueCities = Array.from(new Set(rows.map(r => normalizeCity(r.city)).filter(Boolean)))
     const head = rows[0] || {}
     const priorities = [head.priority1, head.priority2, head.priority3, head.priority4]
@@ -551,36 +596,47 @@ export default function ZoneSetup({ initialZone = null }) {
 
     const couriersApi = couriers.map(p => ({ priority: p.pr, courierName: keyToApiCourier[p.key] || 'None' }))
 
-    const payload = { name, cities: uniqueCities, couriers: couriersApi }
+    const payload = {
+      name,
+      cities: uniqueCities,
+      couriers: couriersApi
+    }
 
-    // Include namingConvention only if there are no zones yet
-    if (!selectedZoneId && (zones || []).length === 0) {
+    // Always include namingConvention for new zones
+    if (!selectedZoneId) {
       payload.namingConvention = convention
     }
 
     return payload
-  }, [rows, convention, nextZoneIndex, normalizeCity, zones, selectedZoneId])
+  }, [rows, convention, nextZoneIndex, normalizeCity, zones, selectedZoneId, zoneOptions])
 
   const handleSave = useCallback(async () => {
     try {
       setSaving(true)
+
+      const currentZoneName = rows[0]?.zone
       const payload = buildPayloadFromRows()
 
+      console.log('Saving with intended name:', currentZoneName)
+
       if (!selectedZoneId) {
-        // Create
-        payload.namingConvention = convention
-        const created = await dispatch(createZone(payload)).unwrap()
+        // Create - pass the name explicitly
+        const created = await dispatch(createZone({ ...payload, name: currentZoneName })).unwrap()
 
         setAlert({ open: true, message: 'Zone created successfully', severity: 'success' })
         await dispatch(fetchZones())
 
-        // Hydrate created zone
+        // The created zone should now have the correct name due to our client-side override
         setSelectedZoneId(created?._id || created?.id || '')
-        hydrateFromApi(created)
       } else {
-        // Update
+        // Update - also pass the name to ensure it's preserved
         const updated = await dispatch(
-          updateZone({ id: selectedZoneId, cities: payload.cities, couriers: payload.couriers })
+          updateZone({
+            id: selectedZoneId,
+            cities: payload.cities,
+            couriers: payload.couriers,
+            name: currentZoneName // Pass name for updates too
+          })
         ).unwrap()
 
         setAlert({ open: true, message: 'Zone updated successfully', severity: 'success' })
@@ -588,12 +644,12 @@ export default function ZoneSetup({ initialZone = null }) {
         hydrateFromApi(updated)
       }
     } catch (e) {
-      console.log(e, 'error in handleSave')
+      console.error('Error in handleSave:', e)
       setAlert({ open: true, message: e?.message || 'Failed to save zone', severity: 'error' })
     } finally {
       setSaving(false)
     }
-  }, [dispatch, selectedZoneId, buildPayloadFromRows, hydrateFromApi])
+  }, [dispatch, selectedZoneId, buildPayloadFromRows, hydrateFromApi, rows])
 
   return (
     <Card>
@@ -631,12 +687,19 @@ export default function ZoneSetup({ initialZone = null }) {
 
         {/* Zone selector tabs */}
         <Tabs
-          value={Math.min(tabIndex, Math.max(0, (dedupedZoneOptions?.length || 1) - 1))}
+          value={Math.min(tabIndex, Math.max(0, (dynamicTabs?.length || 1) - 1))}
           onChange={(_e, idx) => {
             setTabIndex(idx)
-            const item = dedupedZoneOptions[idx]
+            const item = dynamicTabs[idx]
 
-            if (item) {
+            if (!item) return
+
+            // If the user clicked the "new zone" pseudo-tab, keep selectedZoneId empty
+            if (item.id === '__new__') {
+              setSelectedZoneId('')
+
+              // no hydrateFromApi for a new zone
+            } else {
               setSelectedZoneId(item.id)
               if (item.raw) hydrateFromApi(item.raw)
             }
@@ -644,17 +707,18 @@ export default function ZoneSetup({ initialZone = null }) {
           variant='scrollable'
           scrollButtons='auto'
         >
-          {(dedupedZoneOptions || []).map((z, i) => (
+          {(dynamicTabs || []).map((z, i) => (
             <Tab key={`zone-${z.id || z.label || i}`} label={z.label} />
           ))}
         </Tabs>
 
-        <Divider />
+        {/* <Divider /> */}
 
         <Grid container spacing={3} alignItems='center'>
           <Grid size={{ xs: 12, md: 9 }}>
             <Autocomplete
               multiple
+              pedZ
               disableCloseOnSelect
               options={filteredCityOptions}
               getOptionLabel={option => option.label}
@@ -662,6 +726,7 @@ export default function ZoneSetup({ initialZone = null }) {
               getOptionDisabled={option => usedCitiesSet.has(option.label) || selectedLabelSet.has(option.label)}
               value={(selectedCities || []).map(c => {
                 const label = normalizeCity(c)
+
                 return { label, value: label }
               })}
               onChange={(_e, newValue) => setSelectedCities(newValue || [])}
@@ -704,6 +769,7 @@ export default function ZoneSetup({ initialZone = null }) {
                       const p3 = rows[0]?.priority3
                       const p4 = rows[0]?.priority4
                       const taken = [p2, p3, p4].includes(opt.value)
+
                       return (
                         <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
                           {opt.label}
@@ -727,6 +793,7 @@ export default function ZoneSetup({ initialZone = null }) {
                       const p3 = rows[0]?.priority3
                       const p4 = rows[0]?.priority4
                       const taken = [p1, p3, p4].includes(opt.value)
+
                       return (
                         <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
                           {opt.label}
@@ -750,6 +817,7 @@ export default function ZoneSetup({ initialZone = null }) {
                       const p2 = rows[0]?.priority2
                       const p4 = rows[0]?.priority4
                       const taken = [p1, p2, p4].includes(opt.value)
+
                       return (
                         <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
                           {opt.label}
@@ -773,6 +841,7 @@ export default function ZoneSetup({ initialZone = null }) {
                       const p2 = rows[0]?.priority2
                       const p3 = rows[0]?.priority3
                       const taken = [p1, p2, p3].includes(opt.value)
+
                       return (
                         <MenuItem key={opt.value} value={opt.value} disabled={taken && opt.value !== 'none'}>
                           {opt.label}
@@ -810,6 +879,7 @@ export default function ZoneSetup({ initialZone = null }) {
                           defaultValue={{ label: normalizeCity(row.city), value: normalizeCity(row.city) }}
                           onChange={(_e, newValue) => {
                             const label = newValue?.label || ''
+
                             if (label) updateRow(row.id, { city: label })
                             setEditingRowId('')
                           }}
@@ -834,15 +904,15 @@ export default function ZoneSetup({ initialZone = null }) {
                     <TableCell>
                       <Chip label={row.priority4 || 'none'} size='small' />
                     </TableCell>
-                    <TableCell align='right'>
-                      <Tooltip title='Edit city'>
-                        <IconButton color='primary' onClick={() => setEditingRowId(row.id)}>
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell align='right' className='flex gap-2'>
                       <Tooltip title='Delete row'>
                         <IconButton color='error' onClick={() => deleteRow(row.id)}>
                           <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title='Edit city'>
+                        <IconButton color='primary' onClick={() => setEditingRowId(row.id)}>
+                          <EditIcon />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
