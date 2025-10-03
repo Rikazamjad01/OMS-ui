@@ -1530,7 +1530,7 @@ const OrderListTable = ({
           })
         }}
       />
-      <ConfirmationDialog
+      {/* <ConfirmationDialog
         open={confirmOpen}
         setOpen={setConfirmOpen}
         type='update-status'
@@ -1540,7 +1540,7 @@ const OrderListTable = ({
             updateOrdersStatus(confirmPayload.orderIds, confirmPayload.toStatusKey)
           }
         }}
-      />
+      /> */}
       {/* <OpenDialogOnElementClick
         element={Button}
         elementProps={{ children: 'Change to Shipped', variant: 'tonal' }}

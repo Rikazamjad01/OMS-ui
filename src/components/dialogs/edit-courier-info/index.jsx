@@ -19,12 +19,13 @@ import CustomTextField from '@core/components/mui/TextField'
 
 // Local options (keep in sync with table)
 const courierPlatforms = {
-  none: { text: 'None' },
-  leopard: { text: 'Leopards' },
-  daewoo: { text: 'Daewoo' },
-  postEx: { text: 'PostEx' },
-  mp: { text: 'M&P' },
-  tcs: { text: 'TCS' }
+  // none: { text: 'None' },
+
+  leopard: { text: 'Leopards' }
+  // daewoo: { text: 'Daewoo' },
+  // postEx: { text: 'PostEx' },
+  // mp: { text: 'M&P' },
+  // tcs: { text: 'TCS' }
 }
 
 const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
