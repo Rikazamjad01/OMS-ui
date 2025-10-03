@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 // Next Imports
 import { usePathname } from 'next/navigation'
@@ -83,6 +83,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
   const [isOpen, setIsOpen] = useState(false)
   const [direction, setDirection] = useState(dir)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // Refs
   const anchorRef = useRef(null)
@@ -148,13 +149,20 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
     setIsMenuOpen(false)
   }
 
+  // Avoid SSR/client hydration diffs by rendering only after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
+    mounted &&
     !breakpointReached && (
       <div
         className={classnames('customizer', styles.customizer, {
           [styles.show]: isOpen,
           [styles.smallScreen]: isMobileScreen
         })}
+        suppressHydrationWarning
       >
         <div className={styles.toggler} onClick={handleToggle}>
           <i className='bx-cog text-[22px]' />
