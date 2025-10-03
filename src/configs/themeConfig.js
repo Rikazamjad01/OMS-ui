@@ -17,7 +17,7 @@
  */
 const themeConfig = {
   templateName: 'Sukoon',
-  homePageUrl: '/dashboards/sales',
+  homePageUrl: '/apps/ecommerce/orders/list',
   settingsCookieName: 'Sukoon Wellness',
   mode: 'light', // 'system', 'light', 'dark'
   skin: 'default', // 'default', 'bordered'

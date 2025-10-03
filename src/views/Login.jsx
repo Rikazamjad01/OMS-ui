@@ -25,6 +25,9 @@ import { email, object, minLength, string, pipe, nonEmpty } from 'valibot'
 import classnames from 'classnames'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
+import { Alert, Snackbar } from '@mui/material'
+import { toast } from 'react-toastify'
 import Logo from '@components/layout/shared/Logo'
 import CustomTextField from '@core/components/mui/TextField'
 
@@ -33,11 +36,13 @@ import themeConfig from '@configs/themeConfig'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import { loginThunk, selectError, selectIsAuthenticated, selectIsLoading } from '@/redux-store/slices/authSlice'
-import { useDispatch, useSelector } from 'react-redux'
-import { Alert, Snackbar } from '@mui/material'
-import { clearError } from '@/redux-store/slices/authSlice'
-import { toast } from 'react-toastify'
+import {
+  loginThunk,
+  selectError,
+  selectIsAuthenticated,
+  selectIsLoading,
+  clearError
+} from '@/redux-store/slices/authSlice'
 
 // Styled Custom Components
 const LoginIllustration = styled('img')(({ theme }) => ({
@@ -77,6 +82,7 @@ const Login = () => {
   const { lang: locale } = useParams()
   const theme = useTheme()
   const dispatch = useDispatch()
+
   const {
     control,
     handleSubmit,
@@ -95,6 +101,7 @@ const Login = () => {
     const response = await dispatch(loginThunk({ email: data.email, password: data.password }))
       .unwrap()
       .catch(() => {})
+
     if (response === false) {
       toast.info('Password change required. Please change your password.')
       router.push(getLocalizedUrl('/change-password', locale))
@@ -104,6 +111,7 @@ const Login = () => {
   useEffect(() => {
     if (isAuthenticated) {
       const redirectURL = searchParams.get('redirectTo') ?? '/'
+
       router.replace(getLocalizedUrl(redirectURL, locale))
     }
   }, [isAuthenticated, locale, router, searchParams])

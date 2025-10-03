@@ -37,7 +37,7 @@ export async function middleware(request) {
   // If authenticated and visiting an auth route, redirect to dashboards/sales
   if (token && isAuthRoute) {
     const url = request.nextUrl.clone()
-    const target = '/dashboards/sales'
+    const target = '/apps/ecommerce/orders/list'
     url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
     return NextResponse.redirect(url)
   }
