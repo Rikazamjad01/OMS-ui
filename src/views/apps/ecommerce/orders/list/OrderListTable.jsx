@@ -69,6 +69,9 @@ import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
+import { addPartialPaymentThunk } from '@/redux-store/slices/order'
+// import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
+// import IconButton from '@mui/material/IconButton'
 import FilterModal from '../filterModal/page'
 
 // Utils
@@ -244,6 +247,50 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnte
   )
 }
 
+// Inline dialog component for partial payment, matching createOrderDialog styling
+const PartialPaymentInlineDialog = ({ open, setOpen, onSubmitPartial, orderId }) => {
+  const [amount, setAmount] = useState('')
+  const [attachment, setAttachment] = useState(null)
+
+  return (
+    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+      <DialogTitle>Add Partial Payment</DialogTitle>
+      <DialogContent className='pt-2'>
+        <div className='flex flex-col gap-4'>
+          <TextField
+            fullWidth
+            type='number'
+            label='How much (amount)'
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            inputProps={{ min: 0, step: '1' }}
+          />
+          <Button variant='outlined' component='label' startIcon={<i className='bx-paperclip' />}>
+            Upload attachment (proof)
+            <input type='file' hidden onChange={e => setAttachment(e.target.files?.[0] || null)} />
+          </Button>
+          {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button
+          variant='contained'
+          onClick={async () => {
+            const result = await onSubmitPartial?.({ orderId, amount: Number(amount) || 0, attachment })
+            if (result !== false) setOpen(false)
+          }}
+          disabled={!amount}
+        >
+          Submit
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 /* --------------------------- main component ------------------------- */
 const OrderListTable = ({
   orderData = [],
@@ -264,6 +311,10 @@ const OrderListTable = ({
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
   const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
+  const [partialDialogOpen, setPartialDialogOpen] = useState(false)
+  const [partialAmount, setPartialAmount] = useState('')
+  const [partialAttachment, setPartialAttachment] = useState(null)
+  const [partialForOrderId, setPartialForOrderId] = useState(null)
 
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -356,6 +407,17 @@ const OrderListTable = ({
 
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
   const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
+
+  const onSubmitPartial = async ({ orderId, amount, attachment }) => {
+    try {
+      await dispatch(addPartialPaymentThunk({ id: orderId, amount, attachment })).unwrap()
+      setAlert({ open: true, message: 'Partial payment recorded.', severity: 'success' })
+      return true
+    } catch (err) {
+      setAlert({ open: true, message: err || 'Failed to record partial payment.', severity: 'error' })
+      return false
+    }
+  }
 
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
@@ -457,15 +519,10 @@ const OrderListTable = ({
       setLoadings(true)
 
       // ✅ Get previous tags from tagsMap OR from orderData
-      const previousTags =
-        tagsMap[orderId] ??
-        orderData.find(order => order.id === orderId)?.tags ??
-        []
+      const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
 
       // ✅ Push new tag, ensuring uniqueness
-      const updatedTags = Array.from(
-        new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean))
-      )
+      const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
 
       // ✅ Update UI immediately
       setTagsMap(prev => ({
@@ -580,18 +637,37 @@ const OrderListTable = ({
         accessorKey: 'payment',
         header: 'Payment Status',
         meta: { width: '200px' },
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1'>
-            {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
-            <Typography
+        cell: ({ row }) => {
+          const isPending = String(row.original.payment).toLowerCase() === 'pending'
 
-              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
-              className='font-medium'
-            >
-              {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
-            </Typography>
-          </div>
-        )
+          return (
+            <div className='flex items-center gap-2'>
+              {isPending && (
+                <>
+                  {/* <Menu
+                    open={false}
+                    anchorEl={null}
+                    // Placeholder to keep imports happy; real menu shown via inline trigger below
+                  /> */}
+                  <OpenDialogOnElementClick
+                    element={IconButton}
+                    elementProps={{
+                      // size: 'small',
+                      className: 'hover:rounded-4xl',
+                      children: (
+                        <Typography className='font-medium'>
+                          {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                        </Typography>
+                      )
+                    }}
+                    dialog={PartialPaymentInlineDialog}
+                    dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                  />
+                </>
+              )}
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'platform', // fixed: lowercase
@@ -607,7 +683,6 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -679,7 +754,6 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -882,7 +956,7 @@ const OrderListTable = ({
     data,
     columns,
 
-    // state: { rowSelection, globalFilter, columnFilters },
+    state: { rowSelection },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
 

@@ -6,6 +6,7 @@ const initialState = {
   tasks: [],
   extractedAgentsFromPlatform: [],
   ordersIds: [],
+  agentTaskCounts: {},
   loading: false,
   error: null
 }
@@ -60,6 +61,61 @@ export const assignTaskThunk = createAsyncThunk('taskAssignment/assignTask', asy
     return rejectWithValue(error.message)
   }
 })
+
+// Fetch count of tasks per agent for a given platform
+export const fetchAgentTaskCountsThunk = createAsyncThunk(
+  'taskAssignment/fetchAgentTaskCounts',
+  async ({ platformId }, { rejectWithValue }) => {
+    try {
+      const response = await getRequest(`taskAssignment/agent-task-counts?platformId=${platformId}`)
+      if (response.success) {
+        // Expecting response.data to be an array of { agentId, count }
+        return response.data
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Mark an agent absent (server may optionally trigger redistribution)
+export const markAgentAbsentThunk = createAsyncThunk(
+  'taskAssignment/markAgentAbsent',
+  async ({ platformId, agentId }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('taskAssignment/mark-absent', { platformId, agentId })
+      if (response.success) {
+        return response.data
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Reassign all tasks from one agent to another within a platform
+export const reassignAgentTasksThunk = createAsyncThunk(
+  'taskAssignment/reassignAgentTasks',
+  async ({ platformId, fromAgentId, toAgentId, toAgentIds }, { rejectWithValue }) => {
+    try {
+      const payload = { platformId, fromAgentId }
+      if (Array.isArray(toAgentIds) && toAgentIds.length > 0) {
+        payload.toAgentIds = toAgentIds
+      } else if (toAgentId) {
+        payload.toAgentId = toAgentId
+      }
+      const response = await postRequest('taskAssignment/reassign', payload)
+      if (response.success) {
+        return response.data
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 export const taskAsssignmentSlice = createSlice({
   name: 'taskAsssignment',
@@ -123,6 +179,48 @@ export const taskAsssignmentSlice = createSlice({
         state.error = null
       })
       .addCase(assignTaskThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(fetchAgentTaskCountsThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchAgentTaskCountsThunk.fulfilled, (state, action) => {
+        // Normalize into a map { [agentId]: count }
+        const counts = {}
+        ;(action.payload || []).forEach(item => {
+          if (item && item.agentId) counts[item.agentId] = item.count ?? 0
+        })
+        state.agentTaskCounts = counts
+        state.loading = false
+        state.error = null
+      })
+      .addCase(fetchAgentTaskCountsThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(markAgentAbsentThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(markAgentAbsentThunk.fulfilled, (state, action) => {
+        state.loading = false
+        state.error = null
+      })
+      .addCase(markAgentAbsentThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(reassignAgentTasksThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(reassignAgentTasksThunk.fulfilled, (state, action) => {
+        state.loading = false
+        state.error = null
+      })
+      .addCase(reassignAgentTasksThunk.rejected, (state, action) => {
         state.error = action.payload
         state.loading = false
       })

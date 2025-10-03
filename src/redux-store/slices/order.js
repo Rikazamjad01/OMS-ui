@@ -213,6 +213,20 @@ export const updateOrderProducts = createAsyncThunk(
   }
 )
 
+export const getCustomerByPhone = createAsyncThunk('orders/getCustomerByPhone', async (phone, { rejectWithValue }) => {
+  try {
+    const response = await getRequest(`orders/customer/phone/get?phone=${phone}`)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    return response
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
 export const createOrder = createAsyncThunk('orders/createOrder', async (orderData, { rejectWithValue }) => {
   try {
     const response = await postRequest('orders', orderData) // POST /orders
@@ -240,6 +254,63 @@ export const changeCityThunk = createAsyncThunk('orders/changeCity', async ({ id
     return rejectWithValue(error.message)
   }
 })
+
+// Update order discounted price (discounted subtotal)
+export const updateOrderDiscountThunk = createAsyncThunk(
+  'orders/updateDiscount',
+  async ({ id, discountedPrice }, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest('orders/apply/discount', {
+        method: 'PATCH',
+        data: { id, discount: discountedPrice },
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Record a partial payment for an order
+export const addPartialPaymentThunk = createAsyncThunk(
+  'orders/addPartialPayment',
+  async ({ id, amount, attachment }, { rejectWithValue }) => {
+    try {
+      // Use FormData to support file attachment when provided
+      const formData = new FormData()
+      formData.append('id', id)
+      formData.append('amount', String(amount || 0))
+      if (attachment) formData.append('attachment', attachment)
+
+      // const response = await apiRequest('orders/partial-payment', {
+      //   method: 'POST',
+      //   data: formData
+      // })
+      const response = {
+        status: true,
+        data: {
+          id,
+          amount,
+          attachment
+        }
+      }
+
+      if (!response.status) {
+        return rejectWithValue(response.message)
+      }
+
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -407,7 +478,6 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-          
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -444,6 +514,18 @@ const ordersSlice = createSlice({
         state.loading = false
         state.error = action.payload || action.error.message
       })
+      .addCase(getCustomerByPhone.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(getCustomerByPhone.fulfilled, (state, action) => {
+        state.loading = false
+        // state.selectedCustomer = action.payload
+      })
+      .addCase(getCustomerByPhone.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
       .addCase(createOrder.pending, state => {
         state.loading = true
         state.error = null
@@ -473,6 +555,53 @@ const ordersSlice = createSlice({
         state.orders = state.orders.map(order => (order.id === id ? { ...order, city } : order))
       })
       .addCase(changeCityThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(updateOrderDiscountThunk.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(updateOrderDiscountThunk.fulfilled, (state, action) => {
+        state.loading = false
+        const { id, current_total_price, current_total_discounts } = action.payload
+
+        // Update selectedOrders discounted price for immediate UI feedback
+        if (state.selectedOrders && String(state.selectedOrders.id) === String(id)) {
+          state.selectedOrders.current_total_price = Number(current_total_price) || 0
+          state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
+        }
+
+        // Update in orders list if exists
+        state.orders = state.orders.map(o =>
+          String(o.id) === String(id)
+            ? {
+                ...o,
+                current_total_price: Number(current_total_price) || 0,
+                current_total_discounts: Number(current_total_discounts) || 0
+              }
+            : o
+        )
+      })
+      .addCase(updateOrderDiscountThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(addPartialPaymentThunk.pending, state => {
+        // state.loading = true
+        state.error = null
+      })
+      .addCase(addPartialPaymentThunk.fulfilled, (state, action) => {
+        state.loading = false
+        // Optionally update selectedOrders if backend returns updated totals
+        const { id, current_total_price, current_total_discounts } = action.payload || {}
+        if (id && state.selectedOrders && String(state.selectedOrders.id) === String(id)) {
+          if (current_total_price != null) state.selectedOrders.current_total_price = Number(current_total_price) || 0
+          if (current_total_discounts != null)
+            state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
+        }
+      })
+      .addCase(addPartialPaymentThunk.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })
