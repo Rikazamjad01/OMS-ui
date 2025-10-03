@@ -72,9 +72,9 @@ export const getAlUsersThunk = createAsyncThunk(
   'auth/getAllUsers',
   async ({ params, force = false }, { rejectWithValue, getState }) => {
     try {
-      const { allUsers } = getState().auth
+      const { allUsers, allUsersPagination } = getState().auth
       if (allUsers.length > 0 && !force) {
-        return allUsers
+        return { users: allUsers, pagination: allUsersPagination }
       }
       const response = await getRequest(`users/getUsers?${new URLSearchParams(params)}`)
       if (response.success) {

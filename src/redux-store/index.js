@@ -14,6 +14,7 @@ import zonesReducer from '@/redux-store/slices/zonesSlice'
 import userReducer from '@/redux-store/slices/user'
 import authReducer from '@/redux-store/slices/authSlice'
 import roleReducer from '@/redux-store/slices/roleSlice'
+import taskAsssignmentReducer from '@/redux-store/slices/taskAsssignment'
 
 export const store = configureStore({
   reducer: {
@@ -28,7 +29,8 @@ export const store = configureStore({
     zones: zonesReducer,
     user: userReducer,
     auth: authReducer,
-    role: roleReducer
+    role: roleReducer,
+    taskAsssignment: taskAsssignmentReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })

@@ -69,6 +69,9 @@ import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
+import { addPartialPaymentThunk } from '@/redux-store/slices/order'
+// import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
+// import IconButton from '@mui/material/IconButton'
 import FilterModal from '../filterModal/page'
 
 // Utils
@@ -100,13 +103,10 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  completed: { color: 'primary', text: 'Completed' },
-  processing: { color: 'info', text: 'Processing' },
+  processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
-  delivered: { color: 'primary', text: 'Delivered' },
-  onWay: { color: 'warning', text: 'On Way' },
-  returned: { color: 'error', text: 'Returned' }
+  noPick: { color: 'error', text: 'No Pick' }
 }
 
 export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
@@ -244,6 +244,50 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnte
   )
 }
 
+// Inline dialog component for partial payment, matching createOrderDialog styling
+const PartialPaymentInlineDialog = ({ open, setOpen, onSubmitPartial, orderId }) => {
+  const [amount, setAmount] = useState('')
+  const [attachment, setAttachment] = useState(null)
+
+  return (
+    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+      <DialogTitle>Add Partial Payment</DialogTitle>
+      <DialogContent className='pt-2'>
+        <div className='flex flex-col gap-4'>
+          <TextField
+            fullWidth
+            type='number'
+            label='How much (amount)'
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            inputProps={{ min: 0, step: '1' }}
+          />
+          <Button variant='outlined' component='label' startIcon={<i className='bx-paperclip' />}>
+            Upload attachment (proof)
+            <input type='file' hidden onChange={e => setAttachment(e.target.files?.[0] || null)} />
+          </Button>
+          {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button
+          variant='contained'
+          onClick={async () => {
+            const result = await onSubmitPartial?.({ orderId, amount: Number(amount) || 0, attachment })
+            if (result !== false) setOpen(false)
+          }}
+          disabled={!amount}
+        >
+          Submit
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 /* --------------------------- main component ------------------------- */
 const OrderListTable = ({
   orderData = [],
@@ -264,6 +308,10 @@ const OrderListTable = ({
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null)
   const statusMenuOpen = Boolean(statusMenuAnchor)
   const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
+  const [partialDialogOpen, setPartialDialogOpen] = useState(false)
+  const [partialAmount, setPartialAmount] = useState('')
+  const [partialAttachment, setPartialAttachment] = useState(null)
+  const [partialForOrderId, setPartialForOrderId] = useState(null)
 
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -297,9 +345,9 @@ const OrderListTable = ({
   })
 
   const openTagEditor = (orderId, currentTags = []) => {
-    const tag = Array.isArray(currentTags) ? (currentTags[0] ?? '') : (currentTags ?? '')
+    const tags = Array.isArray(currentTags) ? currentTags : (currentTags || '').split(',').map(t => t.trim())
 
-    setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
+    setTagModal({ open: true, orderId, tags })
   }
 
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
@@ -357,6 +405,17 @@ const OrderListTable = ({
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
   const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
 
+  const onSubmitPartial = async ({ orderId, amount, attachment }) => {
+    try {
+      await dispatch(addPartialPaymentThunk({ id: orderId, amount, attachment })).unwrap()
+      setAlert({ open: true, message: 'Partial payment recorded.', severity: 'success' })
+      return true
+    } catch (err) {
+      setAlert({ open: true, message: err || 'Failed to record partial payment.', severity: 'error' })
+      return false
+    }
+  }
+
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
     const from = filterValue.from ? new Date(filterValue.from) : null
@@ -391,9 +450,9 @@ const OrderListTable = ({
       const parsedTags =
         typeof order.tags === 'string'
           ? order.tags
-              .split(',')
+              .split(',') // backend gives comma-separated
               .map(t => t.trim())
-              .filter(Boolean) // "a,b" → ["a","b"]
+              .filter(Boolean)
           : Array.isArray(order.tags)
             ? order.tags.filter(Boolean)
             : []
@@ -440,7 +499,6 @@ const OrderListTable = ({
       </CustomAvatar>
     )
   }
-  console.log(tagsMap, '---tagsMap---')
 
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
@@ -457,34 +515,31 @@ const OrderListTable = ({
     try {
       setLoadings(true)
 
-      setTagsMap(prev => {
-        const previousTags = prev[orderId] ?? []
+      // ✅ Get previous tags from tagsMap OR from orderData
+      const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
 
-        // const merged = Array.from(new Set([...previousTags, tagPayload]))
+      // ✅ Push new tag, ensuring uniqueness
+      const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
 
-        // Immediately update UI
-        return {
-          ...prev,
-          [orderId]: newTag
-        }
-      })
+      // ✅ Update UI immediately
+      setTagsMap(prev => ({
+        ...prev,
+        [orderId]: updatedTags
+      }))
 
-      // Send the full tag list (previous + new) to backend
-      const updatedTags = tagsMap[orderId] ? Array.from(new Set([...tagsMap[orderId], tagPayload])) : [tagPayload]
-
-      const result = await dispatch(
+      // ✅ Send clean comma-separated string to backend
+      await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: updatedTags.join(',') // or send as array if your API accepts
+          tags: updatedTags.join(',')
         })
       ).unwrap()
 
       setAlert({
         open: true,
-        message: result?.message || 'Tag updated successfully.',
+        message: 'Tag updated successfully.',
         severity: 'success'
       })
-
       closeTagEditor()
     } catch (err) {
       setAlert({
@@ -579,17 +634,37 @@ const OrderListTable = ({
         accessorKey: 'payment',
         header: 'Payment Status',
         meta: { width: '200px' },
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1'>
-            {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
-            <Typography
-              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
-              className='font-medium'
-            >
-              {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
-            </Typography>
-          </div>
-        )
+        cell: ({ row }) => {
+          const isPending = String(row.original.payment).toLowerCase() === 'pending'
+
+          return (
+            <div className='flex items-center gap-2'>
+              {isPending && (
+                <>
+                  {/* <Menu
+                    open={false}
+                    anchorEl={null}
+                    // Placeholder to keep imports happy; real menu shown via inline trigger below
+                  /> */}
+                  <OpenDialogOnElementClick
+                    element={IconButton}
+                    elementProps={{
+                      // size: 'small',
+                      className: 'hover:rounded-4xl',
+                      children: (
+                        <Typography className='font-medium'>
+                          {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                        </Typography>
+                      )
+                    }}
+                    dialog={PartialPaymentInlineDialog}
+                    dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                  />
+                </>
+              )}
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'platform', // fixed: lowercase
@@ -772,39 +847,38 @@ const OrderListTable = ({
         meta: { width: '250px' },
 
         cell: ({ row }) => {
-          const originalTags = Array.isArray(row.original.tags) ? row.original.tags : []
+          const orderId = row.original.id
 
-          // const displayedTags = tagsMap[row.original.id] ?? originalTags
-          const hasTags = originalTags.length > 0
+          // Prefer updated tags from tagsMap, else fall back to parsed original
+          const displayedTags = tagsMap[orderId] ?? row.original.tags
+          const hasTags = displayedTags.length > 0
 
           return (
             <div className='flex flex-col gap-1'>
-              {/* First row: Tags */}
               <div
                 className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
-                onClick={() => openTagEditor(row.original.id, displayedTags)}
+                onClick={() => openTagEditor(orderId, displayedTags)}
                 role='button'
                 tabIndex={0}
                 onKeyDown={e => {
-                  if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
+                  if (e.key === 'Enter') openTagEditor(orderId, displayedTags)
                 }}
               >
                 {hasTags ? (
-                  originalTags.map((tag, i) => (
+                  displayedTags.map((tag, i) => (
                     <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
                   ))
                 ) : (
-                  <> </>
+                  <></>
                 )}
               </div>
 
-              {/* Second row: "+" button */}
               <div>
                 <Chip
                   label='+ Add Tag'
                   variant='outlined'
                   size='small'
-                  onClick={() => openTagEditor(row.original.id, originalTags)}
+                  onClick={() => openTagEditor(orderId, displayedTags)}
                 />
               </div>
             </div>
@@ -879,7 +953,7 @@ const OrderListTable = ({
     data,
     columns,
 
-    // state: { rowSelection, globalFilter, columnFilters },
+    state: { rowSelection },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
 
@@ -1020,14 +1094,34 @@ const OrderListTable = ({
               {/* Status Change Menu */}
               <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
                 {orderStatusArray.map(status => (
-                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                  <OpenDialogOnElementClick
+                    key={status.value}
+                    element={MenuItem}
+                    elementProps={{
+                      onClick: () => setStatusMenuAnchor(null) // close the menu
+                    }}
+                    dialog={ConfirmationDialog}
+                    size='small'
+                    dialogProps={{
+                      type: 'update-status',
+                      payload: {
+                        orderIds: [orderId], // or selectedIds for bulk
+                        fromStatus: statusChipColor[currentStatus]?.text,
+                        toStatus: status.label,
+                        toStatusKey: status.value
+                      },
+                      onSuccess: async () => {
+                        await dispatch(fetchOrders({ page: 1, limit, force: true }))
+                      }
+                    }}
+                  >
                     <Chip
                       label={status.label}
                       color={statusChipColor[status.value].color}
                       variant='tonal'
                       size='small'
                     />
-                  </MenuItem>
+                  </OpenDialogOnElementClick>
                 ))}
               </Menu>
             </>
@@ -1162,7 +1256,7 @@ const OrderListTable = ({
         <Autocomplete
           multiple
           fullWidth
-          options={orderStatusArray}
+          options={orderStatusArray.filter(status => status.value.toLowerCase() !== 'processing')}
           getOptionLabel={option => option.label}
           value={filters.orderStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
@@ -1436,6 +1530,36 @@ const OrderListTable = ({
           })
         }}
       />
+      {/* <ConfirmationDialog
+        open={confirmOpen}
+        setOpen={setConfirmOpen}
+        type='update-status'
+        payload={confirmPayload}
+        onSuccess={() => {
+          if (confirmPayload) {
+            updateOrdersStatus(confirmPayload.orderIds, confirmPayload.toStatusKey)
+          }
+        }}
+      /> */}
+      {/* <OpenDialogOnElementClick
+        element={Button}
+        elementProps={{ children: 'Change to Shipped', variant: 'tonal' }}
+        dialog={ConfirmationDialog}
+        size='small'
+        dialogProps={{
+          type: 'update-status',
+          payload: {
+            orderIds: [orderId],
+            fromStatus: statusChipColor[currentStatus]?.text,
+            toStatus: statusChipColor['shipped']?.text,
+            toStatusKey: 'shipped'
+          },
+          onSuccess: async () => {
+            await updateOrdersStatus([orderId], 'shipped')
+            dispatch(fetchOrders({ page: 1, limit, force: true }))
+          }
+        }}
+      /> */}
     </Card>
   )
 }

@@ -1,5 +1,5 @@
-import { getRequest, postRequest } from '@/utils/api'
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { getRequest, postRequest } from '@/utils/api'
 
 const initialState = {
   zones: [],
@@ -10,6 +10,7 @@ const initialState = {
 export const fetchZones = createAsyncThunk('zones/fetchZones', async (_, { rejectWithValue }) => {
   try {
     const response = await getRequest('zones')
+
     if (response.status) {
       if (response.data.length > 0) {
         return response.data
@@ -26,42 +27,74 @@ export const fetchZones = createAsyncThunk('zones/fetchZones', async (_, { rejec
 
 export const createZone = createAsyncThunk('zones/create', async (payload, { rejectWithValue, getState }) => {
   try {
-    let { cities, couriers, namingConvention, name } = payload
+    let { cities, couriers, namingConvention, name: intendedName } = payload // Rename to intendedName
     const state = getState()
+
+    console.log('=== CREATE ZONE DEBUG ===');
+    console.log('Payload received:', payload);
+    console.log('Intended name:', intendedName);
+    console.log('Current zones in state:', state.zones.zones);
+
     if (!namingConvention) {
       namingConvention = state.zones[0].namingConvention
     }
-    const response = await postRequest('zones', { config: { cities }, couriers, namingConvention, name })
-    console.log(response, 'response in createZone')
+
+    const response = await postRequest('zones', { config: { cities }, couriers, namingConvention, name: intendedName })
+
+    console.log('API Response in createZone:', response)
+    console.log('Intended name was:', intendedName)
+
     if (response.status) {
-      return response.data
+      // OVERRIDE the server response name with what we intended to send
+      const fixedResponse = {
+        ...response.data,
+        name: intendedName // Force the correct name regardless of what server returns
+      }
+
+      console.log('Fixed response with correct name:', fixedResponse)
+      return fixedResponse
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || error.message)
   }
 })
 
-export const updateZone = createAsyncThunk('zones/update', async ({ id, cities, couriers }, { rejectWithValue }) => {
-  try {
-    const response = await postRequest(`zones/${id}`, { config: { cities }, couriers }, 'patch')
-    console.log(response, 'response in updateZone')
-    if (response.status) {
-      return response.data
+export const updateZone = createAsyncThunk(
+  'zones/update',
+  async ({ id, cities, couriers, name }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest(`zones/${id}`, { config: { cities }, couriers, name }, 'patch')
+
+      console.log('Update Zone Response:', response)
+
+      if (response.status) {
+        // If name was provided, override the server response
+        if (name) {
+          return { ...response.data, name }
+        }
+
+        return response.data
+      }
+
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message)
     }
-    return rejectWithValue(response.message)
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message)
   }
-})
+)
 
 export const removeCity = createAsyncThunk('zones/removeCity', async ({ id, city }, { rejectWithValue }) => {
   try {
     const response = await postRequest(`zones/remove-city/${id}`, { city }, 'patch')
+
     console.log(response, 'response in removeCity')
+
     if (response.status) {
       return response.data
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || error.message)
