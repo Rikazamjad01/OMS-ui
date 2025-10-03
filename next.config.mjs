@@ -17,13 +17,13 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/en/dashboards/sales',
+        destination: '/apps/ecommerce/orders/list',
         permanent: true,
         locale: false
       },
       {
         source: '/:lang(en|fr|ar)',
-        destination: '/:lang/dashboards/sales',
+        destination: '/:lang/apps/ecommerce/orders/list',
         permanent: true,
         locale: false
       },

@@ -85,7 +85,7 @@ import TablePaginationComponent from '@/components/TablePaginationComponent'
 import OrderDetails from '@/views/apps/ecommerce/orders/details'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
-import { updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import { updateOrderCommentsAndRemarks, updateOrdersStatusThunk } from '@/redux-store/slices/order'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -102,23 +102,23 @@ export const paymentStatus = {
 // }
 
 export const courierPlatforms = {
-  none: { text: 'None', color: 'default', colorClassName: 'text-default' },
-  leopard: { text: 'Leopards', color: 'success', colorClassName: 'text-success' },
-  daewoo: { text: 'Daewoo', color: 'secondary', colorClassName: 'text-secondary' },
-  postEx: { text: 'PostEx', color: 'warning', colorClassName: 'text-warning' },
-  mp: { text: 'M&P', color: 'error', colorClassName: 'text-error' },
-  tcs: { text: 'TCS', color: 'primary', colorClassName: 'text-primary' }
+  // none: { text: 'None', color: 'default', colorClassName: 'text-default' },
+  leopard: { text: 'Leopards', color: 'success', colorClassName: 'text-success' }
+  // daewoo: { text: 'Daewoo', color: 'secondary', colorClassName: 'text-secondary' },
+  // postEx: { text: 'PostEx', color: 'warning', colorClassName: 'text-warning' },
+  // mp: { text: 'M&P', color: 'error', colorClassName: 'text-error' },
+  // tcs: { text: 'TCS', color: 'primary', colorClassName: 'text-primary' }
 }
 
-export const statusChipColor = {
+export const statusChipColorForBooking = {
   confirmed: { color: 'success', text: 'Confirmed' },
   processing: { color: 'info', text: 'Processing' },
   onWay: { color: 'warning', text: 'On Way' }
 }
 
-export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
+export const orderStatusArray = Object.keys(statusChipColorForBooking).map(key => ({
   value: key,
-  label: statusChipColor[key].text
+  label: statusChipColorForBooking[key].text
 }))
 
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
@@ -314,7 +314,7 @@ const BookingListTable = ({
 
       const message =
         result.message ||
-        `Status updated to "${statusChipColor[newStatus]?.text}" for ${count} order${count > 1 ? 's' : ''}`
+        `Status updated to "${statusChipColorForBooking[newStatus]?.text}" for ${count} order${count > 1 ? 's' : ''}`
 
       setAlert({
         open: true,
@@ -449,9 +449,8 @@ const BookingListTable = ({
   const handleSaveTags = async newTag => {
     const tagPayload = String(newTag || '').trim()
 
-    if (!tagPayload || !tagPayload.trim()) {
+    if (!tagPayload) {
       setAlert({ open: true, message: 'Tag cannot be empty.', severity: 'error' })
-
       return
     }
 
@@ -459,58 +458,41 @@ const BookingListTable = ({
 
     if (!orderId) return
 
-    if (!tagPayload) {
-      // console.warn('No tag to update, skipping request.')
-
-      return
-    }
-
     try {
       setLoadings(true)
 
-      const result = await dispatch(
+      // ✅ Get previous tags from tagsMap OR from orderData
+      const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
+
+      // ✅ Push new tag, ensuring uniqueness
+      const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
+
+      // ✅ Update UI immediately
+      setTagsMap(prev => ({
+        ...prev,
+        [orderId]: updatedTags
+      }))
+
+      // ✅ Send clean comma-separated string to backend
+      await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: tagPayload
+          tags: updatedTags.join(',')
         })
       ).unwrap()
 
       setAlert({
         open: true,
-        message: result?.message || 'Tag updated successfully.',
+        message: 'Tag updated successfully.',
         severity: 'success'
       })
-
-      // Normalize to array for UI display, but it's still just one tag
-      const normalizedTags =
-        typeof result.tags === 'string'
-          ? result.tags
-              .split(/[,|\n]+/)
-              .map(t => t.trim())
-              .filter(Boolean)
-          : [tagPayload]
-
-      setTagsMap(prev => {
-        const previousTags = prev[orderId] ?? []
-        const merged = Array.from(new Set([...previousTags, ...normalizedTags]))
-
-        return {
-          ...prev,
-          [orderId]: merged
-        }
-      })
-
-      if (result.status) {
-        closeTagEditor()
-      }
+      closeTagEditor()
     } catch (err) {
       setAlert({
         open: true,
         message: err?.message || 'Failed to update tag.',
         severity: 'error'
       })
-
-      // console.error('Failed to update tag:', err)
     } finally {
       setLoadings(false)
     }
@@ -604,10 +586,7 @@ const BookingListTable = ({
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
-            <Typography
-              // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
-              className='font-medium '
-            >
+            <Typography className='font-medium '>
               {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
             </Typography>
           </div>
@@ -640,10 +619,10 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
-                    if (n.includes('daewoo')) return 'daewoo'
-                    if (n.includes('post')) return 'postEx'
-                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                    if (n.includes('tcs')) return 'tcs'
+                    // if (n.includes('daewoo')) return 'daewoo'
+                    // if (n.includes('post')) return 'postEx'
+                    // if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    // if (n.includes('tcs')) return 'tcs'
                     return 'none'
                   }
 
@@ -658,12 +637,12 @@ const BookingListTable = ({
                 onSubmit: async (payload, controls) => {
                   try {
                     const courierApiMap = {
-                      none: 'None',
-                      leopard: 'Leopard',
-                      daewoo: 'Daewoo',
-                      postEx: 'PostEx',
-                      mp: 'M&P',
-                      tcs: 'TCS'
+                      // none: 'None',
+                      leopard: 'Leopard'
+                      // daewoo: 'Daewoo',
+                      // postEx: 'PostEx',
+                      // mp: 'M&P',
+                      // tcs: 'TCS'
                     }
 
                     const body = {
@@ -693,7 +672,7 @@ const BookingListTable = ({
         accessorKey: 'status',
         header: 'Order Status',
         cell: props => {
-          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
+          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} booking />
         }
       },
       {
@@ -753,7 +732,6 @@ const BookingListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
                       </p>
@@ -857,10 +835,10 @@ const BookingListTable = ({
                       const n = String(name).toLowerCase()
 
                       if (n.includes('leopard')) return 'leopard'
-                      if (n.includes('daewoo')) return 'daewoo'
-                      if (n.includes('post')) return 'postEx'
-                      if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                      if (n.includes('tcs')) return 'tcs'
+                      // if (n.includes('daewoo')) return 'daewoo'
+                      // if (n.includes('post')) return 'postEx'
+                      // if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                      // if (n.includes('tcs')) return 'tcs'
                       return 'none'
                     }
 
@@ -875,12 +853,12 @@ const BookingListTable = ({
                   onSubmit: async (payload, controls) => {
                     try {
                       const courierApiMap = {
-                        none: 'None',
-                        leopard: 'Leopard',
-                        daewoo: 'Daewoo',
-                        postEx: 'PostEx',
-                        mp: 'M&P',
-                        tcs: 'TCS'
+                        // none: 'None',
+                        leopard: 'Leopard'
+                        // daewoo: 'Daewoo',
+                        // postEx: 'PostEx',
+                        // mp: 'M&P',
+                        // tcs: 'TCS'
                       }
 
                       const freshSelectedIds = (() => {
@@ -1058,7 +1036,7 @@ const BookingListTable = ({
     maxAmount: '',
     paymentMethods: [],
     courierPlatforms: [],
-    statusChipColor: [],
+    statusChipColorForBooking: [],
     paymentStatus: [],
     tagsMap: [],
     pakistanCities: []
@@ -1152,10 +1130,10 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
-                    if (n.includes('daewoo')) return 'daewoo'
-                    if (n.includes('post')) return 'postEx'
-                    if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                    if (n.includes('tcs')) return 'tcs'
+                    // if (n.includes('daewoo')) return 'daewoo'
+                    // if (n.includes('post')) return 'postEx'
+                    // if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                    // if (n.includes('tcs')) return 'tcs'
                     return 'none'
                   }
 
@@ -1170,12 +1148,12 @@ const BookingListTable = ({
                 onSubmit: async (payload, controls) => {
                   try {
                     const courierApiMap = {
-                      none: 'None',
-                      leopard: 'Leopard',
-                      daewoo: 'Daewoo',
-                      postEx: 'PostEx',
-                      mp: 'M&P',
-                      tcs: 'TCS'
+                      // none: 'None',
+                      leopard: 'Leopard'
+                      // daewoo: 'Daewoo',
+                      // postEx: 'PostEx',
+                      // mp: 'M&P',
+                      // tcs: 'TCS'
                     }
 
                     const freshSelectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)

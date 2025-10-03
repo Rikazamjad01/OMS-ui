@@ -78,6 +78,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
 
     try {
       setSubmitting(true)
+
       if (isMerge) {
         const ids = payload?.orderIds ?? []
 

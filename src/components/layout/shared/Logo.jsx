@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Third-party Imports
 import styled from '@emotion/styled'
@@ -35,6 +35,7 @@ const LogoText = styled.span`
 const Logo = ({ color }) => {
   // Refs
   const logoTextRef = useRef(null)
+  const [mounted, setMounted] = useState(false)
 
   // Hooks
   const { isHovered, transitionDuration, isBreakpointReached } = useVerticalNav()
@@ -42,6 +43,10 @@ const Logo = ({ color }) => {
 
   // Vars
   const { layout } = settings
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (layout !== 'collapsed') {
@@ -61,16 +66,19 @@ const Logo = ({ color }) => {
   return (
     <div className='flex items-center'>
       <SukoonLogo className='text-2xl text-primary' />
-      <LogoText
-        color={color}
-        ref={logoTextRef}
-        isHovered={isHovered}
-        isCollapsed={layout === 'collapsed'}
-        transitionDuration={transitionDuration}
-        isBreakpointReached={isBreakpointReached}
-      >
-        {themeConfig.templateName}
-      </LogoText>
+      {mounted ? (
+        <LogoText
+          color={color}
+          ref={logoTextRef}
+          isHovered={isHovered}
+          isCollapsed={layout === 'collapsed'}
+          transitionDuration={transitionDuration}
+          isBreakpointReached={isBreakpointReached}
+          suppressHydrationWarning
+        >
+          {themeConfig.templateName}
+        </LogoText>
+      ) : null}
     </div>
   )
 }

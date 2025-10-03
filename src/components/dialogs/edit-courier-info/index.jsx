@@ -19,12 +19,13 @@ import CustomTextField from '@core/components/mui/TextField'
 
 // Local options (keep in sync with table)
 const courierPlatforms = {
-  none: { text: 'None' },
-  leopard: { text: 'Leopards' },
-  daewoo: { text: 'Daewoo' },
-  postEx: { text: 'PostEx' },
-  mp: { text: 'M&P' },
-  tcs: { text: 'TCS' }
+  // none: { text: 'None' },
+
+  leopard: { text: 'Leopards' }
+  // daewoo: { text: 'Daewoo' },
+  // postEx: { text: 'PostEx' },
+  // mp: { text: 'M&P' },
+  // tcs: { text: 'TCS' }
 }
 
 const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
@@ -57,6 +58,7 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
 
     setSubmitting(true)
     const ids = Array.isArray(form.orderIds) ? form.orderIds : [form.orderIds].filter(Boolean)
+
     if (ids.length === 0) {
       setOpen(false)
       setSubmitting(false)
@@ -123,6 +125,7 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
               <CustomTextField
                 fullWidth
                 label='Reason'
+                required
                 placeholder='Why are you changing the courier?'
                 value={form.reason}
                 onChange={e => setForm(prev => ({ ...prev, reason: e.target.value }))}
