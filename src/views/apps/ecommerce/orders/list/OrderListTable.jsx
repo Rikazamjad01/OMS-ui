@@ -100,13 +100,10 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  completed: { color: 'primary', text: 'Completed' },
-  processing: { color: 'info', text: 'Processing' },
+  processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
-  delivered: { color: 'primary', text: 'Delivered' },
-  onWay: { color: 'warning', text: 'On Way' },
-  returned: { color: 'error', text: 'Returned' }
+  noPick: { color: 'error', text: 'No Pick' }
 }
 
 export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
@@ -265,6 +262,9 @@ const OrderListTable = ({
   const statusMenuOpen = Boolean(statusMenuAnchor)
   const [orderIntakeOpen, setOrderIntakeOpen] = useState(false)
 
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmPayload, setConfirmPayload] = useState(null)
+
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsOrderId, setDetailsOrderId] = useState(null)
@@ -356,6 +356,11 @@ const OrderListTable = ({
 
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
   const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
+
+  const handleStatusChangeWithConfirm = (orderIds, fromStatus, newStatus) => {
+    setConfirmPayload({ orderIds, fromStatus, toStatus: statusChipColor[newStatus]?.text, toStatusKey: newStatus })
+    setConfirmOpen(true)
+  }
 
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
@@ -457,15 +462,10 @@ const OrderListTable = ({
       setLoadings(true)
 
       // ✅ Get previous tags from tagsMap OR from orderData
-      const previousTags =
-        tagsMap[orderId] ??
-        orderData.find(order => order.id === orderId)?.tags ??
-        []
+      const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
 
       // ✅ Push new tag, ensuring uniqueness
-      const updatedTags = Array.from(
-        new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean))
-      )
+      const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
 
       // ✅ Update UI immediately
       setTagsMap(prev => ({
@@ -584,7 +584,6 @@ const OrderListTable = ({
           <div className='flex items-center gap-1'>
             {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
             <Typography
-
               // color={`${paymentStatus[row.original.payment]?.color || 'default'}.main`}
               className='font-medium'
             >
@@ -607,7 +606,6 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -679,7 +677,6 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -1023,14 +1020,34 @@ const OrderListTable = ({
               {/* Status Change Menu */}
               <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
                 {orderStatusArray.map(status => (
-                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
+                  <OpenDialogOnElementClick
+                    key={status.value}
+                    element={MenuItem}
+                    elementProps={{
+                      onClick: () => setStatusMenuAnchor(null) // close the menu
+                    }}
+                    dialog={ConfirmationDialog}
+                    size='small'
+                    dialogProps={{
+                      type: 'update-status',
+                      payload: {
+                        orderIds: [orderId], // or selectedIds for bulk
+                        fromStatus: statusChipColor[currentStatus]?.text,
+                        toStatus: status.label,
+                        toStatusKey: status.value
+                      },
+                      onSuccess: async () => {
+                        await dispatch(fetchOrders({ page: 1, limit, force: true }))
+                      }
+                    }}
+                  >
                     <Chip
                       label={status.label}
                       color={statusChipColor[status.value].color}
                       variant='tonal'
                       size='small'
                     />
-                  </MenuItem>
+                  </OpenDialogOnElementClick>
                 ))}
               </Menu>
             </>
@@ -1165,7 +1182,7 @@ const OrderListTable = ({
         <Autocomplete
           multiple
           fullWidth
-          options={orderStatusArray}
+          options={orderStatusArray.filter(status => status.value.toLowerCase() !== 'processing')}
           getOptionLabel={option => option.label}
           value={filters.orderStatus || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
@@ -1439,6 +1456,36 @@ const OrderListTable = ({
           })
         }}
       />
+      <ConfirmationDialog
+        open={confirmOpen}
+        setOpen={setConfirmOpen}
+        type='update-status'
+        payload={confirmPayload}
+        onSuccess={() => {
+          if (confirmPayload) {
+            updateOrdersStatus(confirmPayload.orderIds, confirmPayload.toStatusKey)
+          }
+        }}
+      />
+      {/* <OpenDialogOnElementClick
+        element={Button}
+        elementProps={{ children: 'Change to Shipped', variant: 'tonal' }}
+        dialog={ConfirmationDialog}
+        size='small'
+        dialogProps={{
+          type: 'update-status',
+          payload: {
+            orderIds: [orderId],
+            fromStatus: statusChipColor[currentStatus]?.text,
+            toStatus: statusChipColor['shipped']?.text,
+            toStatusKey: 'shipped'
+          },
+          onSuccess: async () => {
+            await updateOrdersStatus([orderId], 'shipped')
+            dispatch(fetchOrders({ page: 1, limit, force: true }))
+          }
+        }}
+      /> */}
     </Card>
   )
 }

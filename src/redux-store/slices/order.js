@@ -27,7 +27,9 @@ export const fetchOrders = createAsyncThunk(
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
       if (filters.dateTo) filterParams.end_date = filters.dateTo
+
       if (filters.status) filterParams.orderStatus = filters.status
+
       if (filters.platform) filterParams.platform = filters.platform
       if (filters.customer) filterParams.search = filters.customer
       if (filters.order) filterParams.search = filters.order
@@ -407,7 +409,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-          
+
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )

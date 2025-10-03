@@ -110,15 +110,15 @@ export const courierPlatforms = {
   tcs: { text: 'TCS', color: 'primary', colorClassName: 'text-primary' }
 }
 
-export const statusChipColor = {
+export const statusChipColorForBooking = {
   confirmed: { color: 'success', text: 'Confirmed' },
   processing: { color: 'info', text: 'Processing' },
   onWay: { color: 'warning', text: 'On Way' }
 }
 
-export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
+export const orderStatusArray = Object.keys(statusChipColorForBooking).map(key => ({
   value: key,
-  label: statusChipColor[key].text
+  label: statusChipColorForBooking[key].text
 }))
 
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
@@ -314,7 +314,7 @@ const BookingListTable = ({
 
       const message =
         result.message ||
-        `Status updated to "${statusChipColor[newStatus]?.text}" for ${count} order${count > 1 ? 's' : ''}`
+        `Status updated to "${statusChipColorForBooking[newStatus]?.text}" for ${count} order${count > 1 ? 's' : ''}`
 
       setAlert({
         open: true,
@@ -679,7 +679,7 @@ const BookingListTable = ({
         accessorKey: 'status',
         header: 'Order Status',
         cell: props => {
-          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
+          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} booking />
         }
       },
       {
@@ -1043,7 +1043,7 @@ const BookingListTable = ({
     maxAmount: '',
     paymentMethods: [],
     courierPlatforms: [],
-    statusChipColor: [],
+    statusChipColorForBooking: [],
     paymentStatus: [],
     tagsMap: [],
     pakistanCities: []
