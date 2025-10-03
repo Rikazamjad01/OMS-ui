@@ -110,9 +110,8 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const redirectURL = searchParams.get('redirectTo') ?? '/'
-
-      router.replace(getLocalizedUrl(redirectURL, locale))
+      const target = '/apps/ecommerce/customers/list'
+      router.replace(getLocalizedUrl(target, locale))
     }
   }, [isAuthenticated, locale, router, searchParams])
 

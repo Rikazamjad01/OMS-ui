@@ -3,6 +3,13 @@ import { NextResponse } from 'next/server'
 export async function middleware(request) {
   const token = request.cookies.get('token')?.value
   const { pathname } = request.nextUrl
+  const user = request.cookies.get('user')?.value
+  let email = null
+  try {
+    email = JSON.parse(user || '{}')?.email || null
+  } catch (err) {
+    email = null
+  }
 
   // Supported locales (keep in sync with src/configs/i18n.js)
   const locales = ['en', 'fr', 'ar']
@@ -17,8 +24,14 @@ export async function middleware(request) {
 
   const isAuthRoute = authPaths.has(pathWithoutLocale)
 
-  // Allow root always
+  // Allow root, but if authenticated redirect to landing
   if (pathWithoutLocale === '/') {
+    if (token) {
+      const url = request.nextUrl.clone()
+      const target = '/apps/ecommerce/customers/list'
+      url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
+      return NextResponse.redirect(url)
+    }
     return NextResponse.next()
   }
 
@@ -34,14 +47,23 @@ export async function middleware(request) {
     return NextResponse.redirect(url)
   }
 
-  // If authenticated and visiting an auth route, redirect to dashboards/sales
+  // If authenticated and visiting an auth route, redirect to the appropriate landing
   if (token && isAuthRoute) {
     const url = request.nextUrl.clone()
-    const target = '/apps/ecommerce/orders/list'
+    const target = '/apps/ecommerce/customers/list'
     url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
     return NextResponse.redirect(url)
   }
 
+  // If authenticated and at root, send to landing as well
+  if (token && pathWithoutLocale === '/') {
+    const url = request.nextUrl.clone()
+    const target = '/apps/ecommerce/customers/list'
+    url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
+    return NextResponse.redirect(url)
+  }
+
+  // Otherwise allow the request
   return NextResponse.next()
 }
 
