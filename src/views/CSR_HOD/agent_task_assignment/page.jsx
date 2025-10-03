@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography'
 // Component Imports
 import PlatformCreationForm from './components/PlatformCreationForm'
 import TaskAssignmentForm from './components/TaskAssignmentForm'
+import AgentTaskOverview from './components/AgentTaskOverview'
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -35,6 +36,7 @@ function a11yProps(index) {
 
 const AgentTaskAssignment = () => {
   const [tabValue, setTabValue] = useState(0)
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false)
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue)
@@ -54,7 +56,11 @@ const AgentTaskAssignment = () => {
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        <TaskAssignmentForm />
+        {showAssignmentForm ? (
+          <TaskAssignmentForm />
+        ) : (
+          <AgentTaskOverview onOpenAssignmentForm={() => setShowAssignmentForm(true)} />
+        )}
       </TabPanel>
     </Box>
   )

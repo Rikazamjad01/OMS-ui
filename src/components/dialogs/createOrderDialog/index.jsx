@@ -14,7 +14,9 @@ import {
   IconButton,
   Typography,
   TextField,
-  Autocomplete
+  Autocomplete,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { Add, Remove } from '@mui/icons-material'
@@ -24,7 +26,7 @@ import CitiesData from '@/data/cities/cities'
 
 // Redux imports
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { createOrder, fetchOrders } from '@/redux-store/slices/order'
+import { createOrder, fetchOrders, getCustomerByPhone } from '@/redux-store/slices/order'
 
 import DialogCloseButton from '../DialogCloseButton'
 
@@ -42,6 +44,21 @@ const ProvincesData = [
   'Gilgit-Baltistan',
   'Azad Jammu and Kashmir'
 ]
+
+function isValidPakistaniPhone(phone) {
+  if (typeof phone !== 'string') return false
+
+  // Trim whitespace
+  const s = phone.trim()
+
+  // Regex:
+  // ^(?:\+92|0)?  → optionally +92 or 0
+  // [3]           → next digit must start with 3 (mobile operator start)
+  // \d{9}$         → then 9 more digits (for total 10 digits after prefix)
+  const regex = /^(?:\+92|0|0092)?3\d{9}$/
+
+  return regex.test(s)
+}
 
 const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
   const dispatch = useDispatch()
@@ -68,6 +85,11 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
 
   const [products, setProducts] = useState([])
   const [showProductSelector, setShowProductSelector] = useState(false)
+  const [phoneLookupLoading, setPhoneLookupLoading] = useState(false)
+  const [phoneLookupError, setPhoneLookupError] = useState('')
+  const [hasPartialPayment, setHasPartialPayment] = useState(false)
+  const [partialAmount, setPartialAmount] = useState('')
+  const [partialAttachment, setPartialAttachment] = useState(null)
 
   const filteredProducts = allProducts.filter(product =>
     (product.title || '').toLowerCase().includes((searchQuery || '').toLowerCase())
@@ -106,6 +128,54 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     }
   }, [open, dispatch])
 
+  // Auto-fetch customer by phone when a valid Pakistani mobile number is completed
+  useEffect(() => {
+    const phone = orderData.phone
+    setPhoneLookupError('')
+
+    if (!phone || !isValidPakistaniPhone(phone)) return
+
+    const controller = new AbortController()
+    const timeout = setTimeout(async () => {
+      try {
+        setPhoneLookupLoading(true)
+        const action = await dispatch(getCustomerByPhone(phone))
+
+        if (getCustomerByPhone.fulfilled.match(action)) {
+          const payload = action.payload || {}
+          const data = payload.data || payload
+
+          if (data && (data.status === true || payload.status === true)) {
+            setOrderData(prev => ({
+              ...prev,
+              email: data.email ?? prev.email,
+              address1: data.address1 ?? prev.address1,
+              address2: data.address2 ?? prev.address2,
+              city: data.city ?? prev.city,
+              province: data.province ?? prev.province,
+              zip: data.zip ?? prev.zip,
+              phone: data.phone ?? prev.phone,
+              first_name: data.first_name ?? prev.first_name,
+              last_name: data.last_name ?? prev.last_name
+            }))
+          } else {
+            // no customer found → not an error
+          }
+        } else if (getCustomerByPhone.rejected.match(action)) {
+          // show gentle error, do not block user
+          setPhoneLookupError(action.payload || 'Failed to fetch customer info')
+        }
+      } finally {
+        setPhoneLookupLoading(false)
+      }
+    }, 400) // slight debounce to reduce calls while typing
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
+  }, [orderData.phone, dispatch])
+
   const handleClose = () => setOpen(false)
 
   const updateQuantity = (index, delta) => {
@@ -142,6 +212,9 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     const payload = {
       ...orderData,
       shippingId: orderData.shipping_line?.id,
+      partialPayment: hasPartialPayment
+        ? { amount: Number(partialAmount) || 0, attachment: partialAttachment || null }
+        : undefined,
       line_items: products.map(p => ({
         id: p.id,
         quantity: p.quantity,
@@ -158,6 +231,22 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         setSnackbar({ open: true, message: 'Order created successfully!', severity: 'success' })
         setOpen(false)
         onSuccess?.()
+        setOrderData({
+          email: '',
+          first_name: '',
+          last_name: '',
+          phone: '',
+          address1: '',
+          address2: '',
+          city: '',
+          province: '',
+          zip: '',
+          platform: '',
+          payment_gateway_names: ['Cash on Delivery']
+        })
+        setHasPartialPayment(false)
+        setPartialAmount('')
+        setPartialAttachment(null)
         dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed: ' + err, severity: 'error' }))
@@ -186,10 +275,21 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         }}
       >
         <DialogContent>
-          {/* Customer details */}
+          {/* Customer details - restored flex layout, preserved order */}
           <div className='flex flex-wrap mb-4'>
             <div className='flex flex-wrap items-center gap-4 py-2'>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
+                <TextField
+                  label='Phone'
+                  fullWidth
+                  value={orderData.phone}
+                  onChange={e => updateField('phone', e.target.value)}
+                  required
+                  helperText={phoneLookupError || ''}
+                  error={Boolean(phoneLookupError)}
+                />
+              </div>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <TextField
                   label='First Name'
                   fullWidth
@@ -198,7 +298,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/4'>
                 <TextField
                   label='Last Name'
                   fullWidth
@@ -207,7 +307,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full xl:w-1/4'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <TextField
                   label='Email'
                   fullWidth
@@ -215,16 +315,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('email', e.target.value)}
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
-                <TextField
-                  label='Phone'
-                  fullWidth
-                  value={orderData.phone}
-                  onChange={e => updateField('phone', e.target.value)}
-                  required
-                />
-              </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <TextField
                   label='Address 1'
                   fullWidth
@@ -233,7 +324,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full xl:w-1/4'>
+              <div className='w-full md:w-1/2 xl:w-1/4'>
                 <TextField
                   label='Address 2 (Optional)'
                   fullWidth
@@ -241,7 +332,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('address2', e.target.value)}
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <Autocomplete
                   options={CitiesData}
                   value={orderData.city || null}
@@ -250,7 +341,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='City' fullWidth required />}
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <Autocomplete
                   options={ProvincesData}
                   value={orderData.province || null}
@@ -259,7 +350,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='Province' fullWidth required />}
                 />
               </div>
-              <div className='w-full xl:w-1/4'>
+              <div className='w-full md:w-1/2 xl:w-1/4'>
                 <TextField
                   label='Zip Code'
                   fullWidth
@@ -267,7 +358,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('zip', e.target.value)}
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <Autocomplete
                   options={platforms_data}
                   value={orderData.platform || null}
@@ -276,7 +367,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='Platform' fullWidth required />}
                 />
               </div>
-              <div className='w-full xl:w-1/3'>
+              <div className='w-full md:w-1/2 xl:w-1/3'>
                 <TextField
                   label='Payment Method'
                   fullWidth
@@ -285,7 +376,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full xl:w-1/4'>
+              <div className='w-full md:w-1/2 xl:w-1/4'>
                 <Autocomplete
                   options={shipping_lines_data}
                   getOptionLabel={option => option.title}
@@ -296,6 +387,50 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
               </div>
             </div>
           </div>
+          {/* Partial Payment */}
+          <Grid item xs={12} className='mt-4'>
+            <FormControlLabel
+              control={<Checkbox checked={hasPartialPayment} onChange={e => setHasPartialPayment(e.target.checked)} />}
+              label='Have partial payment'
+            />
+          </Grid>
+          {hasPartialPayment && (
+            <Grid container spacing={2} className='mt-1'>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type='number'
+                  label='How much (amount)'
+                  value={partialAmount}
+                  onChange={e => setPartialAmount(e.target.value)}
+                  inputProps={{ min: 0, step: '1' }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Button
+                  variant='outlined'
+                  component='label'
+                  startIcon={<i className='bx-paperclip' />}
+                  className='is-full h-full'
+                >
+                  Upload attachment (proof)
+                  <input
+                    type='file'
+                    hidden
+                    onChange={e => {
+                      const file = e.target.files?.[0] || null
+                      setPartialAttachment(file)
+                    }}
+                  />
+                </Button>
+                {partialAttachment ? (
+                  <Typography variant='body2' className='mt-2'>
+                    {partialAttachment.name}
+                  </Typography>
+                ) : null}
+              </Grid>
+            </Grid>
+          )}
 
           {/* Products */}
           {products.map((product, index) => (
@@ -326,18 +461,20 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
             </div>
           ))}
 
-          <Grid item xs={12} my={5} className='flex gap-4 justify-between'>
-            <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)}>
-              + Add Product
+          <Grid item xs={12} my={5} className='flex gap-4 justify-between items-center'>
+            <Button
+              variant='outlined'
+              onClick={() => setShowProductSelector(!showProductSelector)}
+              startIcon={<i className={showProductSelector ? 'bx-minus' : 'bx-plus'} />}
+            >
+              {showProductSelector ? 'Hide Products' : 'Add Product'}
             </Button>
             {showProductSelector && (
-              <div className='flex gap-2'>
-                <Button variant='outlined' onClick={() => setShowProductSelector(!showProductSelector)}>
-                  Hide Products
-                </Button>
-                <Grid item xs={12}>
+              <div className='flex items-center gap-2 w-[83%]'>
+                <Grid item xs={12} className='flex-1'>
                   <TextField
                     fullWidth
+                    size='small'
                     placeholder='Search products...'
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}

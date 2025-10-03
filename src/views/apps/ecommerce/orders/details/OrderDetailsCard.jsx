@@ -31,7 +31,19 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 
 // Component Imports
-import { Alert, Snackbar } from '@mui/material'
+import {
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
+} from '@mui/material'
+import IconButton from '@mui/material/IconButton'
 import Link from '@components/Link'
 
 // Style Imports
@@ -41,6 +53,7 @@ import EditOrderModal from './EditOrderModal'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
 
 import EditOrderDialog from '@components/dialogs/edit-order-dialog'
+import { updateOrderDiscountThunk } from '@/redux-store/slices/order'
 
 // 💰 Price formatter for PKR
 const formatPrice = amount => {
@@ -121,66 +134,66 @@ const OrderTable = ({ data, onSelectionChange }) => {
         header: 'Qty',
         cell: ({ row }) => <Typography>{row.original.quantity}</Typography>
       }),
-      columnHelper.accessor('discountedPrice', {
-        header: 'Discounted Price',
-        cell: ({ row }) => {
-          const isEditing = editingDiscountRowId === row.original.id
+      // columnHelper.accessor('discountedPrice', {
+      //   header: 'Discounted Price',
+      //   cell: ({ row }) => {
+      //     const isEditing = editingDiscountRowId === row.original.id
 
-          if (isEditing) {
-            return (
-              <TextField
-                key={`discount-input-${row.original.id}`}
-                size='small'
-                type='number'
-                value={discountInput ?? ''}
-                onChange={e => setDiscountInput(e.target.value ?? '')}
-                autoFocus
-                inputProps={{ min: 0, step: '1' }}
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-                onFocus={e => e.stopPropagation()}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    const parsed = Number(discountInput)
+      //     if (isEditing) {
+      //       return (
+      //         <TextField
+      //           key={`discount-input-${row.original.id}`}
+      //           size='small'
+      //           type='number'
+      //           value={discountInput ?? ''}
+      //           onChange={e => setDiscountInput(e.target.value ?? '')}
+      //           autoFocus
+      //           inputProps={{ min: 0, step: '1' }}
+      //           onClick={e => e.stopPropagation()}
+      //           onMouseDown={e => e.stopPropagation()}
+      //           onFocus={e => e.stopPropagation()}
+      //           onKeyDown={e => {
+      //             if (e.key === 'Enter') {
+      //               const parsed = Number(discountInput)
 
-                    if (Number.isNaN(parsed)) return
+      //               if (Number.isNaN(parsed)) return
 
-                    // Call your API here to apply discount for this line item/order
-                    // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
-                    setEditingDiscountRowId(null)
-                  } else if (e.key === 'Escape') {
-                    setEditingDiscountRowId(null)
-                  }
-                }}
-                onBlur={() => {
-                  const parsed = Number(discountInput)
+      //               // Call your API here to apply discount for this line item/order
+      //               // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+      //               setEditingDiscountRowId(null)
+      //             } else if (e.key === 'Escape') {
+      //               setEditingDiscountRowId(null)
+      //             }
+      //           }}
+      //           onBlur={() => {
+      //             const parsed = Number(discountInput)
 
-                  if (Number.isNaN(parsed)) {
-                    setEditingDiscountRowId(null)
-                    return
-                  }
+      //             if (Number.isNaN(parsed)) {
+      //               setEditingDiscountRowId(null)
+      //               return
+      //             }
 
-                  // Call your API here to apply discount for this line item/order
-                  // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
-                  setEditingDiscountRowId(null)
-                }}
-              />
-            )
-          }
+      //             // Call your API here to apply discount for this line item/order
+      //             // Example: dispatch(updateDiscountThunk({ lineItemId: row.original.id, discountedPrice: parsed }))
+      //             setEditingDiscountRowId(null)
+      //           }}
+      //         />
+      //       )
+      //     }
 
-          return (
-            <Typography
-              className='cursor-pointer'
-              onClick={() => {
-                setEditingDiscountRowId(row.original.id)
-                setDiscountInput(String(row.original.discountedPrice ?? 0))
-              }}
-            >
-              {formatPrice(row.original.discountedPrice)}
-            </Typography>
-          )
-        }
-      }),
+      //     return (
+      //       <Typography
+      //         className='cursor-pointer'
+      //         onClick={() => {
+      //           setEditingDiscountRowId(row.original.id)
+      //           setDiscountInput(String(row.original.discountedPrice ?? 0))
+      //         }}
+      //       >
+      //         {formatPrice(row.original.discountedPrice)}
+      //       </Typography>
+      //     )
+      //   }
+      // }),
       columnHelper.accessor('barCode', {
         header: 'Bar code',
         cell: ({ row }) => <Typography>{row.original.barCode || 'N/A'}</Typography>
@@ -306,6 +319,11 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
   const [selectedProducts, setSelectedProducts] = useState([])
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+  const [discountModalOpen, setDiscountModalOpen] = useState(false)
+  const [discountedSubtotalInput, setDiscountedSubtotalInput] = useState('')
+  const [discountPercent, setDiscountPercent] = useState('')
+  const [discountValue, setDiscountValue] = useState(0)
+  const [discountedLoading, setDiscountedLoading] = useState(false)
 
   const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false })
 
@@ -358,7 +376,55 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
   const shippingFee = Number(order?.shipping_lines?.[0]?.price) || 0
   const taxRate = Number(order?.current_total_tax) || 0
   const tax = discountedSubtotal * (taxRate / 100)
-  const total = subtotal + discountedSubtotal + shippingFee + tax
+  const total = subtotal + shippingFee + tax - discountedSubtotal
+
+  const handleOpenDiscountModal = () => {
+    setDiscountedSubtotalInput(String(discountedSubtotal))
+
+    // Compute current discount percent from existing values
+    const allowedPercents = [5, 10, 15, 20, 25, 30, 40, 50]
+    const base = Number(subtotal) || 0
+    let currentPercent = 0
+
+    if (base > 0) {
+      currentPercent = Math.round((Number(discountedSubtotal) / base) * 100)
+    }
+
+    // Find nearest allowed percent
+    let nearest = allowedPercents[0]
+    let minDiff = Math.abs(nearest - currentPercent)
+    for (const p of allowedPercents) {
+      const d = Math.abs(p - currentPercent)
+      if (d < minDiff) {
+        minDiff = d
+        nearest = p
+      }
+    }
+
+    setDiscountPercent(String(nearest))
+    const computedValue = Math.max(0, Math.round((nearest / 100) * base))
+    setDiscountValue(computedValue)
+    setDiscountModalOpen(true)
+  }
+
+  const handleSubmitDiscount = async () => {
+    setDiscountedLoading(true)
+    const parsed = Number(discountValue || discountedSubtotalInput)
+    if (Number.isNaN(parsed)) {
+      setSnackbar({ open: true, message: 'Please enter a valid number.', severity: 'error' })
+      return
+    }
+
+    try {
+      await dispatch(updateOrderDiscountThunk({ id: order?.id, discountedPrice: parsed })).unwrap()
+      setSnackbar({ open: true, message: 'Discount updated successfully.', severity: 'success' })
+      setDiscountModalOpen(false)
+    } catch (err) {
+      setSnackbar({ open: true, message: err || 'Failed to update discount.', severity: 'error' })
+    } finally {
+      setDiscountedLoading(false)
+    }
+  }
 
   if (!order) {
     return <div>Loading order details...</div>
@@ -405,7 +471,14 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             <Typography color='text.primary' className='min-is-[150px]'>
               Discounted Subtotal:
             </Typography>
-            <Typography variant='h6'>{formatPrice(discountedSubtotal)}</Typography>
+            <div className='flex items-center gap-2'>
+              <Typography variant='h6' onClick={handleOpenDiscountModal} className='cursor-pointer'>
+                {formatPrice(discountedSubtotal)}
+              </Typography>
+              <IconButton size='small' onClick={handleOpenDiscountModal} aria-label='Edit discounted subtotal'>
+                <i className='bx-edit' />
+              </IconButton>
+            </div>
           </div>
           <div className='flex items-center gap-12'>
             <Typography color='text.primary' className='min-is-[150px]'>
@@ -437,6 +510,53 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Dialog open={discountModalOpen} onClose={() => setDiscountModalOpen(false)} fullWidth maxWidth='xs'>
+        <DialogTitle>Update Discounted Subtotal</DialogTitle>
+        <DialogContent className='pt-2'>
+          <div className='flex flex-col gap-4'>
+            <FormControl fullWidth>
+              <InputLabel id='discount-percent-label'>Discount (%)</InputLabel>
+              <Select
+                labelId='discount-percent-label'
+                label='Discount (%)'
+                value={discountPercent}
+                onChange={e => {
+                  const p = Number(e.target.value)
+                  setDiscountPercent(e.target.value)
+                  const val = Math.max(0, Math.round((p / 100) * subtotal))
+                  setDiscountValue(val)
+                }}
+              >
+                {[5, 10, 15, 20, 25, 30, 40, 50].map(p => (
+                  <MenuItem key={p} value={p}>{`${p}%`}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              type='number'
+              label='Following Discount will apply to the order.'
+              value={discountValue}
+              disabled
+              onChange={e => {
+                const v = Number(e.target.value)
+                setDiscountValue(Number.isNaN(v) ? 0 : v)
+              }}
+              inputProps={{ min: 0, step: '1' }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button variant='tonal' color='secondary' onClick={() => setDiscountModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant='contained' onClick={handleSubmitDiscount} disabled={discountedLoading}>
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }
