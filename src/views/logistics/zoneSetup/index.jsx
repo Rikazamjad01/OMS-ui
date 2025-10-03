@@ -569,7 +569,7 @@ export default function ZoneSetup({ initialZone = null }) {
   // const filteredCityOptions = useMemo(() => {
   //   return cityOptions.filter(opt => !usedCitiesSet.has(opt.label) || !selectedLabelSet.has(opt.label))
   // }, [cityOptions, usedCitiesSet, selectedLabelSet])
-  console.log(rows, 'rows here')
+  // console.log(rows, 'rows here')
 
   // console.log(cityOptions, 'cityOptions here')
 
@@ -718,7 +718,8 @@ export default function ZoneSetup({ initialZone = null }) {
           <Grid size={{ xs: 12, md: 9 }}>
             <Autocomplete
               multiple
-              pedZ
+              
+              // pedz
               disableCloseOnSelect
               options={filteredCityOptions}
               getOptionLabel={option => option.label}
