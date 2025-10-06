@@ -70,6 +70,7 @@ import CustomTextField from '@core/components/mui/TextField'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
 import { addPartialPaymentThunk } from '@/redux-store/slices/order'
+
 // import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
 // import IconButton from '@mui/material/IconButton'
 import FilterModal from '../filterModal/page'
@@ -103,7 +104,8 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  processing: { color: 'success', text: 'Confirmed' },
+  
+  // processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
   noPick: { color: 'error', text: 'No Pick' }
@@ -680,6 +682,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -751,6 +754,7 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -1019,7 +1023,7 @@ const OrderListTable = ({
 
   return (
     <Card>
-      <CardContent className='flex justify-between items-center'>
+      <CardContent className='flex justify-between items-start'>
         <div className='flex flex-wrap gap-4'>
           {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
@@ -1094,34 +1098,14 @@ const OrderListTable = ({
               {/* Status Change Menu */}
               <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
                 {orderStatusArray.map(status => (
-                  <OpenDialogOnElementClick
-                    key={status.value}
-                    element={MenuItem}
-                    elementProps={{
-                      onClick: () => setStatusMenuAnchor(null) // close the menu
-                    }}
-                    dialog={ConfirmationDialog}
-                    size='small'
-                    dialogProps={{
-                      type: 'update-status',
-                      payload: {
-                        orderIds: [orderId], // or selectedIds for bulk
-                        fromStatus: statusChipColor[currentStatus]?.text,
-                        toStatus: status.label,
-                        toStatusKey: status.value
-                      },
-                      onSuccess: async () => {
-                        await dispatch(fetchOrders({ page: 1, limit, force: true }))
-                      }
-                    }}
-                  >
+                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
                     <Chip
                       label={status.label}
                       color={statusChipColor[status.value].color}
                       variant='tonal'
                       size='small'
                     />
-                  </OpenDialogOnElementClick>
+                  </MenuItem>
                 ))}
               </Menu>
             </>
@@ -1170,7 +1154,7 @@ const OrderListTable = ({
           )}
         </div>
 
-        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+        <div className='flex max-sm:flex-col gap-4'>
           <CustomTextField
             select
             value={limit ?? 25}

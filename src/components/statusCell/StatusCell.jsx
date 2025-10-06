@@ -4,6 +4,7 @@ import { Chip, Menu, MenuItem } from '@mui/material'
 
 import { statusChipColor, orderStatusArray } from '@/views/apps/ecommerce/orders/list/OrderListTable'
 import { statusChipColorForBooking } from '../BookingOrder/BookingListTable'
+import { getStatusOptions } from '../statusOptions/statusOptions'
 
 const StatusCell = ({ row, onStatusChange, booking = false }) => {
   const [anchorEl, setAnchorEl] = useState(null)
@@ -12,45 +13,7 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
   const statusColor = statusChipColorForBooking
 
   useEffect(() => {
-    const status = (row.original.status || '').toLowerCase()
-
-    if (booking) {
-      // Booking status logic
-      if (status === 'confirmed') {
-        setStatusArray([])
-      } else if (status === 'processing') {
-        setStatusArray([{ value: 'onWay', label: 'On Way' }])
-      } else if (status === 'onway') {
-        setStatusArray([])
-      } else {
-        setStatusArray(
-          Object.keys(statusChipColorForBooking).map(key => ({
-            value: key,
-            label: statusChipColorForBooking[key].text
-          }))
-        )
-      }
-    } else {
-      // Regular order status logic
-      if (status === 'pending') {
-        setStatusArray(
-          orderStatusArray.filter(s => s.value === 'confirmed' || s.value === 'cancelled' || s.value === 'noPick')
-        )
-      } else if (status.toLowerCase() === 'confirmed') {
-        // setStatusArray(orderStatusArray.filter(s => s.value === 'onWay'))
-        setStatusArray([])
-      } else if (status === 'onway') {
-        setStatusArray([])
-      } else if (status === 'cancelled') {
-        setStatusArray(orderStatusArray.filter(s => s.value === 'pending'))
-      } else if (status.toLowerCase() === 'processing') {
-        setStatusArray([])
-      } else if (status.toLowerCase() === 'nopick') {
-        setStatusArray(orderStatusArray.filter(s => s.value === 'confirmed' || s.value === 'cancelled'))
-      } else {
-        setStatusArray(orderStatusArray)
-      }
-    }
+    setStatusArray(getStatusOptions(row.original.status, booking))
   }, [row.original.status, booking])
 
   const handleClick = event => {
