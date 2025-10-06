@@ -59,7 +59,10 @@ import {
   updateOrderCommentsAndRemarks,
   selectPagination,
   updateOrdersStatusThunk,
-  changeCityThunk
+  changeCityThunk,
+  updateOrderAddressThunk,
+  addPartialPaymentThunk,
+  uploadAttachmentThunk
 } from '@/redux-store/slices/order'
 import cities from '@/data/cities/cities'
 
@@ -69,7 +72,6 @@ import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
-import { addPartialPaymentThunk } from '@/redux-store/slices/order'
 
 // import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
 // import IconButton from '@mui/material/IconButton'
@@ -92,7 +94,8 @@ export const paymentStatus = {
   paid: { text: 'Paid', color: 'success', colorClassName: 'text-success' },
   pending: { text: 'Pending', color: 'warning', colorClassName: 'text-warning' },
   cancelled: { text: 'Cancelled', color: 'secondary', colorClassName: 'text-secondary' },
-  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
+  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' },
+  partially_paid: { text: 'Partially Paid', color: 'info', colorClassName: 'text-info' }
 }
 
 export const orderPlatform = {
@@ -247,46 +250,110 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnte
 }
 
 // Inline dialog component for partial payment, matching createOrderDialog styling
-const PartialPaymentInlineDialog = ({ open, setOpen, onSubmitPartial, orderId }) => {
+const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
+  const dispatch = useDispatch()
   const [amount, setAmount] = useState('')
   const [attachment, setAttachment] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  const handleSubmit = async () => {
+    if (!amount) return
+    setLoading(true)
+
+    try {
+      let attachmentUrl = null
+
+      if (attachment) {
+        try {
+          const uploadResult = await dispatch(uploadAttachmentThunk(attachment)).unwrap()
+
+          attachmentUrl = uploadResult.url || uploadResult.secureUrl
+        } catch (err) {
+          console.error('Attachment upload failed:', err)
+          setLoading(false)
+          return
+        }
+      }
+
+      const payload = {
+        id: orderId,
+        amount: Number(amount) || 0,
+        attachment: attachmentUrl
+      }
+
+      await dispatch(addPartialPaymentThunk(payload))
+        .unwrap()
+        .then(async () => {
+          setSnackbar({ open: true, message: 'Partial payment added successfully', severity: 'success' })
+          await dispatch(fetchOrders({ page: 1, limit:50, force: true })).unwrap()
+        })
+        .catch(err => {
+          console.error('Partial payment failed:', err)
+          setSnackbar({ open: true, message: 'Failed to add partial payment', severity: 'error' })
+        })
+
+      setOpen(false)
+      setAmount('')
+      setAttachment(null)
+      onSuccess?.()
+    } catch (err) {
+      console.error('Partial payment failed:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
-      <DialogTitle>Add Partial Payment</DialogTitle>
-      <DialogContent className='pt-2'>
-        <div className='flex flex-col gap-4'>
-          <TextField
-            fullWidth
-            type='number'
-            label='How much (amount)'
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            inputProps={{ min: 0, step: '1' }}
-          />
-          <Button variant='outlined' component='label' startIcon={<i className='bx-paperclip' />}>
-            Upload attachment (proof)
-            <input type='file' hidden onChange={e => setAttachment(e.target.files?.[0] || null)} />
+    <>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+        <DialogTitle>Add Partial Payment</DialogTitle>
+        <DialogContent className='pt-2'>
+          <div className='flex flex-col gap-4'>
+            <TextField
+              fullWidth
+              required
+              type='number'
+              label='How much (amount)'
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              inputProps={{ min: 0, step: '1' }}
+            />
+
+            <Button variant='outlined' component='label' startIcon={<i className='bx bx-paperclip' />}>
+              Upload attachment (proof)
+              <input
+                type='file'
+                hidden
+                accept='image/*,application/pdf'
+                onChange={e => setAttachment(e.target.files?.[0] || null)}
+              />
+            </Button>
+
+            {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
+          </div>
+        </DialogContent>
+
+        <DialogActions>
+          <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+            Cancel
           </Button>
-          {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-        <Button
-          variant='contained'
-          onClick={async () => {
-            const result = await onSubmitPartial?.({ orderId, amount: Number(amount) || 0, attachment })
-            if (result !== false) setOpen(false)
-          }}
-          disabled={!amount}
-        >
-          Submit
-        </Button>
-      </DialogActions>
-    </Dialog>
+          <Button variant='contained' onClick={handleSubmit} disabled={!amount || loading}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert variant='filled' severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   )
 }
 
@@ -314,6 +381,7 @@ const OrderListTable = ({
   const [partialAmount, setPartialAmount] = useState('')
   const [partialAttachment, setPartialAttachment] = useState(null)
   const [partialForOrderId, setPartialForOrderId] = useState(null)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -438,6 +506,14 @@ const OrderListTable = ({
     if (max !== null && amount > max) return false
 
     return true
+  }
+
+  // Placeholder: call your backend to update an order's address
+  // Replace the body with your real API call
+  const updateAddressApi = async ({ id, address }) => {
+    // TODO: Implement API call here, e.g. await api.updateOrderAddress({ id, address })
+    // Intentionally left blank per request
+    await dispatch(updateOrderAddressThunk({ id, address })).unwrap()
   }
 
   // Map backend orders -> table rows
@@ -641,7 +717,7 @@ const OrderListTable = ({
 
           return (
             <div className='flex items-center gap-2'>
-              {isPending && (
+              {isPending ? (
                 <>
                   {/* <Menu
                     open={false}
@@ -663,6 +739,21 @@ const OrderListTable = ({
                     dialogProps={{ onSubmitPartial, orderId: row.original.id }}
                   />
                 </>
+              ) : (
+                <OpenDialogOnElementClick
+                  element={IconButton}
+                  elementProps={{
+                    // size: 'small',
+                    className: 'hover:rounded-4xl',
+                    children: (
+                      <Typography className='font-medium'>
+                        {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                      </Typography>
+                    )
+                  }}
+                  dialog={PartialPaymentInlineDialog}
+                  dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                />
               )}
             </div>
           )
@@ -682,7 +773,6 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -700,11 +790,38 @@ const OrderListTable = ({
       {
         accessorKey: 'address',
         header: 'Address',
-        meta: { width: '250px' },
+        meta: { width: '450px' },
         cell: ({ row }) => {
-          const address = row.original.address
+          const initialAddress = row.original.address || ''
+          const [value, setValue] = useState(initialAddress)
+          const [original, setOriginal] = useState(initialAddress)
 
-          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+          useEffect(() => {
+            const next = row.original.address || ''
+
+            setValue(next)
+            setOriginal(next)
+          }, [row.original.address])
+
+          return (
+            <textarea
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onBlur={async () => {
+                const trimmed = String(value || '').trim()
+                const prev = String(original || '').trim()
+
+                if (trimmed !== prev) {
+                  await updateAddressApi({ id: row.original.id, address: trimmed })
+                  setOriginal(trimmed)
+                }
+              }}
+              rows={2}
+              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words'
+              style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
+              placeholder='—'
+            />
+          )
         }
       },
       {
@@ -792,7 +909,6 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -858,7 +974,7 @@ const OrderListTable = ({
           )
         }
       },
-            {
+      {
         accessorKey: 'method',
         header: 'Method',
         meta: { width: '250px' },

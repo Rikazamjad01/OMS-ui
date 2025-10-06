@@ -26,7 +26,7 @@ import CitiesData from '@/data/cities/cities'
 
 // Redux imports
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { createOrder, fetchOrders, getCustomerByPhone } from '@/redux-store/slices/order'
+import { createOrder, fetchOrders, getCustomerByPhone, uploadAttachmentThunk } from '@/redux-store/slices/order' // Import your thunk
 
 import DialogCloseButton from '../DialogCloseButton'
 
@@ -190,6 +190,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     setOrderData(prev => ({ ...prev, [field]: value }))
   }
 
+
   const addNewProduct = product => {
     if (products.find(p => p.id === product.id)) return
     setProducts(prev => [...prev, { ...product, quantity: 1 }])
@@ -199,7 +200,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     setProducts(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     setLoading(true)
 
     if (products.length === 0) {
@@ -208,16 +209,34 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         message: 'Please select at least one product',
         severity: 'error'
       })
-
+      setLoading(false)
       return
+    }
+
+    let attachmentUrl = null
+
+    // If partial payment and attachment, upload first
+    if (hasPartialPayment && partialAttachment) {
+      try {
+        const uploadResult = await dispatch(uploadAttachmentThunk(partialAttachment)).unwrap()
+
+        attachmentUrl = uploadResult.url || uploadResult.secureUrl
+      } catch (err) {
+        setSnackbar({ open: true, message: 'Attachment upload failed: ' + err, severity: 'error' })
+        setLoading(false)
+        return
+      }
     }
 
     const payload = {
       ...orderData,
       shippingId: orderData.shipping_line?.id,
-      partialPayment: hasPartialPayment
-        ? { amount: Number(partialAmount) || 0, attachment: partialAttachment || null }
-        : undefined,
+      ...(hasPartialPayment
+        ? {
+            attachment_url: attachmentUrl,
+            partial_payment: Number(partialAmount) || 0
+          }
+        : {}),
       line_items: products.map(p => ({
         id: p.id,
         quantity: p.quantity,
@@ -364,7 +383,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
               <div className='w-full'>
                 <Autocomplete
                   options={platforms_data}
-                  value={orderData.platform || null}
+                  value={orderData.platform}
                   onChange={(event, newValue) => updateField('platform', newValue)}
                   filterSelectedOptions
                   renderInput={params => <TextField {...params} label='Platform' fullWidth required />}
@@ -383,8 +402,9 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                 <Autocomplete
                   options={shipping_lines_data}
                   getOptionLabel={option => option.title}
-                  value={orderData.shipping_line || null}
+                  value={orderData.shipping_line}
                   onChange={(event, newValue) => updateField('shipping_line', newValue)}
+                  defaultValue={shipping_lines_data[0]}
                   renderInput={params => <TextField {...params} label='Shipping Method' fullWidth required />}
                 />
               </div>
@@ -405,6 +425,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   type='number'
                   label='How much (amount)'
                   value={partialAmount}
+                  required
                   onChange={e => setPartialAmount(e.target.value)}
                   inputProps={{ min: 0, step: '1' }}
                 />
@@ -427,18 +448,14 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                     }}
                   />
                 </Button>
-                {partialAttachment ? (
-                  <Typography variant='body2' className='mt-2'>
-                    {partialAttachment.name}
-                  </Typography>
-                ) : null}
+                {partialAttachment ? <Typography variant='body2'>{partialAttachment.name}</Typography> : null}
               </Grid>
             </Grid>
           )}
 
           {/* Products */}
           {products.map((product, index) => (
-            <div key={product.id} className='flex items-center gap-4 border p-4 rounded-md w-full my-2'>
+            <div key={product.id} className='flex items-center gap-4 border p-4 rounded-md w-full my-7'>
               <TextField label='Product' fullWidth value={product.title || ''} InputProps={{ readOnly: true }} />
               <div className='flex items-center gap-1'>
                 <IconButton onClick={() => updateQuantity(index, -1)} disabled={product.quantity <= 1}>
