@@ -277,8 +277,8 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
         <DialogContent>
           {/* Customer details - restored flex layout, preserved order */}
           <div className='flex flex-wrap mb-4'>
-            <div className='flex flex-wrap items-center gap-4 py-2'>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+            <div className='grid xl:grid-cols-3 w-full md:grid-cols-2 grid-cols-1 items-center gap-4 py-2'>
+              <div className='w-full'>
                 <TextField
                   label='Phone'
                   fullWidth
@@ -289,7 +289,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   error={Boolean(phoneLookupError)}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <TextField
                   label='First Name'
                   fullWidth
@@ -298,7 +298,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/4'>
+              <div className='w-full'>
                 <TextField
                   label='Last Name'
                   fullWidth
@@ -307,7 +307,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <TextField
                   label='Email'
                   fullWidth
@@ -315,7 +315,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('email', e.target.value)}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <TextField
                   label='Address 1'
                   fullWidth
@@ -324,7 +324,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/4'>
+              <div className='w-full'>
                 <TextField
                   label='Address 2 (Optional)'
                   fullWidth
@@ -332,7 +332,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('address2', e.target.value)}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <Autocomplete
                   options={CitiesData}
                   value={orderData.city || null}
@@ -341,7 +341,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='City' fullWidth required />}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <Autocomplete
                   options={ProvincesData}
                   value={orderData.province || null}
@@ -350,7 +350,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='Province' fullWidth required />}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/4'>
+              <div className='w-full'>
                 <TextField
                   label='Zip Code'
                   fullWidth
@@ -358,7 +358,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   onChange={e => updateField('zip', e.target.value)}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <Autocomplete
                   options={platforms_data}
                   value={orderData.platform || null}
@@ -367,7 +367,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   renderInput={params => <TextField {...params} label='Platform' fullWidth required />}
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/3'>
+              <div className='w-full'>
                 <TextField
                   label='Payment Method'
                   fullWidth
@@ -376,7 +376,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   required
                 />
               </div>
-              <div className='w-full md:w-1/2 xl:w-1/4'>
+              <div className='w-full'>
                 <Autocomplete
                   options={shipping_lines_data}
                   getOptionLabel={option => option.title}
@@ -461,7 +461,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
             </div>
           ))}
 
-          <Grid item xs={12} my={5} className='flex gap-4 justify-between items-center'>
+          <Grid item xs={12} my={5} className='flex w-full gap-4 justify-between items-center'>
             <Button
               variant='outlined'
               onClick={() => setShowProductSelector(!showProductSelector)}
@@ -469,8 +469,8 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
             >
               {showProductSelector ? 'Hide Products' : 'Add Product'}
             </Button>
-            {showProductSelector && (
-              <div className='flex items-center gap-2 w-[83%]'>
+            <div className='flex items-center gap-2 w-[83%]'>
+              {showProductSelector ? (
                 <Grid item xs={12} className='flex-1'>
                   <TextField
                     fullWidth
@@ -480,8 +480,18 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                     onChange={e => setSearchQuery(e.target.value)}
                   />
                 </Grid>
-              </div>
-            )}
+              ) : (
+                <Grid item xs={12} className='flex-1'></Grid>
+              )}
+              <DialogActions>
+                <Button disabled={loadings} variant='contained' onClick={handleCreateOrder}>
+                  {loadings ? 'Creating Order...' : 'Create Order'}
+                </Button>
+                <Button variant='tonal' color='secondary' onClick={handleClose}>
+                  Cancel
+                </Button>
+              </DialogActions>
+            </div>
           </Grid>
 
           {showProductSelector && (
@@ -518,15 +528,6 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
             </Grid>
           )}
         </DialogContent>
-
-        <DialogActions>
-          <Button disabled={loadings} variant='contained' onClick={handleCreateOrder}>
-            {loadings ? 'Creating Order...' : 'Create Order'}
-          </Button>
-          <Button variant='tonal' color='secondary' onClick={handleClose}>
-            Cancel
-          </Button>
-        </DialogActions>
       </form>
 
       <Snackbar
