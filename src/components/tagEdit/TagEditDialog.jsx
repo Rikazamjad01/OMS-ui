@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem } from '@mui/material'
 
 export default function TagEditDialog({ open, initialTags = [], onClose, onSave, loading }) {
-  const [tag, setTag] = useState([])
+  const [tag, setTag] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -21,9 +21,25 @@ export default function TagEditDialog({ open, initialTags = [], onClose, onSave,
           variant='outlined'
           value={tag}
           onChange={e => setTag(e.target.value)}
-          placeholder='Type a tag'
+          select
           fullWidth
-        />
+        >
+          <MenuItem value='' disabled>
+            Select a tag
+          </MenuItem>
+          <MenuItem value='Urgent delivery'>Urgent delivery</MenuItem>
+          <MenuItem value='Allowed to Open'>Allowed to Open</MenuItem>
+          <MenuItem value='Deliver between (specific date and Time)'>Deliver between (specific date and Time)</MenuItem>
+          <MenuItem value='Call before reaching'>Call before reaching</MenuItem>
+          <MenuItem value='Deliver parcel to the  (specific person)'>Deliver parcel to the (specific person)</MenuItem>
+          <MenuItem value='Do not deliver to anyone except the mentioned consignee name'>
+            Do not deliver to anyone except the mentioned consignee name
+          </MenuItem>
+          <MenuItem value='Deliver without call'>Deliver without call</MenuItem>
+          <MenuItem value='Product must not be visible-consider privacy'>
+            Product must not be visible-consider privacy
+          </MenuItem>
+        </TextField>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
