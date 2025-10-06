@@ -104,6 +104,7 @@ export const paymentStatus = {
 export const courierPlatforms = {
   // none: { text: 'None', color: 'default', colorClassName: 'text-default' },
   leopard: { text: 'Leopards', color: 'success', colorClassName: 'text-success' }
+
   // daewoo: { text: 'Daewoo', color: 'secondary', colorClassName: 'text-secondary' },
   // postEx: { text: 'PostEx', color: 'warning', colorClassName: 'text-warning' },
   // mp: { text: 'M&P', color: 'error', colorClassName: 'text-error' },
@@ -619,6 +620,7 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
+
                     // if (n.includes('daewoo')) return 'daewoo'
                     // if (n.includes('post')) return 'postEx'
                     // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -639,6 +641,7 @@ const BookingListTable = ({
                     const courierApiMap = {
                       // none: 'None',
                       leopard: 'Leopard'
+
                       // daewoo: 'Daewoo',
                       // postEx: 'PostEx',
                       // mp: 'M&P',
@@ -835,6 +838,7 @@ const BookingListTable = ({
                       const n = String(name).toLowerCase()
 
                       if (n.includes('leopard')) return 'leopard'
+
                       // if (n.includes('daewoo')) return 'daewoo'
                       // if (n.includes('post')) return 'postEx'
                       // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -855,6 +859,7 @@ const BookingListTable = ({
                       const courierApiMap = {
                         // none: 'None',
                         leopard: 'Leopard'
+
                         // daewoo: 'Daewoo',
                         // postEx: 'PostEx',
                         // mp: 'M&P',
@@ -1130,6 +1135,7 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
+
                     // if (n.includes('daewoo')) return 'daewoo'
                     // if (n.includes('post')) return 'postEx'
                     // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -1150,6 +1156,7 @@ const BookingListTable = ({
                     const courierApiMap = {
                       // none: 'None',
                       leopard: 'Leopard'
+
                       // daewoo: 'Daewoo',
                       // postEx: 'PostEx',
                       // mp: 'M&P',
