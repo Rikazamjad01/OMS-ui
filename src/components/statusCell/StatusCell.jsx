@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 
 import { Chip, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material'
 
+import { toast } from 'react-toastify'
 import { statusChipColor, orderStatusArray } from '@/views/apps/ecommerce/orders/list/OrderListTable'
 import { statusChipColorForBooking } from '../BookingOrder/BookingListTable'
-import { toast } from 'react-toastify'
 
 const StatusCell = ({ row, onStatusChange, booking = false }) => {
   const [anchorEl, setAnchorEl] = useState(null)
@@ -42,8 +42,10 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
           return
         }
       }
+
       onStatusChange(row.original.id, pendingStatus.value)
     }
+
     setConfirmOpen(false)
     setPendingStatus(null)
   }
