@@ -104,7 +104,7 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  
+
   // processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
@@ -296,7 +296,7 @@ const OrderListTable = ({
   loading = false,
   error = null,
   page,
-  limit = 25,
+  limit = 50,
   onPageChange,
   onLimitChange,
   onSearchChange,
@@ -698,85 +698,6 @@ const OrderListTable = ({
         cell: props => <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
       },
       {
-        accessorKey: 'method',
-        header: 'Method',
-        meta: { width: '250px' },
-        cell: ({ row }) => {
-          const m = row.original.method
-          const label = row.original.methodLabel
-
-          const iconClass =
-            m === 'card'
-              ? 'bx-credit-card'
-              : m === 'paypal'
-                ? 'bxl-paypal'
-                : m === 'cod'
-                  ? 'bx-money'
-                  : m === 'wallet'
-                    ? 'bx-wallet'
-                    : 'bx-purchase-tag-alt'
-
-          // const rightText = m === 'card' ? row.original.methodNumber || label : label
-
-          return (
-            <div className='flex items-center gap-2'>
-              <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
-                <i className={`${iconClass} text-[18px]`} />
-              </div>
-              <Typography className='font-medium'>{m}</Typography>
-            </div>
-          )
-        }
-      },
-      {
-        accessorKey: 'remarks',
-        header: 'Remarks',
-        meta: { width: '250px' },
-        cell: ({ row }) => {
-          const remarks = row.original.remarks
-
-          // normalize remarks (string → array of strings)
-          const remarkList =
-            typeof remarks === 'string'
-              ? remarks
-                  .split(',')
-                  .map(r => r.trim())
-                  .filter(Boolean)
-              : Array.isArray(remarks)
-                ? remarks.filter(Boolean)
-                : []
-
-          const hasRemarks = remarkList.length > 0
-
-          return (
-            <div className='flex flex-col gap-1'>
-              {/* First row: Remarks */}
-              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
-                {hasRemarks
-                  ? remarkList.map((remark, i) => (
-
-                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
-                      <p key={i} className='text-gray-500'>
-                        {remark}
-                      </p>
-                    ))
-                  : '--'}
-              </div>
-            </div>
-          )
-        }
-      },
-      {
-        accessorKey: 'Amount',
-        header: 'Amount',
-        filterFn: amountRangeFilterFn,
-        cell: ({ row }) => (
-          <Typography className='font-medium text-gray-800'>
-            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
-          </Typography>
-        )
-      },
-      {
         accessorKey: 'address',
         header: 'Address',
         meta: { width: '250px' },
@@ -846,6 +767,54 @@ const OrderListTable = ({
         }
       },
       {
+        accessorKey: 'remarks',
+        header: 'Remarks',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const remarks = row.original.remarks
+
+          // normalize remarks (string → array of strings)
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
+
+          const hasRemarks = remarkList.length > 0
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: Remarks */}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+
+                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      <p key={i} className='text-gray-500'>
+                        {remark}
+                      </p>
+                    ))
+                  : '--'}
+              </div>
+            </div>
+          )
+        }
+      },
+      {
+        accessorKey: 'Amount',
+        header: 'Amount',
+        filterFn: amountRangeFilterFn,
+        cell: ({ row }) => (
+          <Typography className='font-medium text-gray-800'>
+            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
+          </Typography>
+        )
+      },
+      {
         accessorKey: 'tags',
         header: 'Tags',
         meta: { width: '250px' },
@@ -885,6 +854,37 @@ const OrderListTable = ({
                   onClick={() => openTagEditor(orderId, displayedTags)}
                 />
               </div>
+            </div>
+          )
+        }
+      },
+            {
+        accessorKey: 'method',
+        header: 'Method',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const m = row.original.method
+          const label = row.original.methodLabel
+
+          const iconClass =
+            m === 'card'
+              ? 'bx-credit-card'
+              : m === 'paypal'
+                ? 'bxl-paypal'
+                : m === 'cod'
+                  ? 'bx-money'
+                  : m === 'wallet'
+                    ? 'bx-wallet'
+                    : 'bx-purchase-tag-alt'
+
+          // const rightText = m === 'card' ? row.original.methodNumber || label : label
+
+          return (
+            <div className='flex items-center gap-2'>
+              <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
+                <i className={`${iconClass} text-[18px]`} />
+              </div>
+              <Typography className='font-medium'>{m}</Typography>
             </div>
           )
         }
@@ -1157,9 +1157,9 @@ const OrderListTable = ({
         <div className='flex max-sm:flex-col gap-4'>
           <CustomTextField
             select
-            value={limit ?? 25}
+            value={limit ?? 50}
             onChange={async e => {
-              const newLimit = Number(e.target.value) || 25
+              const newLimit = Number(e.target.value) || 50
 
               // console.log('newLimit', newLimit)
               onLimitChange?.(newLimit)
@@ -1180,7 +1180,9 @@ const OrderListTable = ({
             variant='tonal'
             color='primary'
             onClick={() => setOrderIntakeOpen(true)} // open modal on click
+            className='flex items-center gap-1'
           >
+            Add Manual Order
             <i className='bx-plus' />
           </Button>
         </div>
@@ -1444,8 +1446,8 @@ const OrderListTable = ({
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={Number(pagination.itemsPerPage || limit || 25)} // Ensure controlled value
-        onRowsPerPageChange={e => onLimitChange?.(Number(e.target.value) || 25)}
+        rowsPerPage={Number(pagination.itemsPerPage || limit || 50)} // Ensure controlled value
+        onRowsPerPageChange={e => onLimitChange?.(Number(e.target.value) || 50)}
         rowsPerPageOptions={[25, 50, 100]}
       />
 

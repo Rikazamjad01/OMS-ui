@@ -119,7 +119,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     }
   ]
 
-  const platforms_data = ['shopify', 'whatsapp', 'socialMedia', 'other']
+  const platforms_data = ['shopify', 'whatsapp', 'social media', 'instagram', 'facebook', 'call']
 
   useEffect(() => {
     if (open) {
@@ -131,11 +131,13 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
   // Auto-fetch customer by phone when a valid Pakistani mobile number is completed
   useEffect(() => {
     const phone = orderData.phone
+
     setPhoneLookupError('')
 
     if (!phone || !isValidPakistaniPhone(phone)) return
 
     const controller = new AbortController()
+
     const timeout = setTimeout(async () => {
       try {
         setPhoneLookupLoading(true)
@@ -199,6 +201,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
 
   const handleCreateOrder = () => {
     setLoading(true)
+
     if (products.length === 0) {
       setSnackbar({
         open: true,
@@ -419,6 +422,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                     hidden
                     onChange={e => {
                       const file = e.target.files?.[0] || null
+
                       setPartialAttachment(file)
                     }}
                   />

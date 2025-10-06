@@ -115,9 +115,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         </SubMenu> */}
 
         {/* CUSTOMERS */}
-        <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
+        {/* <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
           {dictionary['navigation'].customers}
-        </MenuItem>
+        </MenuItem> */}
         {/* <SubMenu label={dictionary['navigation'].customers} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/customers/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem

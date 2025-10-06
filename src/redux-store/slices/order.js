@@ -4,7 +4,7 @@ import { getRequest, postRequest, apiRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
-  async ({ page = 1, limit = 25, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 50, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
@@ -286,6 +286,7 @@ export const addPartialPaymentThunk = createAsyncThunk(
     try {
       // Use FormData to support file attachment when provided
       const formData = new FormData()
+
       formData.append('id', id)
       formData.append('amount', String(amount || 0))
       if (attachment) formData.append('attachment', attachment)
@@ -327,7 +328,7 @@ const ordersSlice = createSlice({
     lastSearch: '', // Store last used search
     pagination: {
       currentPage: 1,
-      itemsPerPage: 25,
+      itemsPerPage: 50,
       total: 0
     },
     selectedProductIds: [],
@@ -386,7 +387,7 @@ const ordersSlice = createSlice({
       state.selectedCustomer = null
       state.pagination = {
         currentPage: 1,
-        itemsPerPage: 25,
+        itemsPerPage: 50,
         total: 0
       }
     }
@@ -480,7 +481,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-
+          
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -523,6 +524,7 @@ const ordersSlice = createSlice({
       })
       .addCase(getCustomerByPhone.fulfilled, (state, action) => {
         state.loading = false
+
         // state.selectedCustomer = action.payload
       })
       .addCase(getCustomerByPhone.rejected, (state, action) => {
@@ -596,8 +598,10 @@ const ordersSlice = createSlice({
       })
       .addCase(addPartialPaymentThunk.fulfilled, (state, action) => {
         state.loading = false
+
         // Optionally update selectedOrders if backend returns updated totals
         const { id, current_total_price, current_total_discounts } = action.payload || {}
+
         if (id && state.selectedOrders && String(state.selectedOrders.id) === String(id)) {
           if (current_total_price != null) state.selectedOrders.current_total_price = Number(current_total_price) || 0
           if (current_total_discounts != null)

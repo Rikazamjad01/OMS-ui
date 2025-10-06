@@ -422,7 +422,10 @@ const BookingListTable = ({
         trackNumber: order.courier?.trackNumber || '',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
-        tags: parsedTags
+        tags: parsedTags,
+        totalOrders: order?.total_order || '',
+        successfulOrders: order?.successful_order || '',
+        lastOrderStatus: order?.last_order_status || ''
       }
     })
   }, [orderData])
@@ -743,6 +746,36 @@ const BookingListTable = ({
               </div>
             </div>
           )
+        }
+      },
+      {
+        accessorKey: 'address',
+        header: 'Address',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const address = row.original.address
+
+          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+        }
+      },
+      {
+        accessorKey: 'total&successfulOrders',
+        header: 'Total & Successful Orders',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const totalAndSuccessfulOrders = row.original?.totalOrders + row.original?.successfulOrders
+
+          return <Typography className='font-medium text-gray-800'>{totalAndSuccessfulOrders || '—'}</Typography>
+        }
+      },
+      {
+        accessorKey: 'lastOrderStatus',
+        header: 'Last Order Status',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const lastOrderStatus = row.original?.lastOrderStatus
+
+          return <Typography className='font-medium text-gray-800'>{lastOrderStatus || '—'}</Typography>
         }
       },
       {

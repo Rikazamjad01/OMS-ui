@@ -17,7 +17,7 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
     if (booking) {
       // Booking status logic
       if (status === 'confirmed') {
-        setStatusArray([])
+        setStatusArray([{ value: 'cancelled', label: 'Cancel' }])
       } else if (status === 'processing') {
         setStatusArray([{ value: 'onWay', label: 'On Way' }])
       } else if (status === 'onway') {
@@ -73,14 +73,12 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         label={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.text || row.original.status
-            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.text ||
-              row.original.status
+            : statusChipColor[row.original.status || '']?.text || row.original.status
         }
         color={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.color || 'primary'
-            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.color ||
-              'primary'
+            : statusChipColor[row.original.status || '']?.color || 'primary'
         }
         variant='tonal'
         size='small'

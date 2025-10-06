@@ -7,7 +7,7 @@ const initialState = {
   error: null,
   pagination: {
     currentPage: 1,
-    itemsPerPage: 25,
+    itemsPerPage: 50,
     total: 0
   },
   lastFilters: {}
@@ -15,7 +15,7 @@ const initialState = {
 
 export const fetchBookingOrder = createAsyncThunk(
   'booking/fetchOrders',
-  async ({ page = 1, limit = 25, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 50, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
@@ -96,7 +96,7 @@ export const fetchBookingOrder = createAsyncThunk(
 
 export const fetchBookingOrders = createAsyncThunk(
   'booking/fetchOrders/withoutLoader',
-  async ({ page = 1, limit = 25, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 50, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
