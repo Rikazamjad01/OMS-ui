@@ -73,12 +73,14 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         label={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.text || row.original.status
-            : statusChipColor[row.original.status || '']?.text || row.original.status
+            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.text ||
+              row.original.status
         }
         color={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.color || 'primary'
-            : statusChipColor[row.original.status || '']?.color || 'primary'
+            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.color ||
+              'primary'
         }
         variant='tonal'
         size='small'
