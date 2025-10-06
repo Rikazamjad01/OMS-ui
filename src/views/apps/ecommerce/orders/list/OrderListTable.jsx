@@ -59,7 +59,8 @@ import {
   updateOrderCommentsAndRemarks,
   selectPagination,
   updateOrdersStatusThunk,
-  changeCityThunk
+  changeCityThunk,
+  updateOrderAddressThunk
 } from '@/redux-store/slices/order'
 import cities from '@/data/cities/cities'
 
@@ -104,7 +105,7 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  
+
   // processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
@@ -440,6 +441,14 @@ const OrderListTable = ({
     return true
   }
 
+  // Placeholder: call your backend to update an order's address
+  // Replace the body with your real API call
+  const updateAddressApi = async ({ id, address }) => {
+    // TODO: Implement API call here, e.g. await api.updateOrderAddress({ id, address })
+    // Intentionally left blank per request
+    await dispatch(updateOrderAddressThunk({ id, address })).unwrap()
+  }
+
   // Map backend orders -> table rows
   const data = useMemo(() => {
     return (orderData || []).map(order => {
@@ -682,7 +691,6 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -754,7 +762,6 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
-
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -779,11 +786,36 @@ const OrderListTable = ({
       {
         accessorKey: 'address',
         header: 'Address',
-        meta: { width: '250px' },
+        meta: { width: '450px' },
         cell: ({ row }) => {
-          const address = row.original.address
+          const initialAddress = row.original.address || ''
+          const [value, setValue] = useState(initialAddress)
+          const [original, setOriginal] = useState(initialAddress)
 
-          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+          useEffect(() => {
+            const next = row.original.address || ''
+            setValue(next)
+            setOriginal(next)
+          }, [row.original.address])
+
+          return (
+            <textarea
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onBlur={async () => {
+                const trimmed = String(value || '').trim()
+                const prev = String(original || '').trim()
+                if (trimmed !== prev) {
+                  await updateAddressApi({ id: row.original.id, address: trimmed })
+                  setOriginal(trimmed)
+                }
+              }}
+              rows={2}
+              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words'
+              style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
+              placeholder='—'
+            />
+          )
         }
       },
       {

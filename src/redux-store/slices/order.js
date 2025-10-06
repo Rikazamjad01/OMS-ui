@@ -279,7 +279,7 @@ export const updateOrderDiscountThunk = createAsyncThunk(
   }
 )
 
-// Record a partial payment for an order
+// Record a partial payment for an order pending for now....
 export const addPartialPaymentThunk = createAsyncThunk(
   'orders/addPartialPayment',
   async ({ id, amount, attachment }, { rejectWithValue }) => {
@@ -308,6 +308,21 @@ export const addPartialPaymentThunk = createAsyncThunk(
       }
 
       return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const updateOrderAddressThunk = createAsyncThunk(
+  'edit/address',
+  async ({ id, address }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('customers/edit/address', { id, address }, 'patch')
+      if (response.status) {
+        return { id, address }
+      }
+      return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -480,7 +495,6 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -605,6 +619,18 @@ const ordersSlice = createSlice({
         }
       })
       .addCase(addPartialPaymentThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(updateOrderAddressThunk.pending, state => {
+        state.error = null
+      })
+      .addCase(updateOrderAddressThunk.fulfilled, (state, action) => {
+        state.loading = false
+        const { id, address } = action.payload
+        state.orders = state.orders.map(order => (order.id === id ? { ...order, address } : order))
+      })
+      .addCase(updateOrderAddressThunk.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })
