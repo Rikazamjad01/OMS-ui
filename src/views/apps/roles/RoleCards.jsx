@@ -16,7 +16,6 @@ import Link from '@components/Link'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { getAllRoles } from '@/redux-store/slices/roleSlice'
-import Cookies from 'js-cookie'
 import { checkPermission } from '@/hooks/Permissions'
 
 const RoleCards = () => {
@@ -31,10 +30,8 @@ const RoleCards = () => {
     disabled: !canEditRole
   }
 
-  const permissionsString = Cookies.get('user')
-  const user = JSON.parse(permissionsString)
   const canAddRole = checkPermission('role.create')
-
+  console.log(canEditRole, 'canEditRole')
   const CardProps = {
     className: 'cursor-pointer bs-full',
     children: (
@@ -92,13 +89,14 @@ const RoleCards = () => {
                     <Typography variant='caption' className='text-textDisabled'>
                       Scope: {role?.scope?.type || '—'}
                     </Typography>
-                    <OpenDialogOnElementClick
-                      element={Typography}
-                      elementProps={typographyProps}
-                      dialog={RoleDialog}
-                      dialogProps={{ title: role?.name, role }}
-                      disabled={canEditRole}
-                    />
+                    {canEditRole && (
+                      <OpenDialogOnElementClick
+                        element={Typography}
+                        elementProps={typographyProps}
+                        dialog={RoleDialog}
+                        dialogProps={{ title: role?.name, role }}
+                      />
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -106,7 +104,11 @@ const RoleCards = () => {
           </Grid>
         ))}
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-          <OpenDialogOnElementClick element={Card} elementProps={CardProps} dialog={RoleDialog} />
+          {canAddRole ? (
+            <OpenDialogOnElementClick element={Card} elementProps={CardProps} dialog={RoleDialog} />
+          ) : (
+            <Card {...CardProps} />
+          )}
         </Grid>
       </Grid>
     </>

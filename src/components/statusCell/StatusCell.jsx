@@ -12,7 +12,7 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
   const statusColor = statusChipColorForBooking
 
   useEffect(() => {
-    const status = (row.original.status || '').toLowerCase()
+    let status = (row.original.status || '').toLowerCase()
 
     if (booking) {
       // Booking status logic
@@ -44,6 +44,7 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
       } else if (status === 'cancelled') {
         setStatusArray(orderStatusArray.filter(s => s.value === 'pending'))
       } else if (status.toLowerCase() === 'processing') {
+        status = 'confirmed'
         setStatusArray([])
       } else if (status.toLowerCase() === 'nopick') {
         setStatusArray(orderStatusArray.filter(s => s.value === 'confirmed' || s.value === 'cancelled'))
@@ -73,12 +74,14 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         label={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.text || row.original.status
-            : statusChipColor[row.original.status || '']?.text || row.original.status
+            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.text ||
+              row.original.status
         }
         color={
           booking
             ? statusChipColorForBooking[row.original.status || '']?.color || 'primary'
-            : statusChipColor[row.original.status || '']?.color || 'primary'
+            : statusChipColor[row.original.status === 'processing' ? 'confirmed' : row.original.status || '']?.color ||
+              'primary'
         }
         variant='tonal'
         size='small'

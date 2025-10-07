@@ -278,15 +278,15 @@ const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
 
       const payload = {
         id: orderId,
-        amount: Number(amount) || 0,
-        attachment: attachmentUrl
+        amount: Number(amount) || 0
       }
+      if (attachmentUrl) payload.attachment = attachmentUrl
 
       await dispatch(addPartialPaymentThunk(payload))
         .unwrap()
         .then(async () => {
           setSnackbar({ open: true, message: 'Partial payment added successfully', severity: 'success' })
-          await dispatch(fetchOrders({ page: 1, limit:50, force: true })).unwrap()
+          await dispatch(fetchOrders({ page: 1, limit: 50, force: true })).unwrap()
         })
         .catch(err => {
           console.error('Partial payment failed:', err)
@@ -801,7 +801,7 @@ const OrderListTable = ({
 
             setValue(next)
             setOriginal(next)
-          }, [row.original.address])
+          }, [])
 
           return (
             <textarea
@@ -1064,10 +1064,21 @@ const OrderListTable = ({
     label: pakistanCities[key].text
   }))
 
-  const tagsArray = Object.keys(tagsMap).map(key => ({
-    value: key,
-    label: tagsMap[key].text
-  }))
+  const tagsArray = useMemo(() => {
+    const unique = new Set()
+    ;(data || []).forEach(row => {
+      const orderId = row.id
+      const rowTags = tagsMap[orderId] ?? row.tags
+      if (Array.isArray(rowTags)) {
+        rowTags.forEach(t => {
+          const tag = String(t || '').trim()
+          if (tag) unique.add(tag)
+        })
+      }
+    })
+
+    return Array.from(unique).map(tag => ({ value: tag, label: tag }))
+  }, [data, tagsMap])
 
   const table = useReactTable({
     data,

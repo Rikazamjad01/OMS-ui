@@ -23,6 +23,7 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 import Cookies from 'js-cookie'
+import { checkPermission } from '@/hooks/Permissions'
 
 const RenderExpandIcon = ({ open, transitionDuration }) => (
   <StyledVerticalNavExpandIcon open={open} transitionDuration={transitionDuration}>
@@ -77,48 +78,57 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         renderExpandedMenuItemIcon={{ icon: <i className='bx-bxs-circle' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {/* <SubMenu
-          label={dictionary['navigation'].dashboards}
-          icon={<i className='bx-home-smile' />}
-          suffix={<CustomChip label='4' size='small' color='error' round='true' />}
-        >
-          <MenuItem href={`/${locale}/dashboards/sales`}>{dictionary['navigation'].sales}</MenuItem>
-          <MenuItem href={`/${locale}/dashboards/analytics`}>{dictionary['navigation'].analytics}</MenuItem>
-          <MenuItem href={`/${locale}/dashboards/analyticsII`}>{dictionary['navigation'].eCommerce}</MenuItem>
-          <MenuItem href={`/${locale}/dashboards/logistics`}>{dictionary['navigation'].logistics}</MenuItem>
-        </SubMenu> */}
+        {checkPermission('dashboard.view') && (
+          <SubMenu
+            label={dictionary['navigation'].dashboards}
+            icon={<i className='bx-home-smile' />}
+            suffix={<CustomChip label='4' size='small' color='error' round='true' />}
+          >
+            <MenuItem href={`/${locale}/dashboards/sales`}>{dictionary['navigation'].sales}</MenuItem>
+            <MenuItem href={`/${locale}/dashboards/analytics`}>{dictionary['navigation'].analytics}</MenuItem>
+            <MenuItem href={`/${locale}/dashboards/analyticsII`}>{dictionary['navigation'].eCommerce}</MenuItem>
+            <MenuItem href={`/${locale}/dashboards/logistics`}>{dictionary['navigation'].logistics}</MenuItem>
+          </SubMenu>
+        )}
 
         {/* Reports Section */}
-        {/* <SubMenu label={dictionary['navigation'].reports} icon={<i className='bx-receipt' />}>
-          <MenuItem href={`/${locale}/reports/adminReports`}>{dictionary['navigation'].adminReports}</MenuItem>
-          <MenuItem href={`/${locale}/reports/bookingTeamReports`}>
-            {dictionary['navigation'].bookingTeamReports}
-          </MenuItem>
-          <MenuItem href={`/${locale}/reports/csrTeamReports`}>{dictionary['navigation'].csrTeamReports}</MenuItem>
-        </SubMenu> */}
+        {checkPermission('reports.view') && (
+          <SubMenu label={dictionary['navigation'].reports} icon={<i className='bx-receipt' />}>
+            <MenuItem href={`/${locale}/reports/adminReports`}>{dictionary['navigation'].adminReports}</MenuItem>
+            <MenuItem href={`/${locale}/reports/bookingTeamReports`}>
+              {dictionary['navigation'].bookingTeamReports}
+            </MenuItem>
+            <MenuItem href={`/${locale}/reports/csrTeamReports`}>{dictionary['navigation'].csrTeamReports}</MenuItem>
+          </SubMenu>
+        )}
 
         {/* ORDERS */}
-        {mounted && email === '16dev.milestone@gmail.com' && (
+        {mounted && checkPermission('order.view') && (
           <MenuItem href={`/${locale}/apps/ecommerce/orders/list`} icon={<i className='bx-receipt' />}>
             {dictionary['navigation'].orders}
           </MenuItem>
         )}
-        {/* <SubMenu label={dictionary['navigation'].orders} icon={<i className='bx-receipt' />}>
-          <MenuItem href={`/${locale}/apps/ecommerce/orders/list`}>{dictionary['navigation'].list}</MenuItem>
-          <MenuItem
-            href={`/${locale}/apps/ecommerce/orders/details/5434`}
-            exactMatch={false}
-            activeUrl='/apps/ecommerce/orders/details'
-          >
-            {dictionary['navigation'].details}
-          </MenuItem>
-        </SubMenu> */}
+        {/* {checkPermission('orders.view') && (
+          <SubMenu label={dictionary['navigation'].orders} icon={<i className='bx-receipt' />}>
+            <MenuItem href={`/${locale}/apps/ecommerce/orders/list`}>{dictionary['navigation'].list}</MenuItem>
+            <MenuItem
+              href={`/${locale}/apps/ecommerce/orders/details/5434`}
+              exactMatch={false}
+              activeUrl='/apps/ecommerce/orders/details'
+            >
+              {dictionary['navigation'].details}
+            </MenuItem>
+          </SubMenu>
+        )} */}
 
         {/* CUSTOMERS */}
-        {/* <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
-          {dictionary['navigation'].customers}
-        </MenuItem> */}
-        {/* <SubMenu label={dictionary['navigation'].customers} icon={<i className='bx-user' />}>
+        {checkPermission('customers.view') && (
+          <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
+            {dictionary['navigation'].customers}
+          </MenuItem>
+        )}
+        {checkPermission('customers.view') && (
+          <SubMenu label={dictionary['navigation'].customers} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/customers/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem
               href={`/${locale}/apps/ecommerce/customers/details/879861`}
@@ -127,7 +137,8 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             >
               {dictionary['navigation'].details}
             </MenuItem>
-          </SubMenu> */}
+          </SubMenu>
+        )}
         {/* <SubMenu label={dictionary['navigation'].academy} icon={<i className='bx-book-open' />}>
             <MenuItem href={`/${locale}/apps/academy/dashboard`}>{dictionary['navigation'].dashboard}</MenuItem>
             <MenuItem href={`/${locale}/apps/academy/my-courses`}>{dictionary['navigation'].myCourses}</MenuItem>
@@ -137,7 +148,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           </SubMenu> */}
 
         {/* Booking Team Section */}
-        {mounted && email === 'honeyansari917@gmail.com' && (
+        {mounted && checkPermission('courier.view') && (
           <MenuItem href={`/${locale}/bookingTeam`} icon={<i className='bx-group' />}>
             {dictionary['navigation'].booking}
           </MenuItem>
@@ -151,7 +162,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           {dictionary['navigation'].logistics}
         </MenuItem> */}
 
-        {mounted && email === 'honeyansari917@gmail.com' && (
+        {mounted && checkPermission('zonesetup.view') && (
           <SubMenu label={dictionary['navigation'].logistics} icon={<i className='bx-car' />}>
             {/* <MenuItem href={`/${locale}/logistics/fleet`}>{dictionary['navigation'].fleet}</MenuItem> */}
             <MenuItem href={`/${locale}/logistics/zoneSetup`}>{dictionary['navigation'].zoneSetup}</MenuItem>
@@ -159,24 +170,25 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         )}
 
         {/* CSR Head */}
-        {/* <MenuItem
-          href={`/${locale}/pages/CSR-HOD`}
-          icon={<i className="bx-user" />}
-        >
-          {dictionary['navigation'].CSRHead}
-        </MenuItem> */}
-
-        {/* <SubMenu label={dictionary['navigation'].CSRHead} icon={<i className='bx-user' />}>
-          <MenuItem href={`/${locale}/CSR_HOD/agent_task_assignment`}>
-            {dictionary['navigation'].agentTaskAssignment}
+        {mounted && checkPermission('taskassignment.view') && (
+          <MenuItem href={`/${locale}/pages/CSR-HOD`} icon={<i className='bx-user' />}>
+            {dictionary['navigation'].CSRHead}
           </MenuItem>
-          <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem>
-        </SubMenu> */}
+        )}
+
+        {checkPermission('taskassignment.view') && (
+          <SubMenu label={dictionary['navigation'].CSRHead} icon={<i className='bx-user' />}>
+            <MenuItem href={`/${locale}/CSR_HOD/agent_task_assignment`}>
+              {dictionary['navigation'].agentTaskAssignment}
+            </MenuItem>
+            <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem>
+          </SubMenu>
+        )}
 
         {/* courier */}
-        {/* <MenuItem href={`/${locale}/apps/ecommerce/courier`} icon={<i className='bx-box' />}>
+        {/* {mounted && checkPermission('courier.view') && <MenuItem href={`/${locale}/apps/ecommerce/courier`} icon={<i className='bx-box' />}>
           {dictionary['navigation'].courier}
-        </MenuItem> */}
+        </MenuItem>} */}
 
         {/* agents */}
         {/* <MenuItem href={`/${locale}/apps/ecommerce/agents/list`} icon={<i className='bx-user' />}>
@@ -212,7 +224,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             <MenuItem href={`/${locale}/apps/ecommerce/referrals`}>{dictionary['navigation'].referrals}</MenuItem>
             <MenuItem href={`/${locale}/apps/ecommerce/settings`}>{dictionary['navigation'].settings}</MenuItem>
           </SubMenu> */}
-        {mounted && email === '16dev.milestone@gmail.com' && (
+        {mounted && checkPermission('products.view') && (
           <SubMenu label={dictionary['navigation'].products} icon={<i className='bx-box' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/products/list`}>{dictionary['navigation'].list}</MenuItem>
             {/* <MenuItem href={`/${locale}/apps/ecommerce/products/add`}>{dictionary['navigation'].add}</MenuItem> */}
@@ -253,14 +265,20 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             </MenuItem>
             <MenuItem href={`/${locale}/apps/invoice/add`}>{dictionary['navigation'].add}</MenuItem>
           </SubMenu> */}
-        {/* <SubMenu label={dictionary['navigation'].user} icon={<i className='bx-user' />}>
+        {mounted && checkPermission('user.view') && (
+          <SubMenu label={dictionary['navigation'].user} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/apps/user/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem href={`/${locale}/apps/user/view`}>{dictionary['navigation'].view}</MenuItem>
-          </SubMenu> */}
-        {/* <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='bx-check-shield' />}>
+          </SubMenu>
+        )}
+        <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='bx-check-shield' />}>
+          {mounted && checkPermission('role.view') && (
             <MenuItem href={`/${locale}/apps/roles`}>{dictionary['navigation'].roles}</MenuItem>
+          )}
+          {mounted && checkPermission('department.view') && (
             <MenuItem href={`/${locale}/apps/departments`}>{dictionary['navigation'].permissions}</MenuItem>
-          </SubMenu> */}
+          )}
+        </SubMenu>
         {/* <SubMenu label={dictionary['navigation'].pages} icon={<i className='bx-dock-top' />}>
             <MenuItem href={`/${locale}/pages/user-profile`}>{dictionary['navigation'].userProfile}</MenuItem>
             <MenuItem href={`/${locale}/pages/account-settings`}>{dictionary['navigation'].accountSettings}</MenuItem>
