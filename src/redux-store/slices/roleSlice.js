@@ -57,7 +57,7 @@ export const addRole = createAsyncThunk('role/add', async (data, { rejectWithVal
   try {
     const response = await postRequest('roles/addRole', data)
     if (response.success) {
-      return response.data
+      return response
     }
     return rejectWithValue(response.message)
   } catch (error) {
