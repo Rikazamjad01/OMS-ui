@@ -140,9 +140,19 @@ export const fetchAssignedTasksThunk = createAsyncThunk(
 // Fetch total unassigned orders for a given platform
 export const fetchUnassignedOrdersThunk = createAsyncThunk(
   'taskAssignment/fetchUnassignedOrders',
-  async ({ platform }, { rejectWithValue }) => {
+  async ({ platform, brand }, { rejectWithValue, getState }) => {
     try {
-      const response = await getRequest(`taskAssignment/unassigned-orders?platform=${platform}`)
+      const { taskAsssignment } = getState()
+      const platforms = taskAsssignment.platforms
+      const platformData = platforms.find(p => p._id === platform)
+      if (!platformData?._id) {
+        return rejectWithValue('Platform not found')
+      }
+      const params = new URLSearchParams()
+      params.append('platform', platformData._id)
+      params.append('platformName', platformData.platforms[0])
+      if (brand) params.append('brand', brand)
+      const response = await getRequest(`taskAssignment/unassigned-orders?${params.toString()}`)
       if (response.success) {
         return response
       }
@@ -219,7 +229,14 @@ export const taskAsssignmentSlice = createSlice({
         state.error = null
       })
       .addCase(addPlatformsThunk.fulfilled, (state, action) => {
-        state.platforms = [action.payload, ...state.platforms]
+        // state.platforms = [action.payload, ...state.platforms]
+        if (state.platforms.find(platform => platform._id === action.payload._id)) {
+          state.platforms = state.platforms.map(platform =>
+            platform._id === action.payload._id ? action.payload : platform
+          )
+        } else {
+          state.platforms = [action.payload, ...state.platforms]
+        }
         state.loading = false
         state.error = null
       })

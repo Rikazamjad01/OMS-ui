@@ -59,7 +59,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
     fetchAgents()
     fetchPlatforms()
     if (selectedPlatform?._id) {
-      dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id }))
+      dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand }))
     }
   }, [selectedPlatform])
 
@@ -245,9 +245,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
               }
               label='Split automatically'
             />
-            <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
+            {/* <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
               Back
-            </Button>
+            </Button> */}
           </div>
 
           <Divider />
@@ -265,7 +265,19 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
           />
 
           {/* Brand Selection */}
-          <TextField fullWidth label='Brand' value={brand} onChange={e => setBrand(e.target.value)} select>
+          <TextField
+            fullWidth
+            label='Brand'
+            value={brand}
+            onChange={e => {
+              const next = e.target.value
+              setBrand(next)
+              if (selectedPlatform?._id) {
+                dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand: next }))
+              }
+            }}
+            select
+          >
             {/* Unassigned Orders Info */}
             {selectedPlatform?._id ? (
               <Typography variant='body2' color='textSecondary'>
@@ -275,8 +287,8 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
             <MenuItem value='' disabled>
               Select a brand
             </MenuItem>
-            <MenuItem value='Glowrify'>Glowrify</MenuItem>
-            <MenuItem value='sukoon wellness'>sukoon wellness</MenuItem>
+            <MenuItem value='glowrify'>Glowrify</MenuItem>
+            <MenuItem value='sukoon'>sukoon wellness</MenuItem>
           </TextField>
 
           {/* Agents Selection */}
