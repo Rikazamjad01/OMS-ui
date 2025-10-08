@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import Chip from '@mui/material/Chip'
@@ -35,6 +36,7 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
   const [selectedPlatform, setSelectedPlatform] = useState(null)
   const [absentAgent, setAbsentAgent] = useState(null)
   const [reassignToAgents, setReassignToAgents] = useState([])
+  const [assignedLoading, setAssignedLoading] = useState(false)
 
   const platformOptions = useMemo(
     () =>
@@ -54,7 +56,10 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
   useEffect(() => {
     if (selectedPlatform?._id) {
       dispatch(extractAgentsFromPlatform({ id: selectedPlatform._id }))
+      setAssignedLoading(true)
       dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+        .unwrap()
+        .finally(() => setAssignedLoading(false))
     }
   }, [dispatch, selectedPlatform])
 
@@ -67,31 +72,23 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
       toast.error('Cannot reassign to the same agent')
       return
     }
-    try {
-      await dispatch(
-        markAbsentAndReassignThunk({
-          platform: selectedPlatform._id,
-          absentAgentId: absentAgent._id,
-          reassignToAgents: reassignToAgents.map(a => a._id)
-        })
-      ).unwrap()
-      toast.success('Tasks reassigned')
-      dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
-    } catch (e) {
-      toast.error('Failed to reassign tasks')
-    }
+    await dispatch(
+      markAbsentAndReassignThunk({
+        platform: selectedPlatform._id,
+        absentAgentId: absentAgent._id,
+        reassignToAgents: reassignToAgents.map(a => a._id)
+      })
+    ).unwrap()
+    dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+      .unwrap()
+      .finally(() => setAssignedLoading(false))
+    toast.success('Tasks reassigned')
+    dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
   }
 
   return (
     <Card>
-      <CardHeader
-        title='Agent Task Overview'
-        action={
-          <Button variant='contained' onClick={onOpenAssignmentForm} startIcon={<i className='bx-edit' />}>
-            Open Assignment Form
-          </Button>
-        }
-      />
+      <CardHeader title='Agent Task Overview' />
       <CardContent>
         <Box className='space-y-6'>
           <Autocomplete
@@ -107,39 +104,48 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
             renderInput={params => <TextField {...params} label='Select Platform' placeholder='Choose platform' />}
           />
 
-          <Divider />
-
-          <Grid container spacing={2}>
-            {agentOptions.map(agent => {
-              const count = assignedTasksMap?.[agent._id] ?? agentTaskCounts?.[agent._id] ?? 0
-              return (
-                <Grid item xs={12} md={6} lg={4} key={agent._id}>
-                  <Card variant='outlined'>
-                    <CardContent>
-                      <Box className='flex items-center justify-between'>
-                        <Box>
-                          <Typography variant='subtitle1'>
-                            {agent.firstName} {agent.lastName}
-                          </Typography>
-                          <Typography variant='body2' color='textSecondary'>
-                            {agent.email}
-                          </Typography>
-                        </Box>
-                        <Chip label={`${count} task(s)`} color='primary' variant='outlined' />
-                      </Box>
-                    </CardContent>
-                  </Card>
+          {selectedPlatform?._id ? (
+            assignedLoading ? (
+              <Box className='flex justify-center py-6'>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <>
+                <Divider />
+                <Grid container spacing={2}>
+                  {agentOptions.map(agent => {
+                    const count = assignedTasksMap?.[agent._id] ?? agentTaskCounts?.[agent._id] ?? 0
+                    return (
+                      <Grid item xs={12} md={6} lg={4} key={agent._id}>
+                        <Card variant='outlined'>
+                          <CardContent>
+                            <Box className='flex items-center justify-between'>
+                              <Box>
+                                <Typography variant='subtitle1'>
+                                  {agent.firstName} {agent.lastName}
+                                </Typography>
+                                <Typography variant='body2' color='textSecondary'>
+                                  {agent.email}
+                                </Typography>
+                              </Box>
+                              <Chip label={`${count} task(s)`} color='primary' variant='outlined' />
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    )
+                  })}
+                  {agentOptions.length === 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant='body2' color='textSecondary'>
+                        Select a platform to view agents.
+                      </Typography>
+                    </Grid>
+                  )}
                 </Grid>
-              )
-            })}
-            {agentOptions.length === 0 && (
-              <Grid item xs={12}>
-                <Typography variant='body2' color='textSecondary'>
-                  Select a platform to view agents.
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
+              </>
+            )
+          ) : null}
 
           <Divider />
 
