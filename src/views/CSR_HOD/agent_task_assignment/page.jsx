@@ -57,7 +57,7 @@ const AgentTaskAssignment = () => {
 
       <TabPanel value={tabValue} index={1}>
         {showAssignmentForm ? (
-          <TaskAssignmentForm />
+          <TaskAssignmentForm onCloseAssignmentForm={() => setShowAssignmentForm(false)} />
         ) : (
           <AgentTaskOverview onOpenAssignmentForm={() => setShowAssignmentForm(true)} />
         )}

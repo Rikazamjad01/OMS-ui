@@ -26,6 +26,7 @@ import { selectSelectedProducts } from '@/redux-store/slices/products'
 
 export const paymentStatus = {
   paid: { text: 'Paid', color: 'success' },
+  partially_paid: { text: 'Partially Paid', color: 'info' },
   pending: { text: 'Pending', color: 'warning' },
   cancelled: { text: 'Cancelled', color: 'secondary' },
   failed: { text: 'Failed', color: 'error' }
@@ -35,6 +36,7 @@ export const statusChipColor = {
   confirmed: { color: 'success' },
   completed: { color: 'primary' },
   processing: { color: 'info' },
+  partially_paid: { color: 'info' },
   pending: { color: 'warning' },
   cancelled: { color: 'secondary' },
   delivered: { color: 'primary' },
@@ -122,7 +124,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
             <Chip
               variant='tonal'
               label={paymentStatus[order?.financial_status || 'pending']?.text}
-              color={paymentStatus[order?.financial_status || 'pending']?.color}
+              color={paymentStatus[order?.financial_status || 'pending']?.color || 'warning'}
               size='small'
             />
           </div>

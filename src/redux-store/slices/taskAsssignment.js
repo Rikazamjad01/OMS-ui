@@ -7,6 +7,10 @@ const initialState = {
   extractedAgentsFromPlatform: [],
   ordersIds: [],
   agentTaskCounts: {},
+  assignedTasks: [],
+  assignedTasksMap: {},
+  assignedTotals: { totalAgents: 0, totalTasks: 0 },
+  unassignedTotal: 0,
   loading: false,
   error: null
 }
@@ -107,6 +111,59 @@ export const reassignAgentTasksThunk = createAsyncThunk(
         payload.toAgentId = toAgentId
       }
       const response = await postRequest('taskAssignment/reassign', payload)
+      if (response.success) {
+        return response.data
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Fetch assigned tasks per agent for a given platform
+export const fetchAssignedTasksThunk = createAsyncThunk(
+  'taskAssignment/fetchAssignedTasks',
+  async ({ platform }, { rejectWithValue }) => {
+    try {
+      const response = await getRequest(`taskAssignment/assigned-tasks?platform=${platform}`)
+      if (response.success) {
+        return response
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Fetch total unassigned orders for a given platform
+export const fetchUnassignedOrdersThunk = createAsyncThunk(
+  'taskAssignment/fetchUnassignedOrders',
+  async ({ platform }, { rejectWithValue }) => {
+    try {
+      const response = await getRequest(`taskAssignment/unassigned-orders?platform=${platform}`)
+      if (response.success) {
+        return response
+      }
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Mark absent and reassign in one call per new API contract
+export const markAbsentAndReassignThunk = createAsyncThunk(
+  'taskAssignment/markAbsentAndReassign',
+  async ({ platform, absentAgentId, reassignToAgents }, { rejectWithValue }) => {
+    try {
+      const payload = {
+        platform,
+        absentAgentId,
+        reassignToAgents
+      }
+      const response = await postRequest('taskAssignment/mark-absent', payload)
       if (response.success) {
         return response.data
       }
@@ -221,6 +278,54 @@ export const taskAsssignmentSlice = createSlice({
         state.error = null
       })
       .addCase(reassignAgentTasksThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(fetchAssignedTasksThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchAssignedTasksThunk.fulfilled, (state, action) => {
+        const { data, totalAgents, totalTasks } = action.payload || {}
+        state.assignedTasks = Array.isArray(data) ? data : []
+        const map = {}
+        state.assignedTasks.forEach(item => {
+          if (item?.agentId) map[item.agentId] = Number(item.tasks) || 0
+        })
+        state.assignedTasksMap = map
+        state.assignedTotals = {
+          totalAgents: Number(totalAgents) || 0,
+          totalTasks: Number(totalTasks) || 0
+        }
+        state.loading = false
+        state.error = null
+      })
+      .addCase(fetchAssignedTasksThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(fetchUnassignedOrdersThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchUnassignedOrdersThunk.fulfilled, (state, action) => {
+        state.unassignedTotal = Number(action.payload?.total) || 0
+        state.loading = false
+        state.error = null
+      })
+      .addCase(fetchUnassignedOrdersThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+      .addCase(markAbsentAndReassignThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(markAbsentAndReassignThunk.fulfilled, (state, action) => {
+        state.loading = false
+        state.error = null
+      })
+      .addCase(markAbsentAndReassignThunk.rejected, (state, action) => {
         state.error = action.payload
         state.loading = false
       })

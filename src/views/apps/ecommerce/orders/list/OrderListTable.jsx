@@ -59,7 +59,10 @@ import {
   updateOrderCommentsAndRemarks,
   selectPagination,
   updateOrdersStatusThunk,
-  changeCityThunk
+  changeCityThunk,
+  updateOrderAddressThunk,
+  addPartialPaymentThunk,
+  uploadAttachmentThunk
 } from '@/redux-store/slices/order'
 import cities from '@/data/cities/cities'
 
@@ -69,7 +72,7 @@ import OptionMenu from '@core/components/option-menu'
 import CustomTextField from '@core/components/mui/TextField'
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
-import { addPartialPaymentThunk } from '@/redux-store/slices/order'
+
 // import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
 // import IconButton from '@mui/material/IconButton'
 import FilterModal from '../filterModal/page'
@@ -91,7 +94,8 @@ export const paymentStatus = {
   paid: { text: 'Paid', color: 'success', colorClassName: 'text-success' },
   pending: { text: 'Pending', color: 'warning', colorClassName: 'text-warning' },
   cancelled: { text: 'Cancelled', color: 'secondary', colorClassName: 'text-secondary' },
-  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
+  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' },
+  partially_paid: { text: 'Partially Paid', color: 'info', colorClassName: 'text-info' }
 }
 
 export const orderPlatform = {
@@ -103,7 +107,8 @@ export const orderPlatform = {
 
 export const statusChipColor = {
   confirmed: { color: 'success', text: 'Confirmed' },
-  processing: { color: 'success', text: 'Confirmed' },
+
+  // processing: { color: 'success', text: 'Confirmed' },
   pending: { color: 'warning', text: 'Pending' },
   cancelled: { color: 'secondary', text: 'Cancelled' },
   noPick: { color: 'error', text: 'No Pick' }
@@ -113,6 +118,17 @@ export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
   value: key,
   label: statusChipColor[key].text
 }))
+
+export const tagsArray = [
+    { value: 'Urgent delivery', label: 'Urgent delivery' },
+    { value: 'Allowed to Open', label: 'Allowed to Open' },
+    { value: 'Deliver between (specific date and Time)', label: 'Deliver between (specific date and Time)' },
+    { value: 'Call before reaching', label: 'Call before reaching' },
+    { value: 'Deliver parcel to the  (specific person)', label: 'Deliver parcel to the  (specific person)' },
+    { value: 'Do not deliver to anyone except the mentioned consignee name', label: 'Do not deliver to anyone except the mentioned consignee name' },
+    { value: 'Deliver without call', label: 'Deliver without call' },
+    { value: 'Product must not be visible-consider privacy', label: 'Product must not be visible-consider privacy' },
+  ]
 
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
 
@@ -181,6 +197,10 @@ const mapFiltersToApiFormat = localFilters => {
     apiFilters.city = localFilters.pakistanCities.map(c => c.value).join(',')
   }
 
+  if (localFilters.tags && localFilters.tags.length > 0) {
+    apiFilters.tags = localFilters.tags.map(c => c.value).join(',')
+  }
+
   return apiFilters
 }
 
@@ -245,46 +265,111 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnte
 }
 
 // Inline dialog component for partial payment, matching createOrderDialog styling
-const PartialPaymentInlineDialog = ({ open, setOpen, onSubmitPartial, orderId }) => {
+const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
+  const dispatch = useDispatch()
   const [amount, setAmount] = useState('')
   const [attachment, setAttachment] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  const handleSubmit = async () => {
+    if (!amount) return
+    setLoading(true)
+
+    try {
+      let attachmentUrl = null
+
+      if (attachment) {
+        try {
+          const uploadResult = await dispatch(uploadAttachmentThunk(attachment)).unwrap()
+
+          attachmentUrl = uploadResult.url || uploadResult.secureUrl
+        } catch (err) {
+          console.error('Attachment upload failed:', err)
+          setLoading(false)
+          return
+        }
+      }
+
+      const payload = {
+        id: orderId,
+        amount: Number(amount) || 0
+      }
+
+      if (attachmentUrl) payload.attachment = attachmentUrl
+
+      await dispatch(addPartialPaymentThunk(payload))
+        .unwrap()
+        .then(async () => {
+          setSnackbar({ open: true, message: 'Partial payment added successfully', severity: 'success' })
+          await dispatch(fetchOrders({ page: 1, limit: 50, force: true })).unwrap()
+        })
+        .catch(err => {
+          console.error('Partial payment failed:', err)
+          setSnackbar({ open: true, message: 'Failed to add partial payment', severity: 'error' })
+        })
+
+      setOpen(false)
+      setAmount('')
+      setAttachment(null)
+      onSuccess?.()
+    } catch (err) {
+      console.error('Partial payment failed:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
-      <DialogTitle>Add Partial Payment</DialogTitle>
-      <DialogContent className='pt-2'>
-        <div className='flex flex-col gap-4'>
-          <TextField
-            fullWidth
-            type='number'
-            label='How much (amount)'
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            inputProps={{ min: 0, step: '1' }}
-          />
-          <Button variant='outlined' component='label' startIcon={<i className='bx-paperclip' />}>
-            Upload attachment (proof)
-            <input type='file' hidden onChange={e => setAttachment(e.target.files?.[0] || null)} />
+    <>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+        <DialogTitle>Add Partial Payment</DialogTitle>
+        <DialogContent className='pt-2'>
+          <div className='flex flex-col gap-4'>
+            <TextField
+              fullWidth
+              required
+              type='number'
+              label='How much (amount)'
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              inputProps={{ min: 0, step: '1' }}
+            />
+
+            <Button variant='outlined' component='label' startIcon={<i className='bx bx-paperclip' />}>
+              Upload attachment (proof)
+              <input
+                type='file'
+                hidden
+                accept='image/*,application/pdf'
+                onChange={e => setAttachment(e.target.files?.[0] || null)}
+              />
+            </Button>
+
+            {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
+          </div>
+        </DialogContent>
+
+        <DialogActions>
+          <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+            Cancel
           </Button>
-          {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-        <Button
-          variant='contained'
-          onClick={async () => {
-            const result = await onSubmitPartial?.({ orderId, amount: Number(amount) || 0, attachment })
-            if (result !== false) setOpen(false)
-          }}
-          disabled={!amount}
-        >
-          Submit
-        </Button>
-      </DialogActions>
-    </Dialog>
+          <Button variant='contained' onClick={handleSubmit} disabled={!amount || loading}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert variant='filled' severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   )
 }
 
@@ -294,7 +379,7 @@ const OrderListTable = ({
   loading = false,
   error = null,
   page,
-  limit = 25,
+  limit = 50,
   onPageChange,
   onLimitChange,
   onSearchChange,
@@ -312,6 +397,7 @@ const OrderListTable = ({
   const [partialAmount, setPartialAmount] = useState('')
   const [partialAttachment, setPartialAttachment] = useState(null)
   const [partialForOrderId, setPartialForOrderId] = useState(null)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   // Right-side details drawer state
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -438,6 +524,14 @@ const OrderListTable = ({
     return true
   }
 
+  // Placeholder: call your backend to update an order's address
+  // Replace the body with your real API call
+  const updateAddressApi = async ({ id, address }) => {
+    // TODO: Implement API call here, e.g. await api.updateOrderAddress({ id, address })
+    // Intentionally left blank per request
+    await dispatch(updateOrderAddressThunk({ id, address })).unwrap()
+  }
+
   // Map backend orders -> table rows
   const data = useMemo(() => {
     return (orderData || []).map(order => {
@@ -448,14 +542,22 @@ const OrderListTable = ({
           : []
 
       const parsedTags =
-        typeof order.tags === 'string'
+      Array.isArray(order.tags)
+        ? order.tags.flatMap(t =>
+            String(t)
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+          )
+        : typeof order.tags === 'string'
           ? order.tags
-              .split(',') // backend gives comma-separated
+              .split(',')
               .map(t => t.trim())
               .filter(Boolean)
-          : Array.isArray(order.tags)
-            ? order.tags.filter(Boolean)
-            : []
+          : []
+
+    // ✅ Remove duplicates and empty strings
+    const uniqueTags = Array.from(new Set(parsedTags.filter(Boolean)))
 
       return {
         id: order.id,
@@ -475,7 +577,7 @@ const OrderListTable = ({
         city: order?.city || '',
         phone: order?.address?.[0]?.phone || '',
         address: order?.address?.[0]?.address1 || '',
-        tags: parsedTags
+        tags: uniqueTags,
       }
     })
   }, [orderData])
@@ -518,7 +620,9 @@ const OrderListTable = ({
       // ✅ Get previous tags from tagsMap OR from orderData
       const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
 
-      // ✅ Push new tag, ensuring uniqueness
+      console.log(previousTags, 'previousTags')
+
+      // ✅ Ensure distinct trimmed tags
       const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
 
       // ✅ Update UI immediately
@@ -527,11 +631,11 @@ const OrderListTable = ({
         [orderId]: updatedTags
       }))
 
-      // ✅ Send clean comma-separated string to backend
+      // ✅ Send array to backend instead of comma-separated string
       await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: updatedTags.join(',')
+          tags: updatedTags // ← keep as array, not .join(',')
         })
       ).unwrap()
 
@@ -639,7 +743,7 @@ const OrderListTable = ({
 
           return (
             <div className='flex items-center gap-2'>
-              {isPending && (
+              {isPending ? (
                 <>
                   {/* <Menu
                     open={false}
@@ -661,6 +765,21 @@ const OrderListTable = ({
                     dialogProps={{ onSubmitPartial, orderId: row.original.id }}
                   />
                 </>
+              ) : (
+                <OpenDialogOnElementClick
+                  element={IconButton}
+                  elementProps={{
+                    // size: 'small',
+                    className: 'hover:rounded-4xl',
+                    children: (
+                      <Typography className='font-medium'>
+                        {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                      </Typography>
+                    )
+                  }}
+                  dialog={PartialPaymentInlineDialog}
+                  dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                />
               )}
             </div>
           )
@@ -680,6 +799,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -695,91 +815,40 @@ const OrderListTable = ({
         cell: props => <StatusCell {...props} onStatusChange={handleSingleStatusChange} />
       },
       {
-        accessorKey: 'method',
-        header: 'Method',
-        meta: { width: '250px' },
-        cell: ({ row }) => {
-          const m = row.original.method
-          const label = row.original.methodLabel
-
-          const iconClass =
-            m === 'card'
-              ? 'bx-credit-card'
-              : m === 'paypal'
-                ? 'bxl-paypal'
-                : m === 'cod'
-                  ? 'bx-money'
-                  : m === 'wallet'
-                    ? 'bx-wallet'
-                    : 'bx-purchase-tag-alt'
-
-          // const rightText = m === 'card' ? row.original.methodNumber || label : label
-
-          return (
-            <div className='flex items-center gap-2'>
-              <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
-                <i className={`${iconClass} text-[18px]`} />
-              </div>
-              <Typography className='font-medium'>{m}</Typography>
-            </div>
-          )
-        }
-      },
-      {
-        accessorKey: 'remarks',
-        header: 'Remarks',
-        meta: { width: '250px' },
-        cell: ({ row }) => {
-          const remarks = row.original.remarks
-
-          // normalize remarks (string → array of strings)
-          const remarkList =
-            typeof remarks === 'string'
-              ? remarks
-                  .split(',')
-                  .map(r => r.trim())
-                  .filter(Boolean)
-              : Array.isArray(remarks)
-                ? remarks.filter(Boolean)
-                : []
-
-          const hasRemarks = remarkList.length > 0
-
-          return (
-            <div className='flex flex-col gap-1'>
-              {/* First row: Remarks */}
-              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
-                {hasRemarks
-                  ? remarkList.map((remark, i) => (
-                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
-                      <p key={i} className='text-gray-500'>
-                        {remark}
-                      </p>
-                    ))
-                  : '--'}
-              </div>
-            </div>
-          )
-        }
-      },
-      {
-        accessorKey: 'Amount',
-        header: 'Amount',
-        filterFn: amountRangeFilterFn,
-        cell: ({ row }) => (
-          <Typography className='font-medium text-gray-800'>
-            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
-          </Typography>
-        )
-      },
-      {
         accessorKey: 'address',
         header: 'Address',
-        meta: { width: '250px' },
+        meta: { width: '450px' },
         cell: ({ row }) => {
-          const address = row.original.address
+          const initialAddress = row.original.address || ''
+          const [value, setValue] = useState(initialAddress)
+          const [original, setOriginal] = useState(initialAddress)
 
-          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+          useEffect(() => {
+            const next = row.original.address || ''
+
+            setValue(next)
+            setOriginal(next)
+          }, [])
+
+          return (
+            <textarea
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onBlur={async () => {
+                const trimmed = String(value || '').trim()
+                const prev = String(original || '').trim()
+
+                if (trimmed !== prev) {
+                  await updateAddressApi({ id: row.original.id, address: trimmed })
+                  setOriginal(trimmed)
+                }
+              }}
+              rows={2}
+              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
+              style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
+              placeholder='—'
+            />
+          )
         }
       },
       {
@@ -842,35 +911,87 @@ const OrderListTable = ({
         }
       },
       {
+        accessorKey: 'remarks',
+        header: 'Remarks',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const remarks = row.original.remarks
+
+          // normalize remarks (string → array of strings)
+          const remarkList =
+            typeof remarks === 'string'
+              ? remarks
+                  .split(',')
+                  .map(r => r.trim())
+                  .filter(Boolean)
+              : Array.isArray(remarks)
+                ? remarks.filter(Boolean)
+                : []
+
+          const hasRemarks = remarkList.length > 0
+
+          return (
+            <div className='flex flex-col gap-1'>
+              {/* First row: Remarks */}
+              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
+                {hasRemarks
+                  ? remarkList.map((remark, i) => (
+
+                      // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
+                      <p key={i} className='text-gray-500'>
+                        {remark}
+                      </p>
+                    ))
+                  : '--'}
+              </div>
+            </div>
+          )
+        }
+      },
+      {
+        accessorKey: 'Amount',
+        header: 'Amount',
+        filterFn: amountRangeFilterFn,
+        cell: ({ row }) => (
+          <Typography className='font-medium text-gray-800'>
+            {new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(row.original.Amount || '—')}
+          </Typography>
+        )
+      },
+      {
         accessorKey: 'tags',
         header: 'Tags',
         meta: { width: '250px' },
-
         cell: ({ row }) => {
           const orderId = row.original.id
 
-          // Prefer updated tags from tagsMap, else fall back to parsed original
-          const displayedTags = tagsMap[orderId] ?? row.original.tags
+          // Get tags from map or order data
+          const rawTags = tagsMap[orderId] ?? row.original.tags
+
+          // ✅ Normalize to array (handle comma-separated string or array)
+          const displayedTags = Array.isArray(rawTags)
+            ? rawTags
+            : String(rawTags || '')
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(Boolean)
+
           const hasTags = displayedTags.length > 0
 
           return (
             <div className='flex flex-col gap-1'>
               <div
                 className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
-                onClick={() => openTagEditor(orderId, displayedTags)}
                 role='button'
                 tabIndex={0}
                 onKeyDown={e => {
                   if (e.key === 'Enter') openTagEditor(orderId, displayedTags)
                 }}
               >
-                {hasTags ? (
+                {hasTags &&
                   displayedTags.map((tag, i) => (
                     <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
-                  ))
-                ) : (
-                  <></>
-                )}
+                  ))}
               </div>
 
               <div>
@@ -881,6 +1002,37 @@ const OrderListTable = ({
                   onClick={() => openTagEditor(orderId, displayedTags)}
                 />
               </div>
+            </div>
+          )
+        }
+      },
+      {
+        accessorKey: 'method',
+        header: 'Method',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const m = row.original.method
+          const label = row.original.methodLabel
+
+          const iconClass =
+            m === 'card'
+              ? 'bx-credit-card'
+              : m === 'paypal'
+                ? 'bxl-paypal'
+                : m === 'cod'
+                  ? 'bx-money'
+                  : m === 'wallet'
+                    ? 'bx-wallet'
+                    : 'bx-purchase-tag-alt'
+
+          // const rightText = m === 'card' ? row.original.methodNumber || label : label
+
+          return (
+            <div className='flex items-center gap-2'>
+              <div className='flex justify-center items-center bg-[#F6F8FA] rounded-sm is-[29px] bs-[18px]'>
+                <i className={`${iconClass} text-[18px]`} />
+              </div>
+              <Typography className='font-medium'>{m}</Typography>
             </div>
           )
         }
@@ -921,7 +1073,7 @@ const OrderListTable = ({
     startDate: '',
     endDate: '',
     minAmount: '',
-    maxAmount: ''
+    maxAmount: '',
   })
 
   const paymentMethodsArray = Object.keys(paymentMethodsMap).map(key => ({
@@ -944,10 +1096,24 @@ const OrderListTable = ({
     label: pakistanCities[key].text
   }))
 
-  const tagsArray = Object.keys(tagsMap).map(key => ({
-    value: key,
-    label: tagsMap[key].text
-  }))
+  // const tagsArray = useMemo(() => {
+  //   const unique = new Set()
+
+  //   ;(data || []).forEach(row => {
+  //     const orderId = row.id
+  //     const rowTags = tagsMap[orderId] ?? row.tags
+
+  //     if (Array.isArray(rowTags)) {
+  //       rowTags.forEach(t => {
+  //         const tag = String(t || '').trim()
+
+  //         if (tag) unique.add(tag)
+  //       })
+  //     }
+  //   })
+
+  //   return Array.from(unique).map(tag => ({ value: tag, label: tag }))
+  // }, [data, tagsMap])
 
   const table = useReactTable({
     data,
@@ -1019,7 +1185,7 @@ const OrderListTable = ({
 
   return (
     <Card>
-      <CardContent className='flex justify-between items-center'>
+      <CardContent className='flex justify-between items-start'>
         <div className='flex flex-wrap gap-4'>
           {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
@@ -1094,34 +1260,14 @@ const OrderListTable = ({
               {/* Status Change Menu */}
               <Menu anchorEl={statusMenuAnchor} open={statusMenuOpen} onClose={() => setStatusMenuAnchor(null)}>
                 {orderStatusArray.map(status => (
-                  <OpenDialogOnElementClick
-                    key={status.value}
-                    element={MenuItem}
-                    elementProps={{
-                      onClick: () => setStatusMenuAnchor(null) // close the menu
-                    }}
-                    dialog={ConfirmationDialog}
-                    size='small'
-                    dialogProps={{
-                      type: 'update-status',
-                      payload: {
-                        orderIds: [orderId], // or selectedIds for bulk
-                        fromStatus: statusChipColor[currentStatus]?.text,
-                        toStatus: status.label,
-                        toStatusKey: status.value
-                      },
-                      onSuccess: async () => {
-                        await dispatch(fetchOrders({ page: 1, limit, force: true }))
-                      }
-                    }}
-                  >
+                  <MenuItem key={status.value} onClick={() => handleBulkStatusChange(status.value)}>
                     <Chip
                       label={status.label}
                       color={statusChipColor[status.value].color}
                       variant='tonal'
                       size='small'
                     />
-                  </OpenDialogOnElementClick>
+                  </MenuItem>
                 ))}
               </Menu>
             </>
@@ -1170,12 +1316,12 @@ const OrderListTable = ({
           )}
         </div>
 
-        <div className='flex max-sm:flex-col sm:items-center gap-4'>
+        <div className='flex max-sm:flex-col gap-4'>
           <CustomTextField
             select
-            value={limit ?? 25}
+            value={limit ?? 50}
             onChange={async e => {
-              const newLimit = Number(e.target.value) || 25
+              const newLimit = Number(e.target.value) || 50
 
               // console.log('newLimit', newLimit)
               onLimitChange?.(newLimit)
@@ -1196,7 +1342,9 @@ const OrderListTable = ({
             variant='tonal'
             color='primary'
             onClick={() => setOrderIntakeOpen(true)} // open modal on click
+            className='flex items-center gap-1'
           >
+            Add Manual Order
             <i className='bx-plus' />
           </Button>
         </div>
@@ -1323,8 +1471,8 @@ const OrderListTable = ({
           fullWidth
           options={tagsArray}
           getOptionLabel={option => option.label}
-          value={filters.tagsMap || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
+          value={filters.tags || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tags: newValue }))}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const props = getTagProps({ index })
@@ -1362,7 +1510,7 @@ const OrderListTable = ({
             <Button
               onClick={() => {
                 setFilters(emptyFilters)
-                dispatch(fetchOrders({ page: 1, limit, filters: emptyFilters }))
+                dispatch(fetchOrders({ page: 1, limit, filters: emptyFilters, force: true }))
                 onFiltersChange?.(emptyFilters)
 
                 // onPageChange?.(1)
@@ -1376,7 +1524,9 @@ const OrderListTable = ({
               onClick={() => {
                 const apiFilters = mapFiltersToApiFormat(filters)
 
-                dispatch(fetchOrders({ page: 1, limit, filters: apiFilters }))
+                console.log('Applying Filters:', apiFilters, filters)
+
+                dispatch(fetchOrders({ page: 1, limit, filters: apiFilters, force: true }))
                 onFiltersChange?.(apiFilters)
 
                 onPageChange?.(1)
@@ -1460,8 +1610,8 @@ const OrderListTable = ({
         onPageChange={(_e, newPage) => {
           onPageChange?.(newPage + 1) // This will call parent's setPage
         }}
-        rowsPerPage={Number(pagination.itemsPerPage || limit || 25)} // Ensure controlled value
-        onRowsPerPageChange={e => onLimitChange?.(Number(e.target.value) || 25)}
+        rowsPerPage={Number(pagination.itemsPerPage || limit || 50)} // Ensure controlled value
+        onRowsPerPageChange={e => onLimitChange?.(Number(e.target.value) || 50)}
         rowsPerPageOptions={[25, 50, 100]}
       />
 
