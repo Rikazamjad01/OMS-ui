@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 
-import { getRequest, postRequest, apiRequest } from '@/utils/api'
 import { patch } from '@mui/material'
+import { getRequest, postRequest, apiRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
@@ -24,6 +24,8 @@ export const fetchOrders = createAsyncThunk(
 
       const filterParams = {}
 
+      console.log('filters', filters)
+
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
@@ -37,6 +39,7 @@ export const fetchOrders = createAsyncThunk(
       if (filters.paymentMethod) filterParams.payment_method_names = filters.paymentMethod
       if (filters.paymentStatus) filterParams.financial_status = filters.paymentStatus
       if (filters.city) filterParams.city = filters.city
+      if (filters.tags) filterParams.tags = filters.tags
 
       // if (filters.paymentMethods) filterParams.payment_gateway_names = filters.paymentMethods.join(',')
 

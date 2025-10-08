@@ -13,7 +13,7 @@ export default function TagEditDialog({ open, initialTags = [], onClose, onSave,
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
-      <DialogTitle>Edit Tag</DialogTitle>
+      <DialogTitle>Add New Tag</DialogTitle>
       <DialogContent className='py-2 m-0'>
         <TextField
           id='outlined-basic'
