@@ -489,26 +489,26 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Keep tabIndex in sync with selectedZoneId using the deduped list
   useEffect(() => {
-    const findId = selectedZoneId || '__new__';
-    const idx = (dynamicTabs || []).findIndex(z => z.id === findId);
+    const findId = selectedZoneId || '__new__'
+    const idx = (dynamicTabs || []).findIndex(z => z.id === findId)
 
     if (idx >= 0) {
-      setTabIndex(idx);
-      return;
+      setTabIndex(idx)
+      return
     }
 
-    const firstExistingIdx = (dynamicTabs || []).findIndex(z => z.id !== '__new__');
+    const firstExistingIdx = (dynamicTabs || []).findIndex(z => z.id !== '__new__')
 
     if (firstExistingIdx >= 0) {
-      setTabIndex(firstExistingIdx);
-      setSelectedZoneId(dynamicTabs[firstExistingIdx].id);
+      setTabIndex(firstExistingIdx)
+      setSelectedZoneId(dynamicTabs[firstExistingIdx].id)
     } else if ((dynamicTabs || []).length > 0) {
       // only the new tab exists
-      setTabIndex(dynamicTabs.length - 1);
-      setSelectedZoneId('');
+      setTabIndex(dynamicTabs.length - 1)
+      setSelectedZoneId('')
     } else {
-      setTabIndex(0);
-      setSelectedZoneId('');
+      setTabIndex(0)
+      setSelectedZoneId('')
     }
   }, [dynamicTabs, selectedZoneId])
 
@@ -573,9 +573,29 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // console.log(cityOptions, 'cityOptions here')
 
-  const filteredCityOptions = cityOptions.filter(
-    opt => !rows.some(row => row.city.toLowerCase() === opt.label.toLowerCase())
-  )
+  const filteredCityOptions = useMemo(() => {
+    // Get all cities that are currently used in ANY zone (from server data)
+    const allUsedCities = new Set()
+
+    // Add cities from all zones in the store
+    ;(zones || []).forEach(zone => {
+      ;(zone.config?.cities || []).forEach(city => {
+        allUsedCities.add(normalizeCity(city).toLowerCase())
+      })
+    })
+
+    // Add cities from current rows (being edited)
+    rows.forEach(row => {
+      const city = normalizeCity(row.city)
+
+      if (city) {
+        allUsedCities.add(city.toLowerCase())
+      }
+    })
+
+    // Filter cityOptions to exclude any cities that are already used
+    return cityOptions.filter(opt => !allUsedCities.has(opt.label.toLowerCase()))
+  }, [cityOptions, zones, rows, normalizeCity])
 
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
 
@@ -718,7 +738,6 @@ export default function ZoneSetup({ initialZone = null }) {
           <Grid size={{ xs: 12, md: 9 }}>
             <Autocomplete
               multiple
-              
               // pedz
               disableCloseOnSelect
               options={filteredCityOptions}

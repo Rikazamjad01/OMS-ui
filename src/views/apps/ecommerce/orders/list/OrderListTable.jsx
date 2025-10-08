@@ -265,7 +265,7 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 1000, onEnte
 }
 
 // Inline dialog component for partial payment, matching createOrderDialog styling
-const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
+export const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
   const dispatch = useDispatch()
   const [amount, setAmount] = useState('')
   const [attachment, setAttachment] = useState(null)
@@ -619,8 +619,6 @@ const OrderListTable = ({
 
       // ✅ Get previous tags from tagsMap OR from orderData
       const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
-
-      console.log(previousTags, 'previousTags')
 
       // ✅ Ensure distinct trimmed tags
       const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
@@ -1524,8 +1522,6 @@ const OrderListTable = ({
               onClick={() => {
                 const apiFilters = mapFiltersToApiFormat(filters)
 
-                console.log('Applying Filters:', apiFilters, filters)
-
                 dispatch(fetchOrders({ page: 1, limit, filters: apiFilters, force: true }))
                 onFiltersChange?.(apiFilters)
 
@@ -1641,7 +1637,6 @@ const OrderListTable = ({
             message: 'Order created successfully!',
             severity: 'success'
           })
-          console.log('Order created successfully!')
         }}
       />
       {/* Right-side Drawer for order details */}

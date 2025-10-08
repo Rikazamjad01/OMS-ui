@@ -39,7 +39,10 @@ import {
   MenuItem,
   Drawer,
   Box,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -85,14 +88,20 @@ import TablePaginationComponent from '@/components/TablePaginationComponent'
 import OrderDetails from '@/views/apps/ecommerce/orders/details'
 import { postRequest } from '@/utils/api'
 import ConfirmationDialog from '../dialogs/confirmation-dialog'
-import { updateOrderCommentsAndRemarks, updateOrdersStatusThunk } from '@/redux-store/slices/order'
+import {
+  addPartialPaymentThunk,
+  changeCityThunk,
+  updateOrderCommentsAndRemarks,
+  updateOrdersStatusThunk
+} from '@/redux-store/slices/order'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
   paid: { text: 'Paid', color: 'success', colorClassName: 'text-success' },
   pending: { text: 'Pending', color: 'warning', colorClassName: 'text-warning' },
   cancelled: { text: 'Cancelled', color: 'secondary', colorClassName: 'text-secondary' },
-  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' }
+  failed: { text: 'Failed', color: 'error', colorClassName: 'text-error' },
+  partially_paid: { text: 'Partially Paid', color: 'info', colorClassName: 'text-info' }
 }
 
 // export const orderPlatform = {
@@ -122,7 +131,129 @@ export const orderStatusArray = Object.keys(statusChipColorForBooking).map(key =
   label: statusChipColorForBooking[key].text
 }))
 
+export const tagsArray = [
+  { value: 'Urgent delivery', label: 'Urgent delivery' },
+  { value: 'Allowed to Open', label: 'Allowed to Open' },
+  { value: 'Deliver between (specific date and Time)', label: 'Deliver between (specific date and Time)' },
+  { value: 'Call before reaching', label: 'Call before reaching' },
+  { value: 'Deliver parcel to the  (specific person)', label: 'Deliver parcel to the  (specific person)' },
+  {
+    value: 'Do not deliver to anyone except the mentioned consignee name',
+    label: 'Do not deliver to anyone except the mentioned consignee name'
+  },
+  { value: 'Deliver without call', label: 'Deliver without call' },
+  { value: 'Product must not be visible-consider privacy', label: 'Product must not be visible-consider privacy' }
+]
+
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
+
+export const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
+  const dispatch = useDispatch()
+  const [amount, setAmount] = useState('')
+  const [attachment, setAttachment] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  const handleSubmit = async () => {
+    if (!amount) return
+    setLoading(true)
+
+    try {
+      let attachmentUrl = null
+
+      if (attachment) {
+        try {
+          const uploadResult = await dispatch(uploadAttachmentThunk(attachment)).unwrap()
+
+          attachmentUrl = uploadResult.url || uploadResult.secureUrl
+        } catch (err) {
+          console.error('Attachment upload failed:', err)
+          setLoading(false)
+          return
+        }
+      }
+
+      const payload = {
+        id: orderId,
+        amount: Number(amount) || 0
+      }
+
+      if (attachmentUrl) payload.attachment = attachmentUrl
+
+      await dispatch(addPartialPaymentThunk(payload))
+        .unwrap()
+        .then(async () => {
+          setSnackbar({ open: true, message: 'Partial payment added successfully', severity: 'success' })
+          await dispatch(fetchBookingOrders({ page: 1, limit: 50, force: true })).unwrap()
+        })
+        .catch(err => {
+          console.error('Partial payment failed:', err)
+          setSnackbar({ open: true, message: 'Failed to add partial payment', severity: 'error' })
+        })
+
+      setOpen(false)
+      setAmount('')
+      setAttachment(null)
+      onSuccess?.()
+    } catch (err) {
+      console.error('Partial payment failed:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+        <DialogTitle>Add Partial Payment</DialogTitle>
+        <DialogContent className='pt-2'>
+          <div className='flex flex-col gap-4'>
+            <TextField
+              fullWidth
+              required
+              type='number'
+              label='How much (amount)'
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              inputProps={{ min: 0, step: '1' }}
+            />
+
+            <Button variant='outlined' component='label' startIcon={<i className='bx bx-paperclip' />}>
+              Upload attachment (proof)
+              <input
+                type='file'
+                hidden
+                accept='image/*,application/pdf'
+                onChange={e => setAttachment(e.target.files?.[0] || null)}
+              />
+            </Button>
+
+            {attachment ? <Typography variant='body2'>{attachment.name}</Typography> : null}
+          </div>
+        </DialogContent>
+
+        <DialogActions>
+          <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant='contained' onClick={handleSubmit} disabled={!amount || loading}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert variant='filled' severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
+  )
+}
 
 function convertCities(cities = []) {
   return cities.reduce((acc, name, index) => {
@@ -149,6 +280,12 @@ const getTagColor = tag => {
   return chipColors[hash % chipColors.length]
 }
 
+const cityOptions = (cities || []).map(c =>
+  typeof c === 'string'
+    ? { label: c, value: c }
+    : { label: c?.name || c?.label || '', value: c?.value || c?.name || c?.label || '' }
+)
+
 const mapFiltersToApiFormat = localFilters => {
   const apiFilters = {}
 
@@ -165,8 +302,14 @@ const mapFiltersToApiFormat = localFilters => {
   }
 
   // Date filters (you need to add startDate/endDate to your filters state)
-  if (localFilters.startDate) apiFilters.dateFrom = localFilters.startDate
-  if (localFilters.endDate) apiFilters.dateTo = localFilters.endDate
+  // we have order_start_date and order_end_date in the backend
+  if (localFilters.startDate) {
+    apiFilters.dateFrom = dayjs(localFilters.startDate).format('YYYY-MM-DD')
+  }
+
+  if (localFilters.endDate) {
+    apiFilters.dateTo = dayjs(localFilters.endDate).format('YYYY-MM-DD')
+  }
 
   // Status filters - you need to decide which one to use
   if (localFilters.orderStatus && localFilters.orderStatus.length > 0) {
@@ -180,6 +323,10 @@ const mapFiltersToApiFormat = localFilters => {
 
   if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
     apiFilters.city = localFilters.pakistanCities[0].value
+  }
+
+  if (localFilters.tags && localFilters.tags.length > 0) {
+    apiFilters.tags = localFilters.tags.map(c => c.value).join(',')
   }
 
   return apiFilters
@@ -273,6 +420,7 @@ const BookingListTable = ({
   const [globalFilter, setGlobalFilter] = useState('')
   const [columnFilters, setColumnFilters] = useState([])
   const [loadings, setLoadings] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   const [tagModal, setTagModal] = useState({
     open: false,
@@ -295,7 +443,6 @@ const BookingListTable = ({
     setTagModal({ open: true, orderId, tags: [tag].filter(Boolean) })
   }
 
-  console.log(orderData, 'orders in booking list table. here. ')
   const closeTagEditor = () => setTagModal({ open: false, orderId: null, tags: [] })
 
   const updateOrdersStatus = async (orderIds, newStatus) => {
@@ -351,6 +498,17 @@ const BookingListTable = ({
   const handleSingleStatusChange = (orderId, newStatus) => updateOrdersStatus(orderId, newStatus)
   const handleBulkStatusChange = newStatus => updateOrdersStatus(selectedIds, newStatus)
 
+  const onSubmitPartial = async ({ orderId, amount, attachment }) => {
+    try {
+      await dispatch(addPartialPaymentThunk({ id: orderId, amount, attachment })).unwrap()
+      setAlert({ open: true, message: 'Partial payment recorded.', severity: 'success' })
+      return true
+    } catch (err) {
+      setAlert({ open: true, message: err || 'Failed to record partial payment.', severity: 'error' })
+      return false
+    }
+  }
+
   const dateRangeFilterFn = (row, columnId, filterValue) => {
     const rowDate = new Date(row.getValue(columnId))
     const from = filterValue.from ? new Date(filterValue.from) : null
@@ -390,15 +548,25 @@ const BookingListTable = ({
         return name
       })
 
-      const parsedTags =
-        typeof order.tags === 'string'
+      const parsedTags = Array.isArray(order.tags)
+        ? order.tags.flatMap(t =>
+            String(t)
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+          )
+        : typeof order.tags === 'string'
           ? order.tags
               .split(',')
               .map(t => t.trim())
-              .filter(Boolean) // "a,b" → ["a","b"]
-          : Array.isArray(order.tags)
-            ? order.tags.filter(Boolean)
-            : []
+              .filter(Boolean)
+          : []
+
+      // ✅ Remove duplicates and empty strings
+      const uniqueTags = Array.from(new Set(parsedTags.filter(Boolean)))
+
+      const addressObj = Array.isArray(order.address) && order.address.length > 0 ? order.address[0] : {}
+      const fullAddress = addressObj.address1 || addressObj.address2 || ''
 
       return {
         id: order.id,
@@ -422,10 +590,12 @@ const BookingListTable = ({
         trackNumber: order.courier?.trackNumber || '',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
-        tags: parsedTags,
-        totalOrders: order?.total_order || '',
-        successfulOrders: order?.successful_order || '',
-        lastOrderStatus: order?.last_order_status || ''
+        address: fullAddress,
+        phone: addressObj.phone || '',
+        tags: uniqueTags,
+        totalOrders: order?.totalOrdersByCustomer || 0,
+        successfulOrders: order?.completedOrdersByCustomer || 0,
+        lastOrderStatus: order?.lastOrderStatus || 0
       }
     })
   }, [orderData])
@@ -587,14 +757,52 @@ const BookingListTable = ({
         accessorKey: 'payment',
         header: 'Payment Status',
         meta: { width: '200px' },
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1'>
-            {/* <i className={classnames('bx-bxs-circle bs-2 is-2', paymentStatus[row.original.payment].colorClassName)} /> */}
-            <Typography className='font-medium '>
-              {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
-            </Typography>
-          </div>
-        )
+        cell: ({ row }) => {
+          const isPending = String(row.original.payment).toLowerCase() === 'pending'
+
+          return (
+            <div className='flex items-center gap-2'>
+              {isPending ? (
+                <>
+                  {/* <Menu
+                    open={false}
+                    anchorEl={null}
+                    // Placeholder to keep imports happy; real menu shown via inline trigger below
+                  /> */}
+                  <OpenDialogOnElementClick
+                    element={IconButton}
+                    elementProps={{
+                      // size: 'small',
+                      className: 'hover:rounded-4xl',
+                      children: (
+                        <Typography className='font-medium'>
+                          {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                        </Typography>
+                      )
+                    }}
+                    dialog={PartialPaymentInlineDialog}
+                    dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                  />
+                </>
+              ) : (
+                <OpenDialogOnElementClick
+                  element={IconButton}
+                  elementProps={{
+                    // size: 'small',
+                    className: 'hover:rounded-4xl',
+                    children: (
+                      <Typography className='font-medium'>
+                        {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                      </Typography>
+                    )
+                  }}
+                  dialog={PartialPaymentInlineDialog}
+                  dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                />
+              )}
+            </div>
+          )
+        }
       },
       {
         accessorKey: 'courier', // fixed: lowercase
@@ -751,11 +959,38 @@ const BookingListTable = ({
       {
         accessorKey: 'address',
         header: 'Address',
-        meta: { width: '250px' },
+        meta: { width: '450px' },
         cell: ({ row }) => {
-          const address = row.original.address
+          const initialAddress = row.original.address || ''
+          const [value, setValue] = useState(initialAddress)
+          const [original, setOriginal] = useState(initialAddress)
 
-          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+          useEffect(() => {
+            const next = row.original.address || ''
+
+            setValue(next)
+            setOriginal(next)
+          }, [])
+
+          return (
+            <textarea
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onBlur={async () => {
+                const trimmed = String(value || '').trim()
+                const prev = String(original || '').trim()
+
+                if (trimmed !== prev) {
+                  await updateAddressApi({ id: row.original.id, address: trimmed })
+                  setOriginal(trimmed)
+                }
+              }}
+              rows={2}
+              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
+              style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
+              placeholder='—'
+            />
+          )
         }
       },
       {
@@ -763,9 +998,13 @@ const BookingListTable = ({
         header: 'Total & Successful Orders',
         meta: { width: '250px' },
         cell: ({ row }) => {
-          const totalAndSuccessfulOrders = row.original?.totalOrders + row.original?.successfulOrders
+          // const totalAndSuccessfulOrders = row.original?.totalOrders + row.original?.successfulOrders
 
-          return <Typography className='font-medium text-gray-800'>{totalAndSuccessfulOrders || '—'}</Typography>
+          return (
+            <Typography className='font-medium text-gray-800'>
+              {row.original.totalOrders + ' : ' + row.original.successfulOrders || '—'}
+            </Typography>
+          )
         }
       },
       {
@@ -775,7 +1014,14 @@ const BookingListTable = ({
         cell: ({ row }) => {
           const lastOrderStatus = row.original?.lastOrderStatus
 
-          return <Typography className='font-medium text-gray-800'>{lastOrderStatus || '—'}</Typography>
+          return (
+            <Chip
+              variant='tonal'
+              color={getTagColor(lastOrderStatus)}
+              className='font-medium text-gray-800'
+              label={lastOrderStatus || '—'}
+            ></Chip>
+          )
         }
       },
       {
@@ -840,7 +1086,81 @@ const BookingListTable = ({
         accessorKey: 'city',
         header: 'City',
         meta: { width: '180px' },
-        cell: ({ row }) => <Typography className='font-medium text-gray-800'>{row.original.city || '—'}</Typography>
+        cell: ({ row }) => {
+          const city = row.original.city
+          const [open, setOpen] = useState(false)
+          const [selectedCity, setSelectedCity] = useState(null)
+          const [submitting, setSubmitting] = useState(false)
+          const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+          const normalizedCity = typeof city === 'string' ? city : city?.label || ''
+
+          const onSubmit = async () => {
+            if (!selectedCity?.label) return
+
+            try {
+              setSubmitting(true)
+              await dispatch(changeCityThunk({ id: row.original.id, city: selectedCity.label }))
+              await dispatch(fetchBookingOrders({ page: 1, limit: 50, force: true })).unwrap()
+              setSnackbar({ open: true, message: 'City updated successfully', severity: 'success' })
+            } catch (error) {
+              setSnackbar({ open: true, message: 'Failed to update city', severity: 'error' })
+            } finally {
+              setSubmitting(false)
+              setOpen(false)
+            }
+          }
+
+          return (
+            <>
+              <Typography
+                className='font-medium text-gray-800 cursor-pointer hover:text-primary'
+                onClick={() => {
+                  setSelectedCity(
+                    selectedCity || (normalizedCity ? { label: normalizedCity, value: normalizedCity } : null)
+                  )
+                  setOpen(true)
+                }}
+              >
+                {normalizedCity || '—'}
+              </Typography>
+
+              <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+                <DialogTitle>Select City</DialogTitle>
+                <DialogContent className='pt-2'>
+                  <Autocomplete
+                    fullWidth
+                    options={cityOptions}
+                    value={selectedCity}
+                    onChange={(_e, newValue) => setSelectedCity(newValue)}
+                    getOptionLabel={option => option.label}
+                    isOptionEqualToValue={(option, value) => option.value === value.value}
+                    renderInput={params => (
+                      <TextField {...params} fullWidth label='City' placeholder='Search cities and select' />
+                    )}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button variant='tonal' color='secondary' onClick={() => setOpen(false)} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button variant='contained' onClick={onSubmit} disabled={!selectedCity?.label || submitting}>
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              >
+                <Alert severity={snackbar.severity}  variant='filled'>{snackbar.message}</Alert>
+              </Snackbar>
+            </>
+          )
+        }
       },
       {
         accessorKey: 'awb',
@@ -1032,11 +1352,6 @@ const BookingListTable = ({
     label: pakistanCities[key].text
   }))
 
-  const tagsArray = Object.keys(tagsMap).map(key => ({
-    value: key,
-    label: tagsMap[key].text
-  }))
-
   const table = useReactTable({
     data,
     columns,
@@ -1076,7 +1391,7 @@ const BookingListTable = ({
     courierPlatforms: [],
     statusChipColorForBooking: [],
     paymentStatus: [],
-    tagsMap: [],
+    tags: [],
     pakistanCities: []
   }
 
@@ -1131,6 +1446,27 @@ const BookingListTable = ({
             }}
             placeholder='Search in booking order'
             debounce={1000}
+          />
+
+          <RangePicker
+            status='success'
+            value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
+            onChange={dates => {
+              if (dates && dates.length === 2) {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: dates[0].format('YYYY-MM-DD'),
+                  endDate: dates[1].format('YYYY-MM-DD')
+                }))
+              } else {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: '',
+                  endDate: ''
+                }))
+              }
+            }}
+            className='flex py-2'
           />
 
           {/* <FilterModal
@@ -1436,8 +1772,8 @@ const BookingListTable = ({
           fullWidth
           options={tagsArray}
           getOptionLabel={option => option.label}
-          value={filters.tagsMap || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
+          value={filters.tags || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tags: newValue }))}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const props = getTagProps({ index })
@@ -1494,9 +1830,13 @@ const BookingListTable = ({
             </Button>
             <Button
               onClick={() => {
+                console.log('Current filters:', filters)
+
                 const apiFilters = mapFiltersToApiFormat(filters)
 
-                dispatch(fetchBookingOrder({ page: 1, limit, filters: apiFilters }))
+                console.log('API filters being sent:', apiFilters)
+
+                dispatch(fetchBookingOrder({ page: 1, limit, filters: apiFilters, force: true }))
                 onFiltersChange?.(apiFilters)
 
                 onPageChange?.(1)

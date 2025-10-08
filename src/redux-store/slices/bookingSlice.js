@@ -38,8 +38,8 @@ export const fetchBookingOrder = createAsyncThunk(
       console.log('filters', filters)
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
-      if (filters.dateFrom) filterParams.start_date = filters.dateFrom
-      if (filters.dateTo) filterParams.end_date = filters.dateTo
+      if (filters.dateFrom) filterParams.order_start_date = filters.dateFrom
+      if (filters.dateTo) filterParams.order_end_date = filters.dateTo
       if (filters.status) filterParams.orderStatus = filters.status
       if (filters.courierPlatforms) filterParams.courier_name = filters.courierPlatforms
       if (filters.customer) filterParams.search = filters.customer
@@ -47,6 +47,7 @@ export const fetchBookingOrder = createAsyncThunk(
       if (filters.paymentMethod) filterParams.payment_method_names = filters.paymentMethod
       if (filters.paymentStatus) filterParams.financial_status = filters.paymentStatus
       if (filters.city) filterParams.city = filters.city
+      if (filters.tags) filterParams.tags = filters.tags
 
       // if (filters.paymentMethods) filterParams.payment_gateway_names = filters.paymentMethods.join(',')
 
@@ -127,6 +128,7 @@ export const fetchBookingOrders = createAsyncThunk(
       if (filters.paymentMethod) filterParams.payment_method_names = filters.paymentMethod
       if (filters.paymentStatus) filterParams.financial_status = filters.paymentStatus
       if (filters.city) filterParams.city = filters.city
+      if (filters.tags) filterParams.tags = filters.tags
 
       // if (filters.paymentMethods) filterParams.payment_gateway_names = filters.paymentMethods.join(',')
 
