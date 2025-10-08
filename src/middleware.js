@@ -28,7 +28,7 @@ export async function middleware(request) {
   if (pathWithoutLocale === '/') {
     if (token) {
       const url = request.nextUrl.clone()
-      const target = '/apps/ecommerce/customers/list'
+      const target = '/apps/ecommerce/orders/list'
       url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
       return NextResponse.redirect(url)
     }
@@ -50,7 +50,7 @@ export async function middleware(request) {
   // If authenticated and visiting an auth route, redirect to the appropriate landing
   if (token && isAuthRoute) {
     const url = request.nextUrl.clone()
-    const target = '/apps/ecommerce/customers/list'
+    const target = '/apps/ecommerce/orders/list'
     url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
     return NextResponse.redirect(url)
   }
@@ -58,7 +58,7 @@ export async function middleware(request) {
   // If authenticated and at root, send to landing as well
   if (token && pathWithoutLocale === '/') {
     const url = request.nextUrl.clone()
-    const target = '/apps/ecommerce/customers/list'
+    const target = '/apps/ecommerce/orders/list'
     url.pathname = hasLocalePrefix ? `/${segments[0]}${target}` : target
     return NextResponse.redirect(url)
   }
