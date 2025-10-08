@@ -170,18 +170,18 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         )}
 
         {/* CSR Head */}
-        {mounted && checkPermission('taskassignment.view') && (
+        {/* {mounted && checkPermission('task.assign') && (
           <MenuItem href={`/${locale}/pages/CSR-HOD`} icon={<i className='bx-user' />}>
             {dictionary['navigation'].CSRHead}
           </MenuItem>
-        )}
+        )} */}
 
-        {checkPermission('taskassignment.view') && (
+        {checkPermission('task.assign') && (
           <SubMenu label={dictionary['navigation'].CSRHead} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/CSR_HOD/agent_task_assignment`}>
               {dictionary['navigation'].agentTaskAssignment}
             </MenuItem>
-            <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem>
+            {/* <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem> */}
           </SubMenu>
         )}
 
@@ -268,17 +268,19 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         {mounted && checkPermission('user.view') && (
           <SubMenu label={dictionary['navigation'].user} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/apps/user/list`}>{dictionary['navigation'].list}</MenuItem>
-            <MenuItem href={`/${locale}/apps/user/view`}>{dictionary['navigation'].view}</MenuItem>
+            {/* <MenuItem href={`/${locale}/apps/user/view`}>{dictionary['navigation'].view}</MenuItem> */}
           </SubMenu>
         )}
-        <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='bx-check-shield' />}>
-          {mounted && checkPermission('role.view') && (
-            <MenuItem href={`/${locale}/apps/roles`}>{dictionary['navigation'].roles}</MenuItem>
-          )}
-          {mounted && checkPermission('department.view') && (
-            <MenuItem href={`/${locale}/apps/departments`}>{dictionary['navigation'].permissions}</MenuItem>
-          )}
-        </SubMenu>
+        {mounted && (checkPermission('role.view') || checkPermission('department.view')) && (
+          <SubMenu label={dictionary['navigation'].rolesPermissions} icon={<i className='bx-check-shield' />}>
+            {mounted && checkPermission('role.view') && (
+              <MenuItem href={`/${locale}/apps/roles`}>{dictionary['navigation'].roles}</MenuItem>
+            )}
+            {mounted && checkPermission('department.view') && (
+              <MenuItem href={`/${locale}/apps/departments`}>{dictionary['navigation'].permissions}</MenuItem>
+            )}
+          </SubMenu>
+        )}
         {/* <SubMenu label={dictionary['navigation'].pages} icon={<i className='bx-dock-top' />}>
             <MenuItem href={`/${locale}/pages/user-profile`}>{dictionary['navigation'].userProfile}</MenuItem>
             <MenuItem href={`/${locale}/pages/account-settings`}>{dictionary['navigation'].accountSettings}</MenuItem>

@@ -31,7 +31,7 @@ import {
 } from '@/redux-store/slices/taskAsssignment'
 import { toast } from 'react-toastify'
 
-const TaskAssignmentForm = () => {
+const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const dispatch = useDispatch()
 
   // States
@@ -238,10 +238,17 @@ const TaskAssignmentForm = () => {
           {/* {success && <Alert severity='success'>Tasks assigned successfully!</Alert>} */}
 
           {/* Split Automatically Checkbox */}
-          <FormControlLabel
-            control={<Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />}
-            label='Split automatically'
-          />
+          <div className='flex justify-between'>
+            <FormControlLabel
+              control={
+                <Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />
+              }
+              label='Split automatically'
+            />
+            <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
+              Back
+            </Button>
+          </div>
 
           <Divider />
 
