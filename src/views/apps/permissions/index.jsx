@@ -40,6 +40,7 @@ import tableStyles from '@core/styles/table.module.css'
 
 // Redux
 import { getAllDepartments } from '@/redux-store/slices/roleSlice'
+import { checkPermission } from '@/hooks/Permissions'
 
 // Vars
 const colors = {
@@ -122,9 +123,12 @@ const Permissions = () => {
     startIcon: <i className='bx-plus' />
   }
 
+  const canCreateDepartment = checkPermission('department.create')
+  const canUpdateDepartment = checkPermission('department.update')
+
   // Hooks
-  const columns = useMemo(
-    () => [
+  const columns = useMemo(() => {
+    const base = [
       columnHelper.accessor('name', {
         header: 'Name',
         cell: ({ row }) => <Typography color='text.primary'>{row.original.name}</Typography>
@@ -140,22 +144,27 @@ const Permissions = () => {
             {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '-'}
           </Typography>
         )
-      }),
-      columnHelper.accessor('action', {
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <IconButton onClick={() => handleEditDepartment(row.original)}>
-              <i className='bx-edit text-textSecondary' />
-            </IconButton>
-          </div>
-        ),
-        enableSorting: false
       })
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
+    ]
+
+    if (canUpdateDepartment) {
+      base.push(
+        columnHelper.accessor('action', {
+          header: 'Actions',
+          cell: ({ row }) => (
+            <div className='flex items-center'>
+              <IconButton onClick={() => handleEditDepartment(row.original)}>
+                <i className='bx-edit text-textSecondary' />
+              </IconButton>
+            </div>
+          ),
+          enableSorting: false
+        })
+      )
+    }
+
+    return base
+  }, [canUpdateDepartment])
 
   const table = useReactTable({
     data: data,
@@ -219,12 +228,16 @@ const Permissions = () => {
               </CustomTextField>
             </div>
 
-            <OpenDialogOnElementClick
-              element={Button}
-              elementProps={buttonProps}
-              dialog={DepartmentDialog}
-              dialogProps={{ department: null }}
-            />
+            {canCreateDepartment ? (
+              <OpenDialogOnElementClick
+                element={Button}
+                elementProps={buttonProps}
+                dialog={DepartmentDialog}
+                dialogProps={{ department: null }}
+              />
+            ) : (
+              <Button {...buttonProps} disabled />
+            )}
           </div>
         </CardContent>
         <div className='overflow-x-auto'>

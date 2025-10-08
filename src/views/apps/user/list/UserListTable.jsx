@@ -170,135 +170,116 @@ const UserListTable = ({ tableData }) => {
     setFilteredData(rows)
   }, [allUsers])
 
-  const columns = useMemo(
-    () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('fullName', {
-        header: 'User',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
-            <div className='flex flex-col'>
-              <Typography variant='h6'>{row.original.fullName}</Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
-            </div>
-          </div>
-        )
-      }),
-      columnHelper.accessor('role', {
-        header: 'Role',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={classnames('text-xl', userRoleObj[row.original.role]?.icon || userRoleObj.subscriber.icon)}
-              sx={{
-                color: `var(--mui-palette-${userRoleObj[row.original.role]?.color || userRoleObj.subscriber.color}-main)`
-              }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
-      }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Department',
-        cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('billing', {
-        header: 'Created at',
-        cell: ({ row }) => <Typography>{row.original.billing}</Typography>
-      }),
-      columnHelper.accessor('status', {
-        header: 'Status',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status}
-              size='small'
-              color={userStatusObj[row.original.status]}
-              className='capitalize'
-            />
-          </div>
-        )
-      }),
-      columnHelper.accessor('action', {
-        header: 'Action',
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            {/* <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
-              <i className='bx-trash text-textSecondary text-[22px]' />
-            </IconButton>
-            <IconButton>
-              <Link href={getLocalizedUrl('/apps/user/view', locale)} className='flex'>
-                <i className='bx-show text-textSecondary text-[22px]' />
-              </Link>
-            </IconButton> */}
-            <IconButton
-              onClick={() => {
-                // Find the full user object by id from Redux allUsers
-                if (canEditUser) {
-                  const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+  const canAddUser = checkPermission('user.create')
+  const canEditUser = checkPermission('user.update')
 
-                  setSelectedUser(full || null)
-                  setEditUserOpen(true)
-                } else {
-                  toast.error('You are not authorized to edit this user')
-                  return
-                }
+  const columns = useMemo(
+    () => {
+      const baseColumns = [
+        {
+          id: 'select',
+          header: ({ table }) => (
+            <Checkbox
+              {...{
+                checked: table.getIsAllRowsSelected(),
+                indeterminate: table.getIsSomeRowsSelected(),
+                onChange: table.getToggleAllRowsSelectedHandler()
               }}
-            >
-              <i className='bx-edit text-textSecondary text-[22px]' />
-            </IconButton>
-            {/* <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Download',
-                  icon: 'bx-download text-[22px]',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                },
-                {
-                  text: 'Edit',
-                  icon: 'bx-edit text-[22px]',
-                  menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
-                }
-              ]}
-            /> */}
-          </div>
-        ),
-        enableSorting: false
-      })
-    ],
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              {...{
+                checked: row.getIsSelected(),
+                disabled: !row.getCanSelect(),
+                indeterminate: row.getIsSomeSelected(),
+                onChange: row.getToggleSelectedHandler()
+              }}
+            />
+          )
+        },
+        columnHelper.accessor('fullName', {
+          header: 'User',
+          cell: ({ row }) => (
+            <div className='flex items-center gap-4'>
+              {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
+              <div className='flex flex-col'>
+                <Typography variant='h6'>{row.original.fullName}</Typography>
+                <Typography variant='body2'>{row.original.username}</Typography>
+              </div>
+            </div>
+          )
+        }),
+        columnHelper.accessor('role', {
+          header: 'Role',
+          cell: ({ row }) => (
+            <div className='flex items-center gap-2'>
+              <Icon
+                className={classnames('text-xl', userRoleObj[row.original.role]?.icon || userRoleObj.subscriber.icon)}
+                sx={{
+                  color: `var(--mui-palette-${userRoleObj[row.original.role]?.color || userRoleObj.subscriber.color}-main)`
+                }}
+              />
+              <Typography className='capitalize' color='text.primary'>
+                {row.original.role}
+              </Typography>
+            </div>
+          )
+        }),
+        columnHelper.accessor('currentPlan', {
+          header: 'Department',
+          cell: ({ row }) => (
+            <Typography className='capitalize' color='text.primary'>
+              {row.original.currentPlan}
+            </Typography>
+          )
+        }),
+        columnHelper.accessor('billing', {
+          header: 'Created at',
+          cell: ({ row }) => <Typography>{row.original.billing}</Typography>
+        }),
+        columnHelper.accessor('status', {
+          header: 'Status',
+          cell: ({ row }) => (
+            <div className='flex items-center gap-3'>
+              <Chip
+                variant='tonal'
+                label={row.original.status}
+                size='small'
+                color={userStatusObj[row.original.status]}
+                className='capitalize'
+              />
+            </div>
+          )
+        })
+      ]
+
+      if (canEditUser) {
+        baseColumns.push(
+          columnHelper.accessor('action', {
+            header: 'Action',
+            cell: ({ row }) => (
+              <div className='flex items-center'>
+                <IconButton
+                  onClick={() => {
+                    const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+                    setSelectedUser(full || null)
+                    setEditUserOpen(true)
+                  }}
+                >
+                  <i className='bx-edit text-textSecondary text-[22px]' />
+                </IconButton>
+              </div>
+            ),
+            enableSorting: false
+          })
+        )
+      }
+
+      return baseColumns
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, filteredData]
+    [data, filteredData, canEditUser, allUsers]
   )
 
   const table = useReactTable({
@@ -343,8 +324,6 @@ const UserListTable = ({ tableData }) => {
   const currentPageZeroBased = Math.max(0, Number(allUsersPagination.page) - 1 || 0)
   const currentLimit = Math.max(1, Number(allUsersPagination.limit) || 10)
   const totalCount = Math.max(0, Number(allUsersPagination.total) || 0)
-  const canAddUser = checkPermission('user.create')
-  const canEditUser = checkPermission('user.update')
   return (
     <>
       <Card>

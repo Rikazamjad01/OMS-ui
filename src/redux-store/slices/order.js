@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 
+import { patch } from '@mui/material'
 import { getRequest, postRequest, apiRequest } from '@/utils/api'
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
-  async ({ page = 1, limit = 25, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
+  async ({ page = 1, limit = 50, search = '', filters = {}, force = false }, { rejectWithValue, getState }) => {
     try {
       // Check if we already have the data to avoid redundant fetches
       const state = getState()
@@ -23,6 +24,8 @@ export const fetchOrders = createAsyncThunk(
 
       const filterParams = {}
 
+      console.log('filters', filters)
+
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
@@ -36,6 +39,7 @@ export const fetchOrders = createAsyncThunk(
       if (filters.paymentMethod) filterParams.payment_method_names = filters.paymentMethod
       if (filters.paymentStatus) filterParams.financial_status = filters.paymentStatus
       if (filters.city) filterParams.city = filters.city
+      if (filters.tags) filterParams.tags = filters.tags
 
       // if (filters.paymentMethods) filterParams.payment_gateway_names = filters.paymentMethods.join(',')
 
@@ -279,29 +283,20 @@ export const updateOrderDiscountThunk = createAsyncThunk(
   }
 )
 
-// Record a partial payment for an order
+// Record a partial payment for an order pending for now....
 export const addPartialPaymentThunk = createAsyncThunk(
-  'orders/addPartialPayment',
+  'orders/add/partial/payment',
   async ({ id, amount, attachment }, { rejectWithValue }) => {
     try {
-      // Use FormData to support file attachment when provided
-      const formData = new FormData()
-      formData.append('id', id)
-      formData.append('amount', String(amount || 0))
-      if (attachment) formData.append('attachment', attachment)
-
-      // const response = await apiRequest('orders/partial-payment', {
-      //   method: 'POST',
-      //   data: formData
-      // })
-      const response = {
-        status: true,
-        data: {
+      const response = await postRequest(
+        'orders/add/partial/payment',
+        {
           id,
-          amount,
-          attachment
-        }
-      }
+          partial_payment: amount,
+          attachment_url: attachment
+        },
+        'patch'
+      )
 
       if (!response.status) {
         return rejectWithValue(response.message)
@@ -313,6 +308,41 @@ export const addPartialPaymentThunk = createAsyncThunk(
     }
   }
 )
+
+export const updateOrderAddressThunk = createAsyncThunk(
+  'edit/address',
+  async ({ id, address }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('customers/edit/address', { id, address }, 'patch')
+
+      if (response.status) {
+        return { id, address }
+      }
+
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const uploadAttachmentThunk = createAsyncThunk('orders/uploadAttachment', async (file, { rejectWithValue }) => {
+  try {
+    const formData = new FormData()
+
+    formData.append('file', file)
+
+    const response = await postRequest('upload/attachments', formData)
+
+    if (!response.status) {
+      return rejectWithValue(response.message)
+    }
+
+    return response.data // should contain url or secureUrl
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -327,7 +357,7 @@ const ordersSlice = createSlice({
     lastSearch: '', // Store last used search
     pagination: {
       currentPage: 1,
-      itemsPerPage: 25,
+      itemsPerPage: 50,
       total: 0
     },
     selectedProductIds: [],
@@ -386,7 +416,7 @@ const ordersSlice = createSlice({
       state.selectedCustomer = null
       state.pagination = {
         currentPage: 1,
-        itemsPerPage: 25,
+        itemsPerPage: 50,
         total: 0
       }
     }
@@ -480,7 +510,6 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
-
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -523,6 +552,7 @@ const ordersSlice = createSlice({
       })
       .addCase(getCustomerByPhone.fulfilled, (state, action) => {
         state.loading = false
+
         // state.selectedCustomer = action.payload
       })
       .addCase(getCustomerByPhone.rejected, (state, action) => {
@@ -596,15 +626,41 @@ const ordersSlice = createSlice({
       })
       .addCase(addPartialPaymentThunk.fulfilled, (state, action) => {
         state.loading = false
+
         // Optionally update selectedOrders if backend returns updated totals
         const { id, current_total_price, current_total_discounts } = action.payload || {}
-        if (id && state.selectedOrders && String(state.selectedOrders.id) === String(id)) {
-          if (current_total_price != null) state.selectedOrders.current_total_price = Number(current_total_price) || 0
-          if (current_total_discounts != null)
-            state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
-        }
+
+        // if (id && state.selectedOrders && String(state.selectedOrders.id) === String(id)) {
+
+        //   if (current_total_price != null) state.selectedOrders.current_total_price = Number(current_total_price) || 0
+        //   if (current_total_discounts != null)
+        //     state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
+        // }
+        console.log(current_total_price, 'current_total_price in addPartialPaymentThunk')
+        state.orders = state.orders.map(o =>
+          String(o.id) === String(id)
+            ? {
+                ...o,
+                current_total_price,
+                financial_status: 'partially_paid'
+              }
+            : o
+        )
       })
       .addCase(addPartialPaymentThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(updateOrderAddressThunk.pending, state => {
+        state.error = null
+      })
+      .addCase(updateOrderAddressThunk.fulfilled, (state, action) => {
+        state.loading = false
+        const { id, address } = action.payload
+
+        state.orders = state.orders.map(order => (order.id === id ? { ...order, address } : order))
+      })
+      .addCase(updateOrderAddressThunk.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload || action.error.message
       })

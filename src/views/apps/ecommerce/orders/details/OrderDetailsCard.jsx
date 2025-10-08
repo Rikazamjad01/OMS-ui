@@ -360,6 +360,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
         price: Number(product.price) || 0,
         quantity: lineItem.quantity || 0,
         discountedPrice: Number(order.current_total_discounts) || 0,
+        partialPayment: Number(order.partial_payment) || 0,
         barCode: product.barCode || 'N/A',
         weight: product?.selected_variant?.weight || 0,
         weight_unit: product?.selected_variant?.weight_unit ?? '',
@@ -372,11 +373,13 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
   // 💰 Calculations
   const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
-  const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
+  // const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
+  const discountedSubtotal = Number(order?.current_total_discounts) || 0
   const shippingFee = Number(order?.shipping_lines?.[0]?.price) || 0
   const taxRate = Number(order?.current_total_tax) || 0
   const tax = discountedSubtotal * (taxRate / 100)
-  const total = subtotal + shippingFee + tax - discountedSubtotal
+  const partialAmountReceived = Number(order?.partial_payment) || 0
+  const total = subtotal + shippingFee + tax - discountedSubtotal - partialAmountReceived
 
   const handleOpenDiscountModal = () => {
     setDiscountedSubtotalInput(String(discountedSubtotal))
@@ -386,9 +389,9 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
     const base = Number(subtotal) || 0
     let currentPercent = 0
 
-    if (base > 0) {
-      currentPercent = Math.round((Number(discountedSubtotal) / base) * 100)
-    }
+    // if (base > 0) {
+    currentPercent = Math.round((Number(discountedSubtotal) / base) * 100)
+    // }
 
     // Find nearest allowed percent
     let nearest = allowedPercents[0]
@@ -401,7 +404,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
       }
     }
 
-    setDiscountPercent(String(nearest))
+    setDiscountPercent(String(currentPercent || ''))
     const computedValue = Math.max(0, Math.round((nearest / 100) * base))
     setDiscountValue(computedValue)
     setDiscountModalOpen(true)
@@ -409,7 +412,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
   const handleSubmitDiscount = async () => {
     setDiscountedLoading(true)
-    const parsed = Number(discountValue || discountedSubtotalInput)
+    const parsed = Number(discountPercent || discountedSubtotalInput)
     if (Number.isNaN(parsed)) {
       setSnackbar({ open: true, message: 'Please enter a valid number.', severity: 'error' })
       return
@@ -492,6 +495,14 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
             </Typography>
             <Typography variant='h6'>{formatPrice(tax)}</Typography>
           </div>
+          {partialAmountReceived > 0 && (
+            <div className='flex items-center gap-12'>
+              <Typography color='text.primary' className='min-is-[150px]'>
+                Partial Payment:
+              </Typography>
+              <Typography variant='h6'>{formatPrice(partialAmountReceived)}</Typography>
+            </div>
+          )}
           <div className='flex items-center gap-12'>
             <Typography variant='h6' className='min-is-[150px]'>
               Total:
@@ -516,8 +527,8 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
         <DialogContent className='pt-2'>
           <div className='flex flex-col gap-4'>
             <FormControl fullWidth>
-              <InputLabel id='discount-percent-label'>Discount (%)</InputLabel>
-              <Select
+              {/* <InputLabel id='discount-percent-label'>Discount (%)</InputLabel> */}
+              {/* <Select
                 labelId='discount-percent-label'
                 label='Discount (%)'
                 value={discountPercent}
@@ -531,10 +542,17 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
                 {[5, 10, 15, 20, 25, 30, 40, 50].map(p => (
                   <MenuItem key={p} value={p}>{`${p}%`}</MenuItem>
                 ))}
-              </Select>
+              </Select> */}
+              <TextField
+                fullWidth
+                type='number'
+                label='Discount (%)'
+                value={discountPercent}
+                onChange={e => setDiscountPercent(e.target.value)}
+              />
             </FormControl>
 
-            <TextField
+            {/* <TextField
               fullWidth
               type='number'
               label='Following Discount will apply to the order.'
@@ -545,7 +563,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
                 setDiscountValue(Number.isNaN(v) ? 0 : v)
               }}
               inputProps={{ min: 0, step: '1' }}
-            />
+            /> */}
           </div>
         </DialogContent>
         <DialogActions>

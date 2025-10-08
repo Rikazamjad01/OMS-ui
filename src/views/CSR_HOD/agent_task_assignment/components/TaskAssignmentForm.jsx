@@ -18,15 +18,20 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
+import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
-import { assignTaskThunk, extractAgentsFromPlatform, fetchPlatformsThunk } from '@/redux-store/slices/taskAsssignment'
-import { fetchOrders } from '@/redux-store/slices/order'
+import {
+  assignTaskThunk,
+  extractAgentsFromPlatform,
+  fetchPlatformsThunk,
+  fetchUnassignedOrdersThunk
+} from '@/redux-store/slices/taskAsssignment'
 import { toast } from 'react-toastify'
 
-const TaskAssignmentForm = () => {
+const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const dispatch = useDispatch()
 
   // States
@@ -38,11 +43,11 @@ const TaskAssignmentForm = () => {
   const [agents, setAgents] = useState([])
   // const [platforms, setPlatforms] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
-  const { platforms, extractedAgentsFromPlatform } = useSelector(state => state.taskAsssignment)
+  const { platforms, extractedAgentsFromPlatform, unassignedTotal } = useSelector(state => state.taskAsssignment)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
-  const [ordersOptions, setOrdersOptions] = useState([])
+  const MAX_TASKS = 200
   // Available platforms (mock data)
   const availablePlatforms = platforms.map(platform => ({
     _id: platform._id,
@@ -53,7 +58,9 @@ const TaskAssignmentForm = () => {
   useEffect(() => {
     fetchAgents()
     fetchPlatforms()
-    fetchAllOrders()
+    if (selectedPlatform?._id) {
+      dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id }))
+    }
   }, [selectedPlatform])
 
   const fetchPlatforms = async () => {
@@ -100,32 +107,7 @@ const TaskAssignmentForm = () => {
     }
   }
 
-  const fetchAllOrders = async () => {
-    try {
-      const response = await dispatch(fetchOrders({ page: 1, limit: 100 }))
-      const payload = response?.payload
-
-      const list = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.orders)
-          ? payload.orders
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.items)
-              ? payload.items
-              : []
-
-      const mapped = (list || []).map(o => ({
-        id: o?.id ?? o?._id ?? o?.orderId ?? '',
-        label: o?.name ?? String(o?.id ?? o?._id ?? '')
-      }))
-
-      setOrdersOptions(mapped.filter(opt => Boolean(opt.id)))
-    } catch (err) {
-      toast.error('No new orders found yet.')
-      // Silent fail; form remains usable
-    }
-  }
+  // Orders fetching removed per requirements
 
   const addTaskAssignment = () => {
     setTaskAssignments([...taskAssignments, { agent: null, tasks: [] }])
@@ -171,22 +153,25 @@ const TaskAssignmentForm = () => {
       let requestBody
 
       if (splitAutomatically) {
-        // Auto split mode
+        // Auto split mode → send agent IDs; numOfTasks empty
         requestBody = {
           platform: selectedPlatform?._id,
           brand: brand,
-          numOfAgents: selectedAgents.map(agent => agent._id),
+          numOfTasks: [],
+          numOfAgents: (selectedAgents || []).map(agent => agent?._id).filter(Boolean),
           split: true
         }
       } else {
-        // Manual assignment mode
+        // Manual mode → send { tasks: number, agent: id }
         requestBody = {
           platform: selectedPlatform?._id,
           brand: brand,
-          numOfTasks: taskAssignments.map(assignment => ({
-            tasks: assignment.tasks,
-            agent: assignment.agent?._id
-          })),
+          numOfTasks: (taskAssignments || [])
+            .filter(a => a?.agent?._id)
+            .map(assignment => ({
+              tasks: Array.isArray(assignment.tasks) ? assignment.tasks.length : Number(assignment.tasks) || 0,
+              agent: assignment.agent?._id
+            })),
           numOfAgents: [],
           split: false
         }
@@ -217,21 +202,26 @@ const TaskAssignmentForm = () => {
 
   const isFormValid = () => {
     // Platform and brand are always required
-    if (!selectedPlatform || !brand) {
-      return false
-    }
+    if (!selectedPlatform || !brand) return false
 
     if (splitAutomatically) {
-      // Auto split requires selecting the agents list
-      return selectedAgents.length > 0
+      // Auto split requires at least one agent selected
+      return (selectedAgents || []).length > 0
     }
 
-    // Manual mode requires at least one assignment, and each must have agent and >=1 task
-    if (taskAssignments.length < 1) return false
+    // Manual mode requires at least one assignment
+    if (!Array.isArray(taskAssignments) || taskAssignments.length < 1) return false
 
-    return taskAssignments.every(
-      assignment => assignment.agent && Array.isArray(assignment.tasks) && assignment.tasks.length > 0
-    )
+    // Each assignment must have an agent and a positive tasks count
+    const cap = Math.max(0, Number(unassignedTotal) || 0)
+    let totalRequested = 0
+    const allValid = taskAssignments.every(assignment => {
+      const tasksCount = Array.isArray(assignment?.tasks) ? assignment.tasks.length : Number(assignment?.tasks) || 0
+      totalRequested += tasksCount
+      return Boolean(assignment?.agent?._id) && tasksCount > 0
+    })
+    if (!allValid) return false
+    return totalRequested <= cap
   }
   console.log(isFormValid())
   return (
@@ -248,10 +238,17 @@ const TaskAssignmentForm = () => {
           {/* {success && <Alert severity='success'>Tasks assigned successfully!</Alert>} */}
 
           {/* Split Automatically Checkbox */}
-          <FormControlLabel
-            control={<Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />}
-            label='Split automatically'
-          />
+          <div className='flex justify-between'>
+            <FormControlLabel
+              control={
+                <Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />
+              }
+              label='Split automatically'
+            />
+            <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
+              Back
+            </Button>
+          </div>
 
           <Divider />
 
@@ -267,14 +264,20 @@ const TaskAssignmentForm = () => {
             )}
           />
 
-          {/* Brand Input */}
-          <TextField
-            fullWidth
-            label='Brand'
-            value={brand}
-            onChange={e => setBrand(e.target.value)}
-            placeholder='Enter brand name'
-          />
+          {/* Brand Selection */}
+          <TextField fullWidth label='Brand' value={brand} onChange={e => setBrand(e.target.value)} select>
+            {/* Unassigned Orders Info */}
+            {selectedPlatform?._id ? (
+              <Typography variant='body2' color='textSecondary'>
+                Unassigned Orders: {unassignedTotal}
+              </Typography>
+            ) : null}
+            <MenuItem value='' disabled>
+              Select a brand
+            </MenuItem>
+            <MenuItem value='Glowrify'>Glowrify</MenuItem>
+            <MenuItem value='sukoon wellness'>sukoon wellness</MenuItem>
+          </TextField>
 
           {/* Agents Selection */}
           {splitAutomatically && (
@@ -329,15 +332,6 @@ const TaskAssignmentForm = () => {
                   a => !usedAgentIds.includes(a._id) || (assignment?.agent && assignment.agent._id === a._id)
                 )
 
-                const usedTaskIds = taskAssignments
-                  .slice(0, index)
-                  .flatMap(a => (Array.isArray(a?.tasks) ? a.tasks : []))
-
-                const taskOptions = (ordersOptions || []).filter(
-                  o =>
-                    !usedTaskIds.includes(o.id) || (Array.isArray(assignment?.tasks) && assignment.tasks.includes(o.id))
-                )
-
                 return (
                   <Card key={index} variant='outlined'>
                     <CardContent>
@@ -367,47 +361,22 @@ const TaskAssignmentForm = () => {
                           )}
                         />
 
-                        {/* Task IDs Selection */}
-                        <Autocomplete
-                          multiple
+                        {/* Number of Tasks Selection */}
+                        <TextField
                           fullWidth
-                          options={taskOptions}
-                          getOptionLabel={option => option.label}
-                          disableCloseOnSelect
-                          isOptionEqualToValue={(option, value) => option.id === value.id}
-                          value={(assignment.tasks || []).map(id => taskOptions.find(o => o.id === id)).filter(Boolean)}
-                          onChange={(_e, newValue) => {
-                            const ids = (newValue || []).map(v => v.id)
-                            updateTaskAssignment(index, 'tasks', ids)
-                          }}
-                          renderTags={(value, getTagProps) =>
-                            value.map((option, i) => (
-                              <Chip {...getTagProps({ index: i })} key={option.id} label={option.label} />
-                            ))
+                          type='number'
+                          label='Number of Tasks'
+                          value={
+                            Array.isArray(assignment.tasks) ? assignment.tasks.length : Number(assignment.tasks) || 0
                           }
-                          renderInput={params => (
-                            <TextField {...params} label='Select Tasks (Order IDs)' placeholder='Pick orders' />
-                          )}
+                          onChange={e => {
+                            const cap = Math.max(0, Number(unassignedTotal) || 0)
+                            const requested = Math.max(0, Math.min(Number(e.target.value) || 0, cap))
+                            updateTaskAssignment(index, 'tasks', requested)
+                          }}
+                          inputProps={{ min: 0, max: Math.max(0, Number(unassignedTotal) || 0) }}
+                          helperText={`Max: ${Math.max(0, Number(unassignedTotal) || 0)}`}
                         />
-
-                        {/* Display current tasks */}
-                        {assignment.tasks.length > 0 && (
-                          <Box>
-                            <Typography variant='body2' color='textSecondary'>
-                              Assigned Tasks:
-                            </Typography>
-                            <Box className='flex flex-wrap gap-1 mt-1'>
-                              {assignment.tasks.map((taskId, taskIndex) => (
-                                <Chip
-                                  key={taskIndex}
-                                  label={taskId}
-                                  size='small'
-                                  onDelete={() => removeTaskFromAssignment(index, taskId)}
-                                />
-                              ))}
-                            </Box>
-                          </Box>
-                        )}
                       </Box>
                     </CardContent>
                   </Card>

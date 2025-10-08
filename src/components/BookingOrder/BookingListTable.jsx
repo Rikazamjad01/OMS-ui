@@ -104,6 +104,7 @@ export const paymentStatus = {
 export const courierPlatforms = {
   // none: { text: 'None', color: 'default', colorClassName: 'text-default' },
   leopard: { text: 'Leopards', color: 'success', colorClassName: 'text-success' }
+
   // daewoo: { text: 'Daewoo', color: 'secondary', colorClassName: 'text-secondary' },
   // postEx: { text: 'PostEx', color: 'warning', colorClassName: 'text-warning' },
   // mp: { text: 'M&P', color: 'error', colorClassName: 'text-error' },
@@ -421,7 +422,10 @@ const BookingListTable = ({
         trackNumber: order.courier?.trackNumber || '',
         Amount: Number(order.current_total_price),
         city: order?.city || '',
-        tags: parsedTags
+        tags: parsedTags,
+        totalOrders: order?.total_order || '',
+        successfulOrders: order?.successful_order || '',
+        lastOrderStatus: order?.last_order_status || ''
       }
     })
   }, [orderData])
@@ -619,6 +623,7 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
+
                     // if (n.includes('daewoo')) return 'daewoo'
                     // if (n.includes('post')) return 'postEx'
                     // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -639,6 +644,7 @@ const BookingListTable = ({
                     const courierApiMap = {
                       // none: 'None',
                       leopard: 'Leopard'
+
                       // daewoo: 'Daewoo',
                       // postEx: 'PostEx',
                       // mp: 'M&P',
@@ -743,6 +749,36 @@ const BookingListTable = ({
         }
       },
       {
+        accessorKey: 'address',
+        header: 'Address',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const address = row.original.address
+
+          return <Typography className='font-medium text-gray-800'>{address || '—'}</Typography>
+        }
+      },
+      {
+        accessorKey: 'total&successfulOrders',
+        header: 'Total & Successful Orders',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const totalAndSuccessfulOrders = row.original?.totalOrders + row.original?.successfulOrders
+
+          return <Typography className='font-medium text-gray-800'>{totalAndSuccessfulOrders || '—'}</Typography>
+        }
+      },
+      {
+        accessorKey: 'lastOrderStatus',
+        header: 'Last Order Status',
+        meta: { width: '250px' },
+        cell: ({ row }) => {
+          const lastOrderStatus = row.original?.lastOrderStatus
+
+          return <Typography className='font-medium text-gray-800'>{lastOrderStatus || '—'}</Typography>
+        }
+      },
+      {
         accessorKey: 'tags',
         header: 'Tags',
         meta: { width: '250px' },
@@ -835,6 +871,7 @@ const BookingListTable = ({
                       const n = String(name).toLowerCase()
 
                       if (n.includes('leopard')) return 'leopard'
+
                       // if (n.includes('daewoo')) return 'daewoo'
                       // if (n.includes('post')) return 'postEx'
                       // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -855,6 +892,7 @@ const BookingListTable = ({
                       const courierApiMap = {
                         // none: 'None',
                         leopard: 'Leopard'
+
                         // daewoo: 'Daewoo',
                         // postEx: 'PostEx',
                         // mp: 'M&P',
@@ -1130,6 +1168,7 @@ const BookingListTable = ({
                     const n = String(name).toLowerCase()
 
                     if (n.includes('leopard')) return 'leopard'
+
                     // if (n.includes('daewoo')) return 'daewoo'
                     // if (n.includes('post')) return 'postEx'
                     // if (n.includes('m&p') || n.includes('mp')) return 'mp'
@@ -1150,6 +1189,7 @@ const BookingListTable = ({
                     const courierApiMap = {
                       // none: 'None',
                       leopard: 'Leopard'
+
                       // daewoo: 'Daewoo',
                       // postEx: 'PostEx',
                       // mp: 'M&P',
