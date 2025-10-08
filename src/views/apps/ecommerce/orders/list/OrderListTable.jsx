@@ -119,6 +119,17 @@ export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
   label: statusChipColor[key].text
 }))
 
+export const tagsArray = [
+    { value: 'Urgent delivery', label: 'Urgent delivery' },
+    { value: 'Allowed to Open', label: 'Allowed to Open' },
+    { value: 'Deliver between (specific date and Time)', label: 'Deliver between (specific date and Time)' },
+    { value: 'Call before reaching', label: 'Call before reaching' },
+    { value: 'Deliver parcel to the  (specific person)', label: 'Deliver parcel to the  (specific person)' },
+    { value: 'Do not deliver to anyone except the mentioned consignee name', label: 'Do not deliver to anyone except the mentioned consignee name' },
+    { value: 'Deliver without call', label: 'Deliver without call' },
+    { value: 'Product must not be visible-consider privacy', label: 'Product must not be visible-consider privacy' },
+  ]
+
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
 
 function convertCities(cities = []) {
@@ -184,6 +195,10 @@ const mapFiltersToApiFormat = localFilters => {
 
   if (localFilters.pakistanCities && localFilters.pakistanCities.length > 0) {
     apiFilters.city = localFilters.pakistanCities.map(c => c.value).join(',')
+  }
+
+  if (localFilters.tags && localFilters.tags.length > 0) {
+    apiFilters.tags = localFilters.tags.map(c => c.value).join(',')
   }
 
   return apiFilters
@@ -280,6 +295,7 @@ const PartialPaymentInlineDialog = ({ open, setOpen, orderId, onSuccess }) => {
         id: orderId,
         amount: Number(amount) || 0
       }
+
       if (attachmentUrl) payload.attachment = attachmentUrl
 
       await dispatch(addPartialPaymentThunk(payload))
@@ -526,14 +542,22 @@ const OrderListTable = ({
           : []
 
       const parsedTags =
-        typeof order.tags === 'string'
+      Array.isArray(order.tags)
+        ? order.tags.flatMap(t =>
+            String(t)
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+          )
+        : typeof order.tags === 'string'
           ? order.tags
-              .split(',') // backend gives comma-separated
+              .split(',')
               .map(t => t.trim())
               .filter(Boolean)
-          : Array.isArray(order.tags)
-            ? order.tags.filter(Boolean)
-            : []
+          : []
+
+    // ✅ Remove duplicates and empty strings
+    const uniqueTags = Array.from(new Set(parsedTags.filter(Boolean)))
 
       return {
         id: order.id,
@@ -553,7 +577,7 @@ const OrderListTable = ({
         city: order?.city || '',
         phone: order?.address?.[0]?.phone || '',
         address: order?.address?.[0]?.address1 || '',
-        tags: parsedTags
+        tags: uniqueTags,
       }
     })
   }, [orderData])
@@ -596,7 +620,9 @@ const OrderListTable = ({
       // ✅ Get previous tags from tagsMap OR from orderData
       const previousTags = tagsMap[orderId] ?? orderData.find(order => order.id === orderId)?.tags ?? []
 
-      // ✅ Push new tag, ensuring uniqueness
+      console.log(previousTags, 'previousTags')
+
+      // ✅ Ensure distinct trimmed tags
       const updatedTags = Array.from(new Set([...previousTags, tagPayload].map(t => String(t).trim()).filter(Boolean)))
 
       // ✅ Update UI immediately
@@ -605,11 +631,11 @@ const OrderListTable = ({
         [orderId]: updatedTags
       }))
 
-      // ✅ Send clean comma-separated string to backend
+      // ✅ Send array to backend instead of comma-separated string
       await dispatch(
         updateOrderCommentsAndRemarks({
           orderId,
-          tags: updatedTags.join(',')
+          tags: updatedTags // ← keep as array, not .join(',')
         })
       ).unwrap()
 
@@ -773,6 +799,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -817,7 +844,7 @@ const OrderListTable = ({
                 }
               }}
               rows={2}
-              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words'
+              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
               style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
               placeholder='—'
             />
@@ -909,6 +936,7 @@ const OrderListTable = ({
               <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
                 {hasRemarks
                   ? remarkList.map((remark, i) => (
+
                       // <Chip key={i} label={remark} variant='tonal' size='small' color={getTagColor(remark)} />
                       <p key={i} className='text-gray-500'>
                         {remark}
@@ -934,32 +962,36 @@ const OrderListTable = ({
         accessorKey: 'tags',
         header: 'Tags',
         meta: { width: '250px' },
-
         cell: ({ row }) => {
           const orderId = row.original.id
 
-          // Prefer updated tags from tagsMap, else fall back to parsed original
-          const displayedTags = tagsMap[orderId] ?? row.original.tags
+          // Get tags from map or order data
+          const rawTags = tagsMap[orderId] ?? row.original.tags
+
+          // ✅ Normalize to array (handle comma-separated string or array)
+          const displayedTags = Array.isArray(rawTags)
+            ? rawTags
+            : String(rawTags || '')
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(Boolean)
+
           const hasTags = displayedTags.length > 0
 
           return (
             <div className='flex flex-col gap-1'>
               <div
                 className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
-                onClick={() => openTagEditor(orderId, displayedTags)}
                 role='button'
                 tabIndex={0}
                 onKeyDown={e => {
                   if (e.key === 'Enter') openTagEditor(orderId, displayedTags)
                 }}
               >
-                {hasTags ? (
+                {hasTags &&
                   displayedTags.map((tag, i) => (
                     <Chip key={i} label={tag} color={getTagColor(tag)} variant='tonal' size='small' />
-                  ))
-                ) : (
-                  <></>
-                )}
+                  ))}
               </div>
 
               <div>
@@ -1041,7 +1073,7 @@ const OrderListTable = ({
     startDate: '',
     endDate: '',
     minAmount: '',
-    maxAmount: ''
+    maxAmount: '',
   })
 
   const paymentMethodsArray = Object.keys(paymentMethodsMap).map(key => ({
@@ -1064,21 +1096,24 @@ const OrderListTable = ({
     label: pakistanCities[key].text
   }))
 
-  const tagsArray = useMemo(() => {
-    const unique = new Set()
-    ;(data || []).forEach(row => {
-      const orderId = row.id
-      const rowTags = tagsMap[orderId] ?? row.tags
-      if (Array.isArray(rowTags)) {
-        rowTags.forEach(t => {
-          const tag = String(t || '').trim()
-          if (tag) unique.add(tag)
-        })
-      }
-    })
+  // const tagsArray = useMemo(() => {
+  //   const unique = new Set()
 
-    return Array.from(unique).map(tag => ({ value: tag, label: tag }))
-  }, [data, tagsMap])
+  //   ;(data || []).forEach(row => {
+  //     const orderId = row.id
+  //     const rowTags = tagsMap[orderId] ?? row.tags
+
+  //     if (Array.isArray(rowTags)) {
+  //       rowTags.forEach(t => {
+  //         const tag = String(t || '').trim()
+
+  //         if (tag) unique.add(tag)
+  //       })
+  //     }
+  //   })
+
+  //   return Array.from(unique).map(tag => ({ value: tag, label: tag }))
+  // }, [data, tagsMap])
 
   const table = useReactTable({
     data,
@@ -1436,8 +1471,8 @@ const OrderListTable = ({
           fullWidth
           options={tagsArray}
           getOptionLabel={option => option.label}
-          value={filters.tagsMap || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tagsMap: newValue }))}
+          value={filters.tags || []}
+          onChange={(e, newValue) => setFilters(prev => ({ ...prev, tags: newValue }))}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const props = getTagProps({ index })
@@ -1475,7 +1510,7 @@ const OrderListTable = ({
             <Button
               onClick={() => {
                 setFilters(emptyFilters)
-                dispatch(fetchOrders({ page: 1, limit, filters: emptyFilters }))
+                dispatch(fetchOrders({ page: 1, limit, filters: emptyFilters, force: true }))
                 onFiltersChange?.(emptyFilters)
 
                 // onPageChange?.(1)
@@ -1489,7 +1524,9 @@ const OrderListTable = ({
               onClick={() => {
                 const apiFilters = mapFiltersToApiFormat(filters)
 
-                dispatch(fetchOrders({ page: 1, limit, filters: apiFilters }))
+                console.log('Applying Filters:', apiFilters, filters)
+
+                dispatch(fetchOrders({ page: 1, limit, filters: apiFilters, force: true }))
                 onFiltersChange?.(apiFilters)
 
                 onPageChange?.(1)
