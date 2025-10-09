@@ -83,7 +83,7 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
       .unwrap()
       .finally(() => setAssignedLoading(false))
     toast.success('Tasks reassigned')
-    dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
+    // dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
   }
 
   return (
