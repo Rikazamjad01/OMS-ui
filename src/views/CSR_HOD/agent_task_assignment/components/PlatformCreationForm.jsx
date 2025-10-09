@@ -215,24 +215,17 @@ const PlatformCreationForm = () => {
 
           {/* Platforms Selection */}
           <Autocomplete
-            multiple
             fullWidth
             options={availablePlatforms}
             getOptionLabel={option => option.label}
             isOptionEqualToValue={(option, value) => option.value === value.value}
-            filterSelectedOptions
-            value={selectedPlatforms}
-            onChange={(event, newValue) => setSelectedPlatforms(newValue)}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip {...getTagProps({ index })} key={option.value} label={option.label} variant='outlined' />
-              ))
-            }
+            value={selectedPlatforms?.[0] || null}
+            onChange={(event, newValue) => setSelectedPlatforms(newValue ? [newValue] : [])}
             renderInput={params => (
               <TextField
                 {...params}
-                label='Select Platforms'
-                placeholder='Choose platforms for assignment'
+                label='Select Platform'
+                placeholder='Choose one platform for assignment'
                 helperText={`${selectedPlatforms.length} platform(s) selected`}
               />
             )}

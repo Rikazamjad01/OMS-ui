@@ -110,7 +110,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const target = '/apps/ecommerce/customers/list'
+      const target = '/apps/ecommerce/orders/list'
       router.replace(getLocalizedUrl(target, locale))
     }
   }, [isAuthenticated, locale, router, searchParams])

@@ -48,6 +48,7 @@ const AgentTaskAssignment = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label='agent task assignment tabs'>
           <Tab label='Platform Creation' {...a11yProps(0)} />
           <Tab label='Task Assignment' {...a11yProps(1)} />
+          <Tab label='Mark Absent' {...a11yProps(2)} />
         </Tabs>
       </Box>
 
@@ -56,11 +57,13 @@ const AgentTaskAssignment = () => {
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        {showAssignmentForm ? (
-          <TaskAssignmentForm onCloseAssignmentForm={() => setShowAssignmentForm(false)} />
-        ) : (
-          <AgentTaskOverview onOpenAssignmentForm={() => setShowAssignmentForm(true)} />
-        )}
+        {/* {showAssignmentForm ? ( */}
+        <TaskAssignmentForm onCloseAssignmentForm={() => setShowAssignmentForm(false)} />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <AgentTaskOverview onOpenAssignmentForm={() => setShowAssignmentForm(true)} />
+        {/* <MarkAbsentAndReassign /> */}
       </TabPanel>
     </Box>
   )
