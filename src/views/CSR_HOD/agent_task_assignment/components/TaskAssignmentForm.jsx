@@ -354,71 +354,73 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
                 </Button>
               </Box>
 
-              {taskAssignments.map((assignment, index) => {
-                const usedAgentIds = taskAssignments
-                  .slice(0, index)
-                  .map(a => a?.agent?._id)
-                  .filter(Boolean)
+              <Box className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                {taskAssignments.map((assignment, index) => {
+                  const usedAgentIds = taskAssignments
+                    .slice(0, index)
+                    .map(a => a?.agent?._id)
+                    .filter(Boolean)
 
-                const agentOptions = (extractedAgentsFromPlatform || []).filter(
-                  a => !usedAgentIds.includes(a._id) || (assignment?.agent && assignment.agent._id === a._id)
-                )
+                  const agentOptions = (extractedAgentsFromPlatform || []).filter(
+                    a => !usedAgentIds.includes(a._id) || (assignment?.agent && assignment.agent._id === a._id)
+                  )
 
-                return (
-                  <Card key={index} variant='outlined'>
-                    <CardContent>
-                      <Box className='space-y-4'>
-                        <Box className='flex justify-between items-center'>
-                          <Typography variant='subtitle1'>Assignment {index + 1}</Typography>
-                          <IconButton onClick={() => removeTaskAssignment(index)} color='error' size='small'>
-                            <i className='bx-trash' />
-                          </IconButton>
+                  return (
+                    <Card key={index} variant='outlined' className=' border-0'>
+                      <CardContent className='border rounded-lg'>
+                        <Box className='space-y-4'>
+                          <Box className='flex justify-between items-center'>
+                            <Typography variant='subtitle1'>Assignment {index + 1}</Typography>
+                            <IconButton onClick={() => removeTaskAssignment(index)} color='error' size='small'>
+                              <i className='bx-trash' />
+                            </IconButton>
+                          </Box>
+
+                          {/* Agent Selection for this assignment */}
+                          <Autocomplete
+                            fullWidth
+                            options={agentOptions}
+                            getOptionLabel={option => `${option.firstName} ${option.lastName} (${option.email})`}
+                            isOptionEqualToValue={(option, value) => option._id === value._id}
+                            filterSelectedOptions
+                            value={assignment.agent}
+                            onChange={(event, newValue) => updateTaskAssignment(index, 'agent', newValue)}
+                            renderInput={params => (
+                              <TextField
+                                {...params}
+                                label='Select Agent'
+                                placeholder='Choose agent for this assignment'
+                              />
+                            )}
+                          />
+
+                          {/* Number of Tasks Selection */}
+                          <TextField
+                            fullWidth
+                            type='number'
+                            label='Number of Tasks'
+                            value={
+                              Array.isArray(assignment.tasks) ? assignment.tasks.length : Number(assignment.tasks) || 0
+                            }
+                            onChange={e => {
+                              const cap = Math.max(0, Number(unassignedTotal) || 0)
+                              const requested = Math.max(0, Math.min(Number(e.target.value) || 0, cap))
+
+                              updateTaskAssignment(index, 'tasks', requested)
+                            }}
+                            inputProps={{ min: 0, max: Math.max(0, Number(unassignedTotal) || 0) }}
+                            helperText={`Max: ${Math.max(0, Number(unassignedTotal) || 0)}`}
+                          />
                         </Box>
-
-                        {/* Agent Selection for this assignment */}
-                        <Autocomplete
-                          fullWidth
-                          options={agentOptions}
-                          getOptionLabel={option => `${option.firstName} ${option.lastName} (${option.email})`}
-                          isOptionEqualToValue={(option, value) => option._id === value._id}
-                          filterSelectedOptions
-                          value={assignment.agent}
-                          onChange={(event, newValue) => updateTaskAssignment(index, 'agent', newValue)}
-                          renderInput={params => (
-                            <TextField
-                              {...params}
-                              label='Select Agent'
-                              placeholder='Choose agent for this assignment'
-                            />
-                          )}
-                        />
-
-                        {/* Number of Tasks Selection */}
-                        <TextField
-                          fullWidth
-                          type='number'
-                          label='Number of Tasks'
-                          value={
-                            Array.isArray(assignment.tasks) ? assignment.tasks.length : Number(assignment.tasks) || 0
-                          }
-                          onChange={e => {
-                            const cap = Math.max(0, Number(unassignedTotal) || 0)
-                            const requested = Math.max(0, Math.min(Number(e.target.value) || 0, cap))
-
-                            updateTaskAssignment(index, 'tasks', requested)
-                          }}
-                          inputProps={{ min: 0, max: Math.max(0, Number(unassignedTotal) || 0) }}
-                          helperText={`Max: ${Math.max(0, Number(unassignedTotal) || 0)}`}
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </Box>
 
               {taskAssignments.length === 0 && (
                 <Alert severity='info'>
-                  No task assignments added. Click "Add Assignment" to create manual task assignments.
+                  No task assignments added. Click &quot;Add Assignment&quot; to create manual task assignments.
                 </Alert>
               )}
             </Box>
