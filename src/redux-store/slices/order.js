@@ -126,6 +126,24 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
   }
 )
 
+export const updateOrderRemarksThunk = createAsyncThunk(
+  'orders/updateRemarks',
+  async ({ id, remarks }, { rejectWithValue }) => {
+    try {
+      // Make the same API call your main thunk uses, but simplified
+      const response = await postRequest('orders/add', { id, remarks })
+
+      if (response.status) {
+        return { id, remarks: response.data?.remarks || remarks }
+      }
+
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (orderId, { rejectWithValue }) => {
   try {
     const response = await getRequest(`orders/${orderId}`)
@@ -636,7 +654,6 @@ const ordersSlice = createSlice({
         //   if (current_total_discounts != null)
         //     state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
         // }
-        console.log(current_total_price, 'current_total_price in addPartialPaymentThunk')
         state.orders = state.orders.map(o =>
           String(o.id) === String(id)
             ? {
@@ -662,6 +679,23 @@ const ordersSlice = createSlice({
       })
       .addCase(updateOrderAddressThunk.rejected, (state, action) => {
         state.loading = false
+        state.error = action.payload || action.error.message
+      })
+      .addCase(updateOrderRemarksThunk.pending, state => {
+        state.error = null
+      })
+      .addCase(updateOrderRemarksThunk.fulfilled, (state, action) => {
+        const { id, remarks } = action.payload
+
+        // Update remarks directly in the main orders list
+        state.orders = state.orders.map(order => (order.id === id ? { ...order, remarks } : order))
+
+        // If the currently selected order is this one, update it too
+        if (state.selectedOrders?.id === id) {
+          state.selectedOrders = { ...state.selectedOrders, remarks }
+        }
+      })
+      .addCase(updateOrderRemarksThunk.rejected, (state, action) => {
         state.error = action.payload || action.error.message
       })
   }

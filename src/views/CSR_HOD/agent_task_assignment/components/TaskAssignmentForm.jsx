@@ -21,6 +21,7 @@ import IconButton from '@mui/material/IconButton'
 import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
+import { toast } from 'react-toastify'
 import CustomTextField from '@core/components/mui/TextField'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
 import {
@@ -29,7 +30,6 @@ import {
   fetchPlatformsThunk,
   fetchUnassignedOrdersThunk
 } from '@/redux-store/slices/taskAsssignment'
-import { toast } from 'react-toastify'
 
 const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const dispatch = useDispatch()
@@ -41,6 +41,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const [selectedAgents, setSelectedAgents] = useState([])
   const [taskAssignments, setTaskAssignments] = useState([])
   const [agents, setAgents] = useState([])
+
   // const [platforms, setPlatforms] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
   const { platforms, extractedAgentsFromPlatform, unassignedTotal } = useSelector(state => state.taskAsssignment)
@@ -48,6 +49,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const MAX_TASKS = 200
+
   // Available platforms (mock data)
   const availablePlatforms = platforms.map(platform => ({
     _id: platform._id,
@@ -58,6 +60,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   useEffect(() => {
     fetchAgents()
     fetchPlatforms()
+
     if (selectedPlatform?._id) {
       dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand }))
     }
@@ -67,7 +70,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
     try {
       setPlatformsLoading(true)
       const response = await dispatch(fetchPlatformsThunk({ limit: 10 }))
+
       console.log(response)
+
       // setPlatforms(response.payload.platformAssignment || [])
     } catch (err) {
       setError('Failed to fetch platforms')
@@ -75,16 +80,20 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
       setPlatformsLoading(false)
     }
   }
+
   const fetchAgents = async () => {
     try {
       setLoading(true)
+
       // TODO: Replace with actual API call
       // const response = await dispatch(getUsers())
       // setAgents(response.data || [])
       // const response = await dispatch(getAlUsersThunk({ params: { role: 'agent' } }))
       const response = dispatch(extractAgentsFromPlatform({ id: selectedPlatform?._id }))
+
       console.log(response)
       setAgents(extractedAgentsFromPlatform || [])
+
       // Mock data for now
       // setAgents([
       //   {
@@ -119,12 +128,14 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
 
   const updateTaskAssignment = (index, field, value) => {
     const updated = [...taskAssignments]
+
     updated[index] = { ...updated[index], [field]: value }
     setTaskAssignments(updated)
   }
 
   const addTaskToAssignment = (assignmentIndex, taskId) => {
     const updated = [...taskAssignments]
+
     if (!updated[assignmentIndex].tasks.includes(taskId)) {
       updated[assignmentIndex].tasks.push(taskId)
       setTaskAssignments(updated)
@@ -133,6 +144,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
 
   const removeTaskFromAssignment = (assignmentIndex, taskId) => {
     const updated = [...taskAssignments]
+
     updated[assignmentIndex].tasks = updated[assignmentIndex].tasks.filter(id => id !== taskId)
     setTaskAssignments(updated)
   }
@@ -182,7 +194,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
       // TODO: Replace with actual API call
       // await dispatch(assignTasks(requestBody))
       const response = await dispatch(assignTaskThunk(requestBody))
+
       console.log(response)
+
       if (response.meta.requestStatus === 'fulfilled') {
         setSuccess(true)
 
@@ -215,14 +229,18 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
     // Each assignment must have an agent and a positive tasks count
     const cap = Math.max(0, Number(unassignedTotal) || 0)
     let totalRequested = 0
+
     const allValid = taskAssignments.every(assignment => {
       const tasksCount = Array.isArray(assignment?.tasks) ? assignment.tasks.length : Number(assignment?.tasks) || 0
+
       totalRequested += tasksCount
       return Boolean(assignment?.agent?._id) && tasksCount > 0
     })
+
     if (!allValid) return false
     return totalRequested <= cap
   }
+
   console.log(isFormValid())
   return (
     <Card>
@@ -271,7 +289,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
             value={brand}
             onChange={e => {
               const next = e.target.value
+
               setBrand(next)
+
               if (selectedPlatform?._id) {
                 dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand: next }))
               }
@@ -384,6 +404,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
                           onChange={e => {
                             const cap = Math.max(0, Number(unassignedTotal) || 0)
                             const requested = Math.max(0, Math.min(Number(e.target.value) || 0, cap))
+
                             updateTaskAssignment(index, 'tasks', requested)
                           }}
                           inputProps={{ min: 0, max: Math.max(0, Number(unassignedTotal) || 0) }}

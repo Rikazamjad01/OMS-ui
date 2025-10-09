@@ -91,7 +91,9 @@ import ConfirmationDialog from '../dialogs/confirmation-dialog'
 import {
   addPartialPaymentThunk,
   changeCityThunk,
+  updateOrderAddressThunk,
   updateOrderCommentsAndRemarks,
+  updateOrderRemarksThunk,
   updateOrdersStatusThunk
 } from '@/redux-store/slices/order'
 
@@ -410,6 +412,8 @@ const BookingListTable = ({
   const dispatch = useDispatch()
   const pagination = useSelector(selectBookingOrdersPagination)
 
+  console.log(orderData, 'orderData')
+
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [editCourierData, setEditCourierData] = useState({ open: false, courier: null, remarks: '' })
 
@@ -672,6 +676,18 @@ const BookingListTable = ({
     }
   }
 
+  const updateAddressApi = async ({ id, address }) => {
+    // TODO: Implement API call here, e.g. await api.updateOrderAddress({ id, address })
+    // Intentionally left blank per request
+    await dispatch(updateOrderAddressThunk({ id, address })).unwrap()
+  }
+
+  const updateRemarksApi = async ({ id, remarks }) => {
+    // TODO: Implement API call here, e.g. await api.updateOrderAddress({ id, address })
+    // Intentionally left blank per request
+    await dispatch(updateOrderCommentsAndRemarks({ orderId: id, remarks })).unwrap()
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -923,36 +939,72 @@ const BookingListTable = ({
       {
         accessorKey: 'remarks',
         header: 'Remarks',
-        meta: { width: '250px' },
+        meta: { width: '200px' },
         cell: ({ row }) => {
-          const remarks = row.original.remarks
+          const initialRemarks =
+            typeof row.original.remarks === 'string'
+              ? row.original.remarks
+              : Array.isArray(row.original.remarks)
+                ? row.original.remarks.join(', ')
+                : ''
 
-          // normalize remarks (string → array of strings)
-          const remarkList =
-            typeof remarks === 'string'
-              ? remarks
-                  .split(',')
-                  .map(r => r.trim())
-                  .filter(Boolean)
-              : Array.isArray(remarks)
-                ? remarks.filter(Boolean)
-                : []
+          const [value, setValue] = useState(initialRemarks)
+          const [original, setOriginal] = useState(initialRemarks)
+          const [updating, setUpdating] = useState(false)
+          const hasExistingRemark = original.trim() !== ''
 
-          const hasRemarks = remarkList.length > 0
+          useEffect(() => {
+            const next =
+              typeof row.original.remarks === 'string'
+                ? row.original.remarks
+                : Array.isArray(row.original.remarks)
+                  ? row.original.remarks.join(', ')
+                  : ''
+
+            setValue(next)
+            setOriginal(next)
+          }, [row.original.remarks])
+
+          const handleBlur = async () => {
+            const trimmed = String(value || '').trim()
+            const prev = String(original || '').trim()
+
+            if (trimmed === prev) return
+
+            try {
+              setUpdating(true)
+              console.log(row.original.id, 'id')
+              await updateRemarksApi({ id: row.original.id, remarks: trimmed })
+              setOriginal(trimmed)
+
+              // optional: show success snackbar if you have global one
+              // setSnackbar({ open: true, message: 'Remarks updated successfully', severity: 'success' })
+            } catch (err) {
+              // optional: show error snackbar
+              // setSnackbar({ open: true, message: 'Failed to update remarks', severity: 'error' })
+            } finally {
+              setUpdating(false)
+            }
+          }
 
           return (
-            <div className='flex flex-col gap-1'>
-              {/* First row: Remarks */}
-              <div className='flex gap-2 overflow-scroll no-scrollbar cursor-pointer'>
-                {hasRemarks
-                  ? remarkList.map((remark, i) => (
-                      <p key={i} className='text-gray-500'>
-                        {remark}
-                      </p>
-                    ))
-                  : '--'}
-              </div>
-            </div>
+            <input
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onBlur={handleBlur}
+              disabled={updating || hasExistingRemark}
+              rows={2}
+              className={`bg-transparent border-0 outline-none w-[200px] text-gray-800 resize-none break-words no-scrollbar ${
+                updating ? 'opacity-60' : ''
+              } ${hasExistingRemark ? 'cursor-not-allowed text-gray-500' : ''}`}
+              style={{
+                fontFamily: 'inherit',
+                fontSize: 'inherit',
+                lineHeight: 'inherit',
+                fontWeight: 'inherit'
+              }}
+              placeholder='—'
+            />
           )
         }
       },
@@ -964,6 +1016,7 @@ const BookingListTable = ({
           const initialAddress = row.original.address || ''
           const [value, setValue] = useState(initialAddress)
           const [original, setOriginal] = useState(initialAddress)
+          const [updating, setUpdating] = useState(false)
 
           useEffect(() => {
             const next = row.original.address || ''
@@ -986,7 +1039,7 @@ const BookingListTable = ({
                 }
               }}
               rows={2}
-              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
+              className={`bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar ${updating ? 'opacity-60' : ''}`}
               style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
               placeholder='—'
             />
@@ -1156,7 +1209,9 @@ const BookingListTable = ({
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               >
-                <Alert severity={snackbar.severity}  variant='filled'>{snackbar.message}</Alert>
+                <Alert severity={snackbar.severity} variant='filled'>
+                  {snackbar.message}
+                </Alert>
               </Snackbar>
             </>
           )
