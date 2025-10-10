@@ -11,6 +11,7 @@ import Switch from '@mui/material/Switch'
 
 // Component Imports
 import CustomIconButton from '@core/components/mui/IconButton'
+import { Chip } from '@mui/material'
 
 // Vars
 const connectedAccountsArr = [
@@ -47,14 +48,14 @@ const connectedAccountsArr = [
 ]
 
 const courierPlatforms = [
-  { title: 'Leopards', code: 'leopard', img: '/images/couriers/leopards.png',},
-  { title: 'Daewoo', code: 'daewoo', img: '/images/couriers/daewoo.png',},
-  { title: 'Post Ex', code: 'postEx', img: '/images/couriers/postEx.jpg',},
-  { title: 'M&P', code: 'mp', img: '/images/couriers/m&p.jpg',},
-  { title: 'TCS', code: 'tcs', img: '/images/couriers/tcs.jpg',},
+  { title: 'Leopards', code: 'leopard', img: '/images/couriers/leopards.png' },
+  { title: 'Daewoo', code: 'daewoo', img: '/images/couriers/daewoo.png' },
+  { title: 'Post Ex', code: 'postEx', img: '/images/couriers/postEx.jpg' },
+  { title: 'M&P', code: 'mp', img: '/images/couriers/m&p.jpg' },
+  { title: 'TCS', code: 'tcs', img: '/images/couriers/tcs.jpg' }
 ]
 
-const SettingsPage = () => {
+const CouriersPage = () => {
   return (
     <div className='flex flex-col gap-6'>
       <Card>
@@ -82,7 +83,7 @@ const SettingsPage = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <CardHeader title='Courier Platforms' subheader='courier platforms you want to use for your orders' />
             <CardContent className='flex flex-col gap-4'>
-             {courierPlatforms.map((item, index) => (
+              {courierPlatforms.map((item, index) => (
                 <div key={index} className='flex items-center justify-between gap-4'>
                   <div className='flex flex-grow items-center gap-4'>
                     <img height={32} width={32} src={item.img} alt={item.title} className='object-contain' />
@@ -91,15 +92,60 @@ const SettingsPage = () => {
                       <Typography variant='body2'>{item.subtitle}</Typography>
                     </div>
                   </div>
-                  <Switch defaultChecked={item.checked} />
+                  <div className='flex items-center gap-4'>
+                    <Switch defaultChecked={item.checked} />
+                    <Chip
+                      label='+ Add '
+                      variant='outlined'
+                      size='small'
+                      className='cursor-pointer hover:bg-primary hover:text-white'
+                    />
+                    <div className='cursor-pointer hover:text-primary flex items-center'>
+                    <i className='bx bx-edit'/>
+                    </div>
+                    <div className='cursor-pointer hover:text-red-600 flex items-center'>
+                      <i className='bx bx-trash'/>
+                    </div>
+                  </div>
                 </div>
               ))}
             </CardContent>
           </Grid>
         </Grid>
       </Card>
+      <Card>
+        <Grid size={{ md: 6 }}>
+          <CardHeader title='Courier Platforms' subheader='courier platforms you want to use for your orders' />
+          <CardContent className='flex gap-4 justify-between w-full'>
+            <div className='flex flex-col gap-4'>
+              {courierPlatforms.map((item, index) => (
+                <div key={index} className='flex items-center justify-between gap-4'>
+                  <div className='flex flex-grow items-center gap-4'>
+                    <img height={32} width={32} src={item.img} alt={item.title} className='object-contain' />
+                    <div className='flex-grow'>
+                      <Typography variant='h6'>{item.title}</Typography>
+                      <Typography variant='body2'>{item.subtitle}</Typography>
+                    </div>
+                  </div>
+                  {/* two columns to show min orders and max orders in each */}
+                </div>
+              ))}
+            </div>
+            <div className='grid grid-cols-2 gap-10'>
+              <div>
+                <Typography variant='body2'>Min Orders</Typography>
+                {/* map api to show min orders in each row */}
+              </div>
+              <div>
+                <Typography variant='body2'>Max Orders</Typography>
+                {/* map api to show min orders in each row */}
+              </div>
+            </div>
+          </CardContent>
+        </Grid>
+      </Card>
     </div>
   )
 }
 
-export default SettingsPage
+export default CouriersPage

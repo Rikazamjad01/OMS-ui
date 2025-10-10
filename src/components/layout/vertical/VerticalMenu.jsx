@@ -1,6 +1,6 @@
 // Next Imports
-import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
@@ -9,6 +9,7 @@ import { useTheme } from '@mui/material/styles'
 import PerfectScrollbar from 'react-perfect-scrollbar'
 
 // Component Imports
+import Cookies from 'js-cookie'
 import { Menu, SubMenu, MenuItem, MenuSection } from '@menu/vertical-menu'
 import CustomChip from '@core/components/mui/Chip'
 
@@ -22,7 +23,6 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 // Style Imports
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
-import Cookies from 'js-cookie'
 import { checkPermission } from '@/hooks/Permissions'
 
 const RenderExpandIcon = ({ open, transitionDuration }) => (
@@ -41,9 +41,11 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
 
   useEffect(() => {
     setMounted(true)
+
     try {
       const user = Cookies.get('user')
       const parsed = JSON.parse(user || '{}')
+
       setEmail(parsed?.email || null)
     } catch (err) {
       setEmail(null)
@@ -319,9 +321,12 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           </SubMenu>
           */}
 
-          <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
-            {dictionary['navigation'].settings}
-          </MenuItem> 
+        {/* <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
+          {dictionary['navigation'].settings}
+        </MenuItem> */}
+        <MenuItem href={`/${locale}/couriers`} icon={<i className='bx-car' />}>
+          {dictionary['navigation'].couriers}
+        </MenuItem>
 
         {/* <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}> */}
         {/* <SubMenu label={dictionary['navigation'].login}>

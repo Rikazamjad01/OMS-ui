@@ -18,9 +18,11 @@ const initialState = {
 export const getPendingOrdersThunk = createAsyncThunk('orders/get/pending', async (_, { rejectWithValue }) => {
   try {
     const response = await getRequest('orders/get/pending')
+
     if (response.status) {
       return response.data
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -32,9 +34,11 @@ export const fetchPlatformsThunk = createAsyncThunk(
   async (params, { rejectWithValue, getState }) => {
     try {
       const response = await getRequest(`platform/getPlatforms?${new URLSearchParams(params)}`)
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -45,9 +49,11 @@ export const fetchPlatformsThunk = createAsyncThunk(
 export const addPlatformsThunk = createAsyncThunk('platform/addPlatform', async (data, { rejectWithValue }) => {
   try {
     const response = await postRequest('platform/addPlatform', data)
+
     if (response.success) {
       return response.platformAssignment
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -57,9 +63,11 @@ export const addPlatformsThunk = createAsyncThunk('platform/addPlatform', async 
 export const assignTaskThunk = createAsyncThunk('taskAssignment/assignTask', async (data, { rejectWithValue }) => {
   try {
     const response = await postRequest('taskAssignment/task-assignment', data)
+
     if (response.success) {
       return response
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -72,10 +80,12 @@ export const fetchAgentTaskCountsThunk = createAsyncThunk(
   async ({ platformId }, { rejectWithValue }) => {
     try {
       const response = await getRequest(`taskAssignment/agent-task-counts?platformId=${platformId}`)
+
       if (response.success) {
         // Expecting response.data to be an array of { agentId, count }
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -89,9 +99,11 @@ export const markAgentAbsentThunk = createAsyncThunk(
   async ({ platformId, agentId }, { rejectWithValue }) => {
     try {
       const response = await postRequest('taskAssignment/mark-absent', { platformId, agentId })
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -105,15 +117,19 @@ export const reassignAgentTasksThunk = createAsyncThunk(
   async ({ platformId, fromAgentId, toAgentId, toAgentIds }, { rejectWithValue }) => {
     try {
       const payload = { platformId, fromAgentId }
+
       if (Array.isArray(toAgentIds) && toAgentIds.length > 0) {
         payload.toAgentIds = toAgentIds
       } else if (toAgentId) {
         payload.toAgentId = toAgentId
       }
+
       const response = await postRequest('taskAssignment/reassign', payload)
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -127,9 +143,11 @@ export const fetchAssignedTasksThunk = createAsyncThunk(
   async ({ platform }, { rejectWithValue }) => {
     try {
       const response = await getRequest(`taskAssignment/assigned-tasks?platform=${platform}`)
+
       if (response.success) {
         return response
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -145,17 +163,22 @@ export const fetchUnassignedOrdersThunk = createAsyncThunk(
       const { taskAsssignment } = getState()
       const platforms = taskAsssignment.platforms
       const platformData = platforms.find(p => p._id === platform)
+
       if (!platformData?._id) {
         return rejectWithValue('Platform not found')
       }
+
       const params = new URLSearchParams()
+
       params.append('platform', platformData._id)
       params.append('platformName', platformData.platforms[0])
       if (brand) params.append('brand', brand)
       const response = await getRequest(`taskAssignment/unassigned-orders?${params.toString()}`)
+
       if (response.success) {
         return response
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -173,11 +196,31 @@ export const markAbsentAndReassignThunk = createAsyncThunk(
         absentAgentId,
         reassignToAgents
       }
+
       const response = await postRequest('taskAssignment/mark-absent', payload)
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const makeOrderPendingThunk = createAsyncThunk(
+  'taskAssignment/makeOrderPending',
+  async ({ absentAgentId, platform }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('taskAssignment/make-order-pending', { userId: absentAgentId, platform })
+
+      if (!response.success) {
+        return rejectWithValue(response.message)
+      }
+
+      return response
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -191,6 +234,7 @@ export const taskAsssignmentSlice = createSlice({
     extractAgentsFromPlatform: (state, action) => {
       const { id } = action.payload
       const selectedPlatform = state.platforms.find(platform => platform._id === id)
+
       if (selectedPlatform) {
         state.extractedAgentsFromPlatform = selectedPlatform.agents
       }
@@ -237,6 +281,7 @@ export const taskAsssignmentSlice = createSlice({
         } else {
           state.platforms = [action.payload, ...state.platforms]
         }
+
         state.loading = false
         state.error = null
       })
@@ -263,6 +308,7 @@ export const taskAsssignmentSlice = createSlice({
       .addCase(fetchAgentTaskCountsThunk.fulfilled, (state, action) => {
         // Normalize into a map { [agentId]: count }
         const counts = {}
+
         ;(action.payload || []).forEach(item => {
           if (item && item.agentId) counts[item.agentId] = item.count ?? 0
         })
@@ -304,8 +350,10 @@ export const taskAsssignmentSlice = createSlice({
       })
       .addCase(fetchAssignedTasksThunk.fulfilled, (state, action) => {
         const { data, totalAgents, totalTasks } = action.payload || {}
+
         state.assignedTasks = Array.isArray(data) ? data : []
         const map = {}
+
         state.assignedTasks.forEach(item => {
           if (item?.agentId) map[item.agentId] = Number(item.tasks) || 0
         })
@@ -345,6 +393,20 @@ export const taskAsssignmentSlice = createSlice({
       .addCase(markAbsentAndReassignThunk.rejected, (state, action) => {
         state.error = action.payload
         state.loading = false
+      })
+      .addCase(makeOrderPendingThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(makeOrderPendingThunk.fulfilled, (state, action) => {
+        state.error = null
+
+        // state.error = action.payload
+        state.loading = false
+      })
+      .addCase(makeOrderPendingThunk.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
       })
   }
 })

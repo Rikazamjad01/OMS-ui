@@ -362,6 +362,12 @@ export const uploadAttachmentThunk = createAsyncThunk('orders/uploadAttachment',
   }
 })
 
+//  /make-order-pending
+// body: {
+//  userId: the id of the agent
+//  platform: the id of hte platform
+// }
+
 const ordersSlice = createSlice({
   name: 'orders',
   initialState: {
@@ -528,6 +534,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
+
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -679,23 +686,6 @@ const ordersSlice = createSlice({
       })
       .addCase(updateOrderAddressThunk.rejected, (state, action) => {
         state.loading = false
-        state.error = action.payload || action.error.message
-      })
-      .addCase(updateOrderRemarksThunk.pending, state => {
-        state.error = null
-      })
-      .addCase(updateOrderRemarksThunk.fulfilled, (state, action) => {
-        const { id, remarks } = action.payload
-
-        // Update remarks directly in the main orders list
-        state.orders = state.orders.map(order => (order.id === id ? { ...order, remarks } : order))
-
-        // If the currently selected order is this one, update it too
-        if (state.selectedOrders?.id === id) {
-          state.selectedOrders = { ...state.selectedOrders, remarks }
-        }
-      })
-      .addCase(updateOrderRemarksThunk.rejected, (state, action) => {
         state.error = action.payload || action.error.message
       })
   }

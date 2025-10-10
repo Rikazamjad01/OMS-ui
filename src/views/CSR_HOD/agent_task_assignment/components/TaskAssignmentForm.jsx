@@ -37,10 +37,10 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   // States
   const [splitAutomatically, setSplitAutomatically] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState(null)
-  const [brand, setBrand] = useState('')
   const [selectedAgents, setSelectedAgents] = useState([])
   const [taskAssignments, setTaskAssignments] = useState([])
   const [agents, setAgents] = useState([])
+  const [brand, setBrand] = useState([])
 
   // const [platforms, setPlatforms] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
@@ -242,6 +242,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   }
 
   console.log(isFormValid())
+
+  const brands = ['Glowrify', 'Sukoon']
+
   return (
     <Card>
       <CardHeader title='Task Assignment' />
@@ -283,33 +286,33 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
           />
 
           {/* Brand Selection */}
-          <TextField
+          <Autocomplete
+            multiple
             fullWidth
-            label='Brand'
-            value={brand}
-            onChange={e => {
-              const next = e.target.value
-
-              setBrand(next)
+            options={['All', ...brands]}
+            value={brand} // brand should now be an array (e.g., useState([]))
+            onChange={(event, newValue) => {  
+              setBrand(newValue)
 
               if (selectedPlatform?._id) {
-                dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand: next }))
+                dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand: newValue }))
               }
             }}
-            select
-          >
-            {/* Unassigned Orders Info */}
-            {selectedPlatform?._id ? (
-              <Typography variant='body2' color='textSecondary'>
-                Unassigned Orders: {unassignedTotal}
-              </Typography>
-            ) : null}
-            <MenuItem value='' disabled>
-              Select a brand
-            </MenuItem>
-            <MenuItem value='glowrify'>Glowrify</MenuItem>
-            <MenuItem value='sukoon'>sukoon wellness</MenuItem>
-          </TextField>
+            renderInput={params => (
+              <TextField
+                {...params}
+                label='Select Brand(s)'
+                placeholder='Choose one or more brands'
+                helperText={
+                  selectedPlatform?._id ? (
+                    <Typography variant='body2' color='textSecondary'>
+                      Unassigned Orders: {unassignedTotal}
+                    </Typography>
+                  ) : null
+                }
+              />
+            )}
+          />
 
           {/* Agents Selection */}
           {splitAutomatically && (

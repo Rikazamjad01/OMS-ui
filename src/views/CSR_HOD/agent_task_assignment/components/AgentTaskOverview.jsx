@@ -23,7 +23,8 @@ import {
   fetchPlatformsThunk,
   fetchAssignedTasksThunk,
   extractAgentsFromPlatform,
-  markAbsentAndReassignThunk
+  markAbsentAndReassignThunk,
+  makeOrderPendingThunk
 } from '@/redux-store/slices/taskAsssignment'
 
 const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
@@ -63,8 +64,22 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
     }
   }, [dispatch, selectedPlatform])
 
-  // Optional: keep function if needed elsewhere
-  const handleMarkAbsent = async () => {}
+  const handleMarkAbsent = async () => {
+    if (!selectedPlatform?._id || !absentAgent?._id) return
+
+    await dispatch(
+      makeOrderPendingThunk({
+        platform: selectedPlatform._id,
+        absentAgentId: absentAgent._id
+      })
+    ).unwrap()
+    dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+      .unwrap()
+      .finally(() => setAssignedLoading(false))
+    toast.success('Tasks Made Pending')
+
+    // dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
+  }
 
   const handleReassign = async () => {
     if (!selectedPlatform?._id || !absentAgent?._id || (reassignToAgents || []).length === 0) return
@@ -194,14 +209,14 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
                 <Button
                   variant='contained'
                   onClick={handleReassign}
-                  disabled={!selectedPlatform || !absentAgent || (reassignToAgents || []).length === 0 || loading}
+                  disabled={!selectedPlatform || !reassignToAgents.length || !absentAgent || loading}
                 >
                   Reassign Tasks
                 </Button>
-                 <Button
+                <Button
                   variant='contained'
-                  onClick={handleReassign}
-                  disabled={!selectedPlatform || !absentAgent || (reassignToAgents || []).length === 0 || loading}
+                  disabled={!selectedPlatform || !absentAgent || loading}
+                  onClick={handleMarkAbsent}
                 >
                   Make Tasks Spending
                 </Button>
