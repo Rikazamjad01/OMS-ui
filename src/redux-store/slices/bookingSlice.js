@@ -35,7 +35,6 @@ export const fetchBookingOrder = createAsyncThunk(
 
       const filterParams = {}
 
-      console.log('filters', filters)
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.order_start_date = filters.dateFrom
@@ -116,7 +115,6 @@ export const fetchBookingOrders = createAsyncThunk(
 
       const filterParams = {}
 
-      console.log('filters', filters)
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
@@ -212,8 +210,6 @@ export const generateAirwayBill = createAsyncThunk(
 export const downloadLoadSheet = createAsyncThunk('download-load-sheet', async ({ orderIds }, { rejectWithValue }) => {
   try {
     const response = await postRequest('booking/download-load-sheet', { loadSheets: orderIds })
-
-    console.log(response, 'response')
 
     if (!response.status) {
       return rejectWithValue(response.message)

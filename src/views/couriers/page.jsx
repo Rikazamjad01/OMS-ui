@@ -10,42 +10,42 @@ import Typography from '@mui/material/Typography'
 import Switch from '@mui/material/Switch'
 
 // Component Imports
-import CustomIconButton from '@core/components/mui/IconButton'
 import { Chip } from '@mui/material'
+import CustomIconButton from '@core/components/mui/IconButton'
 
 // Vars
-const connectedAccountsArr = [
-  {
-    checked: true,
-    title: 'Google',
-    logo: '/images/logos/google.png',
-    subtitle: 'Calendar and Contacts'
-  },
-  {
-    checked: false,
-    title: 'Slack',
-    logo: '/images/logos/slack.png',
-    subtitle: 'Communications'
-  },
-  {
-    checked: true,
-    title: 'Github',
-    logo: '/images/logos/github.png',
-    subtitle: 'Manage your Git repositories'
-  },
-  {
-    checked: true,
-    title: 'Mailchimp',
-    subtitle: 'Email marketing service',
-    logo: '/images/logos/mailchimp.png'
-  },
-  {
-    title: 'Asana',
-    checked: false,
-    subtitle: 'Task Communication',
-    logo: '/images/logos/asana.png'
-  }
-]
+// const connectedAccountsArr = [
+//   {
+//     checked: true,
+//     title: 'Google',
+//     logo: '/images/logos/google.png',
+//     subtitle: 'Calendar and Contacts'
+//   },
+//   {
+//     checked: false,
+//     title: 'Slack',
+//     logo: '/images/logos/slack.png',
+//     subtitle: 'Communications'
+//   },
+//   {
+//     checked: true,
+//     title: 'Github',
+//     logo: '/images/logos/github.png',
+//     subtitle: 'Manage your Git repositories'
+//   },
+//   {
+//     checked: true,
+//     title: 'Mailchimp',
+//     subtitle: 'Email marketing service',
+//     logo: '/images/logos/mailchimp.png'
+//   },
+//   {
+//     title: 'Asana',
+//     checked: false,
+//     subtitle: 'Task Communication',
+//     logo: '/images/logos/asana.png'
+//   }
+// ]
 
 const courierPlatforms = [
   { title: 'Leopards', code: 'leopard', img: '/images/couriers/leopards.png' },
@@ -59,58 +59,38 @@ const CouriersPage = () => {
   return (
     <div className='flex flex-col gap-6'>
       <Card>
-        <Grid container>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <CardHeader
-              title='Connected Accounts'
-              subheader='Display content from your connected accounts on your site'
-            />
-            <CardContent className='flex flex-col gap-4'>
-              {connectedAccountsArr.map((item, index) => (
-                <div key={index} className='flex items-center justify-between gap-4'>
-                  <div className='flex flex-grow items-center gap-4'>
-                    <img height={32} width={32} src={item.logo} alt={item.title} />
-                    <div className='flex-grow'>
-                      <Typography variant='h6'>{item.title}</Typography>
-                      <Typography variant='body2'>{item.subtitle}</Typography>
-                    </div>
-                  </div>
-                  <Switch defaultChecked={item.checked} />
-                </div>
-              ))}
-            </CardContent>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ md: 6 }}>
             <CardHeader title='Courier Platforms' subheader='courier platforms you want to use for your orders' />
-            <CardContent className='flex flex-col gap-4'>
-              {courierPlatforms.map((item, index) => (
-                <div key={index} className='flex items-center justify-between gap-4'>
-                  <div className='flex flex-grow items-center gap-4'>
-                    <img height={32} width={32} src={item.img} alt={item.title} className='object-contain' />
-                    <div className='flex-grow'>
-                      <Typography variant='h6'>{item.title}</Typography>
-                      <Typography variant='body2'>{item.subtitle}</Typography>
+            <CardContent className='flex gap-4 justify-between w-full'>
+              <div className='flex flex-col gap-4  w-full'>
+                {courierPlatforms.map((item, index) => (
+                  <div key={index} className='flex w-full gap-4'>
+                    <div className='flex flex-grow items-center justify-between gap-4'>
+                      <img height={32} width={32} src={item.img} alt={item.title} className='object-contain' />
+                      <div className='flex-grow'>
+                        <Typography variant='h6'>{item.title}</Typography>
+                        <Typography variant='body2'>{item.subtitle}</Typography>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-4'>
+                      <Switch defaultChecked={item.checked} />
+                      <Chip
+                        label='+ Add '
+                        variant='outlined'
+                        size='small'
+                        className='cursor-pointer hover:bg-primary hover:text-white'
+                      />
+                      <div className='cursor-pointer hover:text-primary flex items-center'>
+                        <i className='bx bx-edit' />
+                      </div>
+                      <div className='cursor-pointer hover:text-red-600 flex items-center'>
+                        <i className='bx bx-trash' />
+                      </div>
                     </div>
                   </div>
-                  <div className='flex items-center gap-4'>
-                    <Switch defaultChecked={item.checked} />
-                    <Chip
-                      label='+ Add '
-                      variant='outlined'
-                      size='small'
-                      className='cursor-pointer hover:bg-primary hover:text-white'
-                    />
-                    <div className='cursor-pointer hover:text-primary flex items-center'>
-                    <i className='bx bx-edit'/>
-                    </div>
-                    <div className='cursor-pointer hover:text-red-600 flex items-center'>
-                      <i className='bx bx-trash'/>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </CardContent>
-          </Grid>
         </Grid>
       </Card>
       <Card>

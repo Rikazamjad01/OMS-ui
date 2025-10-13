@@ -126,6 +126,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
               label={paymentStatus[order?.financial_status || 'pending']?.text}
               color={paymentStatus[order?.financial_status || 'pending']?.color || 'warning'}
               size='small'
+              className='lowercase'
             />
           </div>
           <Typography>

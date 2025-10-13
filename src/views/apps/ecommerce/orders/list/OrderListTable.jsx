@@ -120,15 +120,18 @@ export const orderStatusArray = Object.keys(statusChipColor).map(key => ({
 }))
 
 export const tagsArray = [
-    { value: 'Urgent delivery', label: 'Urgent delivery' },
-    { value: 'Allowed to Open', label: 'Allowed to Open' },
-    { value: 'Deliver between (specific date and Time)', label: 'Deliver between (specific date and Time)' },
-    { value: 'Call before reaching', label: 'Call before reaching' },
-    { value: 'Deliver parcel to the  (specific person)', label: 'Deliver parcel to the  (specific person)' },
-    { value: 'Do not deliver to anyone except the mentioned consignee name', label: 'Do not deliver to anyone except the mentioned consignee name' },
-    { value: 'Deliver without call', label: 'Deliver without call' },
-    { value: 'Product must not be visible-consider privacy', label: 'Product must not be visible-consider privacy' },
-  ]
+  { value: 'Urgent delivery', label: 'Urgent delivery' },
+  { value: 'Allowed to Open', label: 'Allowed to Open' },
+  { value: 'Deliver between (specific date and Time)', label: 'Deliver between (specific date and Time)' },
+  { value: 'Call before reaching', label: 'Call before reaching' },
+  { value: 'Deliver parcel to the  (specific person)', label: 'Deliver parcel to the  (specific person)' },
+  {
+    value: 'Do not deliver to anyone except the mentioned consignee name',
+    label: 'Do not deliver to anyone except the mentioned consignee name'
+  },
+  { value: 'Deliver without call', label: 'Deliver without call' },
+  { value: 'Product must not be visible-consider privacy', label: 'Product must not be visible-consider privacy' }
+]
 
 const chipColors = ['primary', 'secondary', 'success', 'warning', 'info', 'error']
 
@@ -541,8 +544,7 @@ const OrderListTable = ({
           ? [order.payment_gateway_names]
           : []
 
-      const parsedTags =
-      Array.isArray(order.tags)
+      const parsedTags = Array.isArray(order.tags)
         ? order.tags.flatMap(t =>
             String(t)
               .split(',')
@@ -556,8 +558,8 @@ const OrderListTable = ({
               .filter(Boolean)
           : []
 
-    // ✅ Remove duplicates and empty strings
-    const uniqueTags = Array.from(new Set(parsedTags.filter(Boolean)))
+      // ✅ Remove duplicates and empty strings
+      const uniqueTags = Array.from(new Set(parsedTags.filter(Boolean)))
 
       return {
         id: order.id,
@@ -577,7 +579,7 @@ const OrderListTable = ({
         city: order?.city || '',
         phone: order?.address?.[0]?.phone || '',
         address: order?.address?.[0]?.address1 || '',
-        tags: uniqueTags,
+        tags: uniqueTags
       }
     })
   }, [orderData])
@@ -754,7 +756,9 @@ const OrderListTable = ({
                       // size: 'small',
                       className: 'hover:rounded-4xl',
                       children: (
-                        <Typography className='font-medium'>
+                        <Typography
+                          className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                        >
                           {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
                         </Typography>
                       )
@@ -770,7 +774,9 @@ const OrderListTable = ({
                     // size: 'small',
                     className: 'hover:rounded-4xl',
                     children: (
-                      <Typography className='font-medium'>
+                      <Typography
+                        className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                      >
                         {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
                       </Typography>
                     )
@@ -797,7 +803,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-
+              
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -979,7 +985,7 @@ const OrderListTable = ({
           return (
             <div className='flex flex-col gap-1'>
               <div
-                className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
+                className='flex flex-col gap-2 cursor-pointer overflow-scroll no-scrollbar'
                 role='button'
                 tabIndex={0}
                 onKeyDown={e => {
@@ -1071,7 +1077,7 @@ const OrderListTable = ({
     startDate: '',
     endDate: '',
     minAmount: '',
-    maxAmount: '',
+    maxAmount: ''
   })
 
   const paymentMethodsArray = Object.keys(paymentMethodsMap).map(key => ({
@@ -1169,17 +1175,6 @@ const OrderListTable = ({
     tagsMap: [],
     pakistanCities: []
   }
-
-  // if (error) {
-  //   return (
-  //     <Card>
-  //       <CardContent className='flex items-center justify-between'>
-  //         <Typography color='error'>Failed to fetch orders: {error?.message || String(error)}</Typography>
-  //         <Button variant='contained'>Retry</Button>
-  //       </CardContent>
-  //     </Card>
-  //   )
-  // }
 
   return (
     <Card>

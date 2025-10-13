@@ -20,18 +20,11 @@ const OrderDetails = ({ id }) => {
   const error = useSelector(selectOrdersError)
   const order = useSelector(state => state.orders.selectedOrders)
 
-  console.log(order, 'orders from Redux in OrderDetails')
-
   useEffect(() => {
     if (id) {
       dispatch(fetchOrderById(id))
     }
   }, [id, dispatch])
-
-  // Add this to refresh when order updates
-  useEffect(() => {
-    console.log('Order updated in Redux:', order)
-  }, [order])
 
   if (loading) return <p>Loading order...</p>
   if (error) return <p>Error: {error}</p>

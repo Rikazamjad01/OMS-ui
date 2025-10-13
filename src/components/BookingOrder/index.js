@@ -23,8 +23,8 @@ const BookingOrder = () => {
   useEffect(() => {
     dispatch(
       fetchBookingOrder({
-        page: pagination.currentPage || 1,
-        limit: pagination.itemsPerPage || 25,
+        page: pagination.currentPage,
+        limit: pagination.itemsPerPage || 50,
         search,
         filters,
         force: true

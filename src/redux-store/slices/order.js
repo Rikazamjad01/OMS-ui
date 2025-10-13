@@ -24,8 +24,6 @@ export const fetchOrders = createAsyncThunk(
 
       const filterParams = {}
 
-      console.log('filters', filters)
-
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
@@ -215,8 +213,6 @@ export const updateOrderProducts = createAsyncThunk(
         quantity: p.quantity || 1,
         variant_id: p.variant?.id || p.id
       }))
-
-      console.log(line_items, 'line_items')
 
       const response = await apiRequest('orders', {
         method: 'PATCH',

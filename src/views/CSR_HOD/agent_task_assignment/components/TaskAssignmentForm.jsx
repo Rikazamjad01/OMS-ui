@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 
 // MUI Imports
@@ -22,11 +22,14 @@ import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
 import { toast } from 'react-toastify'
+import Grid from 'antd/es/card/Grid'
+import { CircularProgress } from '@mui/material'
 import CustomTextField from '@core/components/mui/TextField'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
 import {
   assignTaskThunk,
   extractAgentsFromPlatform,
+  fetchAssignedTasksThunk,
   fetchPlatformsThunk,
   fetchUnassignedOrdersThunk
 } from '@/redux-store/slices/taskAsssignment'
@@ -41,10 +44,11 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
   const [taskAssignments, setTaskAssignments] = useState([])
   const [agents, setAgents] = useState([])
   const [brand, setBrand] = useState([])
+  const [assignedLoading, setAssignedLoading] = useState(false)
 
   // const [platforms, setPlatforms] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
-  const { platforms, extractedAgentsFromPlatform, unassignedTotal } = useSelector(state => state.taskAsssignment)
+  const { platforms, extractedAgentsFromPlatform, unassignedTotal, assignedTasksMap, agentTaskCounts } = useSelector(state => state.taskAsssignment)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
@@ -56,22 +60,23 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
     name: `${platform.agents.map(agent => agent.firstName + ' ' + agent.lastName).join(', ')} (${platform.platforms.join(', ')})`
   }))
 
+  const agentOptions = useMemo(() => extractedAgentsFromPlatform || [], [extractedAgentsFromPlatform])
+
   // Fetch agents from API
   useEffect(() => {
-    fetchAgents()
-    fetchPlatforms()
-
-    if (selectedPlatform?._id) {
-      dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand }))
-    }
-  }, [selectedPlatform])
+      if (selectedPlatform?._id) {
+        dispatch(extractAgentsFromPlatform({ id: selectedPlatform._id }))
+        setAssignedLoading(true)
+        dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+          .unwrap()
+          .finally(() => setAssignedLoading(false))
+      }
+    }, [dispatch, selectedPlatform])
 
   const fetchPlatforms = async () => {
     try {
       setPlatformsLoading(true)
       const response = await dispatch(fetchPlatformsThunk({ limit: 10 }))
-
-      console.log(response)
 
       // setPlatforms(response.payload.platformAssignment || [])
     } catch (err) {
@@ -91,7 +96,6 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
       // const response = await dispatch(getAlUsersThunk({ params: { role: 'agent' } }))
       const response = dispatch(extractAgentsFromPlatform({ id: selectedPlatform?._id }))
 
-      console.log(response)
       setAgents(extractedAgentsFromPlatform || [])
 
       // Mock data for now
@@ -162,13 +166,15 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
         return
       }
 
+      const selectedBrandValues = (brand || []).map(b => b.value)
+
       let requestBody
 
       if (splitAutomatically) {
         // Auto split mode → send agent IDs; numOfTasks empty
         requestBody = {
           platform: selectedPlatform?._id,
-          brand: brand,
+          brand: selectedBrandValues,
           numOfTasks: [],
           numOfAgents: (selectedAgents || []).map(agent => agent?._id).filter(Boolean),
           split: true
@@ -177,7 +183,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
         // Manual mode → send { tasks: number, agent: id }
         requestBody = {
           platform: selectedPlatform?._id,
-          brand: brand,
+          brand: selectedBrandValues,
           numOfTasks: (taskAssignments || [])
             .filter(a => a?.agent?._id)
             .map(assignment => ({
@@ -189,20 +195,14 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
         }
       }
 
-      console.log('Task Assignment Request Body:', requestBody)
-
-      // TODO: Replace with actual API call
-      // await dispatch(assignTasks(requestBody))
       const response = await dispatch(assignTaskThunk(requestBody))
-
-      console.log(response)
 
       if (response.meta.requestStatus === 'fulfilled') {
         setSuccess(true)
 
         // Reset form
         setSelectedPlatform(null)
-        setBrand('')
+        setBrand([])
         setSelectedAgents([])
         setTaskAssignments([])
         toast.success('Tasks assigned successfully!')
@@ -241,9 +241,11 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
     return totalRequested <= cap
   }
 
-  console.log(isFormValid())
-
-  const brands = ['Glowrify', 'Sukoon']
+  const brands = [
+    { label: 'All', value: 'All' },
+    { label: 'Glowrify', value: 'glowrify' },
+    { label: 'Sukooon Wellness', value: 'sukoon' }
+  ]
 
   return (
     <Card>
@@ -257,19 +259,6 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
           )}
 
           {/* {success && <Alert severity='success'>Tasks assigned successfully!</Alert>} */}
-
-          {/* Split Automatically Checkbox */}
-          <div className='flex justify-between'>
-            <FormControlLabel
-              control={
-                <Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />
-              }
-              label='Split automatically'
-            />
-            {/* <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
-              Back
-            </Button> */}
-          </div>
 
           <Divider />
 
@@ -285,17 +274,91 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
             )}
           />
 
+          {selectedPlatform?._id ? (
+            assignedLoading ? (
+              <Box className='flex justify-center py-6'>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <>
+                <Divider />
+                <Grid container spacing={2}>
+                  {agentOptions.map(agent => {
+                    const count = assignedTasksMap?.[agent._id] ?? agentTaskCounts?.[agent._id] ?? 0
+
+                    return (
+                      <Grid item xs={12} md={6} lg={4} key={agent._id}>
+                        <Card variant='outlined'>
+                          <CardContent>
+                            <Box className='flex items-center justify-between'>
+                              <Box>
+                                <Typography variant='subtitle1'>
+                                  {agent.firstName} {agent.lastName}
+                                </Typography>
+                                <Typography variant='body2' color='textSecondary'>
+                                  {agent.email}
+                                </Typography>
+                              </Box>
+                              <Chip label={`${count} task(s)`} color='primary' variant='outlined' />
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    )
+                  })}
+                  {agentOptions.length === 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant='body2' color='textSecondary'>
+                        Select a platform to view agents.
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </>
+            )
+          ) : null}
+
+          <Divider />
+
           {/* Brand Selection */}
           <Autocomplete
             multiple
             fullWidth
-            options={['All', ...brands]}
-            value={brand} // brand should now be an array (e.g., useState([]))
-            onChange={(event, newValue) => {  
-              setBrand(newValue)
+            options={brands}
+            getOptionLabel={option => option.label}
+            value={brand}
+            onChange={(event, newValue) => {
+              const allOption = brands.find(b => b.value === 'All')
+              const allSelected = newValue.some(b => b.value === 'All')
 
-              if (selectedPlatform?._id) {
-                dispatch(fetchUnassignedOrdersThunk({ platform: selectedPlatform._id, brand: newValue }))
+              if (allSelected) {
+                // If user selects "All", set all except "All" itself
+                const allWithoutAll = brands.filter(b => b.value !== 'All')
+
+                setBrand(allWithoutAll)
+
+                if (selectedPlatform?._id) {
+                  dispatch(
+                    fetchUnassignedOrdersThunk({
+                      platform: selectedPlatform._id,
+                      brand: allWithoutAll.map(b => b.value)
+                    })
+                  )
+                }
+              } else {
+                // Normal selection (filter out "All" if accidentally included)
+                const filtered = newValue.filter(b => b.value !== 'All')
+
+                setBrand(filtered)
+
+                if (selectedPlatform?._id) {
+                  dispatch(
+                    fetchUnassignedOrdersThunk({
+                      platform: selectedPlatform._id,
+                      brand: filtered.map(b => b.value)
+                    })
+                  )
+                }
               }
             }}
             renderInput={params => (
@@ -312,7 +375,25 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
                 }
               />
             )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip {...getTagProps({ index })} key={option.value} label={option.label} variant='outlined' />
+              ))
+            }
           />
+
+          {/* Split Automatically Checkbox */}
+          <div className='flex justify-between'>
+            <FormControlLabel
+              control={
+                <Checkbox checked={splitAutomatically} onChange={e => setSplitAutomatically(e.target.checked)} />
+              }
+              label='Split Equally Among Selected Agents'
+            />
+            {/* <Button variant='contained' onClick={onCloseAssignmentForm} startIcon={<i className='bx-close' />}>
+              Back
+            </Button> */}
+          </div>
 
           {/* Agents Selection */}
           {splitAutomatically && (

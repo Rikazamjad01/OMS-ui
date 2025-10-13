@@ -30,9 +30,11 @@ const PlatformCreationForm = () => {
   const [selectedAgents, setSelectedAgents] = useState([])
   const [selectedPlatforms, setSelectedPlatforms] = useState([])
   const [agents, setAgents] = useState([])
+
   // const [platforms, setPlatforms] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
   // const [success, setSuccess] = useState(false)
   // const [platformAssignments, setPlatformAssignments] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
@@ -55,14 +57,16 @@ const PlatformCreationForm = () => {
   const fetchAgents = async () => {
     try {
       setLoading(true)
+
       // TODO: Replace with actual API call
       // const response = await dispatch(getUsers())
       // setAgents(response.data || [])
 
       // Mock data for now
       const response = await dispatch(getAlUsersThunk({ params: { role: 'agent' } }))
-      console.log(response)
+
       setAgents(response.payload.users || [])
+
       // Mock data for now
       // setAgents([
       //   {
@@ -94,7 +98,7 @@ const PlatformCreationForm = () => {
       // const list = res.payload?.data?.platformAssignment || []
       // setPlatformAssignments(list)
       const response = await dispatch(fetchPlatformsThunk({ limit: 10 }))
-      console.log(response)
+
       // setPlatformAssignments(response.payload.platformAssignment || [])
       // Mocked from provided response shape
       // const mock = {
@@ -141,26 +145,38 @@ const PlatformCreationForm = () => {
       setLoading(true)
       setError(null)
 
-      // Prepare API body
-      const requestBody = {
-        agents: selectedAgents.map(agent => agent._id),
-        platforms: selectedPlatforms.map(platform => platform.value)
+      const selectedPlatformValues = selectedPlatforms.map(p => p.value)
+      const selectedAgentIds = selectedAgents.map(a => a._id)
+
+      // 🧩 Check if this combination already exists in `platforms`
+      const duplicate = platforms.some(
+        item =>
+          item.platforms.some(p => selectedPlatformValues.includes(p)) &&
+          item.agents.some(a => selectedAgentIds.includes(a._id))
+      )
+
+      if (duplicate) {
+        toast.error('One or more selected agents are already assigned to this platform.')
+        setLoading(false)
+        return
       }
 
-      console.log('Platform Creation Request Body:', requestBody)
+      // ✅ Prepare API body if no duplicate found
+      const requestBody = {
+        agents: selectedAgentIds,
+        platforms: selectedPlatformValues
+      }
 
-      // TODO: Replace with actual API call
-      // await dispatch(createPlatformAssignment(requestBody))
       const response = await dispatch(addPlatformsThunk(requestBody))
-      console.log(response)
+
       if (response.meta.requestStatus === 'fulfilled') {
         toast.success('Platform assignment created successfully!')
         setSelectedAgents([])
         setSelectedPlatforms([])
+      } else {
+        toast.error(response.payload || 'Failed to create platform assignment')
       }
-      toast.error(response.payload || 'Failed to create platform assignment')
     } catch (err) {
-      console.log(err)
       toast.error(err.message || 'Failed to create platform assignment')
       setError(err.message || 'Failed to create platform assignment')
     } finally {
@@ -274,11 +290,13 @@ const PlatformCreationForm = () => {
                       Created:{' '}
                       {(() => {
                         const d = item?.createdAt ? new Date(item.createdAt) : null
+
                         return d ? d.toISOString().replace('T', ' ').slice(0, 19) : '—'
                       })()}{' '}
                       | Updated:{' '}
                       {(() => {
                         const d = item?.updatedAt ? new Date(item.updatedAt) : null
+
                         return d ? d.toISOString().replace('T', ' ').slice(0, 19) : '—'
                       })()}
                     </Typography>

@@ -91,6 +91,7 @@ import ConfirmationDialog from '../dialogs/confirmation-dialog'
 import {
   addPartialPaymentThunk,
   changeCityThunk,
+  fetchOrders,
   updateOrderAddressThunk,
   updateOrderCommentsAndRemarks,
   updateOrderRemarksThunk,
@@ -411,8 +412,6 @@ const BookingListTable = ({
   const { lang: locale } = useParams()
   const dispatch = useDispatch()
   const pagination = useSelector(selectBookingOrdersPagination)
-
-  console.log(orderData, 'orderData')
 
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' })
   const [editCourierData, setEditCourierData] = useState({ open: false, courier: null, remarks: '' })
@@ -791,7 +790,9 @@ const BookingListTable = ({
                       // size: 'small',
                       className: 'hover:rounded-4xl',
                       children: (
-                        <Typography className='font-medium'>
+                        <Typography
+                          className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                        >
                           {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
                         </Typography>
                       )
@@ -807,7 +808,9 @@ const BookingListTable = ({
                     // size: 'small',
                     className: 'hover:rounded-4xl',
                     children: (
-                      <Typography className='font-medium'>
+                      <Typography
+                        className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                      >
                         {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
                       </Typography>
                     )
@@ -973,7 +976,6 @@ const BookingListTable = ({
 
             try {
               setUpdating(true)
-              console.log(row.original.id, 'id')
               await updateRemarksApi({ id: row.original.id, remarks: trimmed })
               setOriginal(trimmed)
 
@@ -1319,7 +1321,13 @@ const BookingListTable = ({
                         const res = await dispatch(cancelAwb({ trackNumber: trackNumbers })).unwrap()
 
                         setAlert({ open: true, message: res?.message || 'AWB cancelled', severity: 'success' })
-                        await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                        await dispatch(
+                          fetchBookingOrders({
+                            page: pagination.currentPage,
+                            limit: pagination.itemsPerPage,
+                            force: true
+                          })
+                        )
                       } catch (e) {
                         setAlert({ open: true, message: e?.message || 'Failed to cancel AWB', severity: 'error' })
                       }
@@ -1343,6 +1351,14 @@ const BookingListTable = ({
                 elementProps={{ label: 'Create', variant: 'outlined', size: 'small', className: 'cursor-pointer' }}
                 dialog={ConfirmationDialog}
                 dialogProps={{ type: 'generate-airway-bill', payload: { orderIds: [row.original.id] } }}
+                onSuccess={async () => {
+                  try {
+                    // Refresh bookings list
+                    dispatch(fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true }))
+                  } catch (e) {
+                    setAlert({ open: true, message: e?.message || 'Failed to generate AWB', severity: 'error' })
+                  }
+                }}
               />
             </div>
           )
@@ -1436,6 +1452,10 @@ const BookingListTable = ({
 
   const selectedCount = useMemo(() => Object.keys(rowSelection).length, [rowSelection])
   const selectedIds = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+  const selectedRows = table.getSelectedRowModel().flatRows
+  const selectedStatuses = selectedRows.map(r => r.original.status?.toLowerCase())
+
+  const allSelectedAreOnWay = selectedCount > 0 && selectedStatuses.every(status => status === 'onway')
 
   const emptyFilters = {
     startDate: '',
@@ -1460,11 +1480,10 @@ const BookingListTable = ({
   //     </Card>
   //   )
   // }
-  console.log('selectedIds', rowSelection)
   return (
     <Card>
-      <CardContent className='w-full flex items-center justify-between'>
-        <div className='flex items-center gap-4 w-full'>
+      <CardContent className='w-full flex items-start justify-between'>
+        <div className='flex flex-wrap items-center gap-4 w-full'>
           {/* <Button variant='outlined' startIcon={<i className='bx-filter' />} onClick={() => setOpenFilter(true)}>
             Filter
           </Button> */}
@@ -1681,6 +1700,32 @@ const BookingListTable = ({
               size='small'
             />
           )}
+
+          {allSelectedAreOnWay && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{
+                children: 'Mark as Dispatching',
+                color: 'success',
+                variant: 'contained',
+                size: 'small'
+              }}
+              dialog={ConfirmationDialog}
+              dialogProps={{
+                type: 'update-status',
+                payload: {
+                  orderIds: selectedIds,
+                  fromStatus: 'onWay',
+                  toStatus: 'Dispatching',
+                  toStatusKey: 'dispatching'
+                },
+                onSuccess: async () => {
+                  await dispatch(fetchBookingOrders({ page: 1, limit, force: true }))
+                  setRowSelection({})
+                }
+              }}
+            />
+          )}
         </div>
 
         <div className='flex max-sm:flex-col sm:items-center gap-4'>
@@ -1885,11 +1930,7 @@ const BookingListTable = ({
             </Button>
             <Button
               onClick={() => {
-                console.log('Current filters:', filters)
-
                 const apiFilters = mapFiltersToApiFormat(filters)
-
-                console.log('API filters being sent:', apiFilters)
 
                 dispatch(fetchBookingOrder({ page: 1, limit, filters: apiFilters, force: true }))
                 onFiltersChange?.(apiFilters)
