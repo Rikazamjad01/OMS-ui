@@ -1,6 +1,7 @@
 'use client'
 
 // MUI Imports
+import { useEffect } from 'react'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid2'
@@ -8,13 +9,12 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
 import RoleDialog from '@components/dialogs/role-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import Link from '@components/Link'
 
 // Redux Imports
-import { useDispatch, useSelector } from 'react-redux'
-import { useEffect } from 'react'
 import { getAllRoles } from '@/redux-store/slices/roleSlice'
 import { checkPermission } from '@/hooks/Permissions'
 
@@ -31,7 +31,9 @@ const RoleCards = () => {
   }
 
   const canAddRole = checkPermission('role.create')
+
   console.log(canEditRole, 'canEditRole')
+
   const CardProps = {
     className: 'cursor-pointer bs-full',
     children: (
@@ -78,7 +80,7 @@ const RoleCards = () => {
                 </div>
                 <div className='flex justify-between items-start'>
                   <div className='flex flex-col items-start gap-1'>
-                    <Typography variant='h5' className='capitalize'>
+                    <Typography variant='h5' className='uppercase'>
                       {role?.name}
                     </Typography>
                     {role?.description ? (

@@ -50,6 +50,9 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const isDownloadLoadSheet = type === 'download-load-sheet'
   const isCancelAwb = type === 'cancel-awb'
   const Wrapper = type === 'suspend-account' ? 'div' : Fragment
+  const isActivateCourier = type === 'activate-courier'
+  const isDeactivateCourier = type === 'deactivate-courier'
+  const isDeleteCourier = type === 'delete-courier'
 
   // Initialize quantities when dialog opens
   useEffect(() => {
@@ -143,7 +146,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           setResultTitle('AWB Generated')
           setResultSubtitle(`${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}.`)
         }
-        
+
         onSuccess?.(payload)
       } else if (type === 'confirm-city') {
         const { orderId, city } = payload
@@ -171,6 +174,20 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         } catch (error) {
           toast.error(error?.message || 'Failed to update order status')
         }
+      } else if (isActivateCourier || isDeactivateCourier) {
+        const courierId = payload?.id
+
+        if (!courierId) throw new Error('Courier ID is required.')
+
+        // Delegate API handling to parent component
+        await onSuccess?.(payload)
+      } else if (isDeleteCourier) {
+        const courierId = payload?.id
+
+        if (!courierId) throw new Error('Courier ID is required.')
+
+        // Delegate API handling to parent component
+        await onSuccess?.(payload)
       }
 
       // Success
@@ -225,6 +242,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Do you really want to upsell this order?'
       case 'update-status':
         return 'Do you really want to update this order status?'
+      case 'delete-courier':
+        return 'Delete Courier?'
+      case 'activate-courier':
+        return 'Activate Courier?'
+      case 'deactivate-courier':
+        return 'Deactivate Courier?'
       default:
         return 'Are you sure?'
     }
@@ -258,6 +281,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Yes, Upsell Order!'
       case 'update-status':
         return 'Yes, Update Status!'
+      case 'delete-courier':
+        return 'Yes, Delete'
+      case 'activate-courier':
+        return 'Yes, Activate'
+      case 'deactivate-courier':
+        return 'Yes, Dectivate'
       default:
         return 'Yes'
     }
@@ -295,6 +324,12 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Upsell Processed'
       case 'update-status':
         return 'Status Updated'
+      case 'delete-courier':
+        return 'Courier deleted successfully!'
+      case 'activate-courier':
+        return 'Courier Deactivated!'
+      case 'deactivate-courier':
+        return 'Courier Activated!'
       default:
         return 'Done'
     }

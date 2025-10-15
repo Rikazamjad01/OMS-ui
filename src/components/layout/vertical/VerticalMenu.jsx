@@ -124,7 +124,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         )} */}
 
         {/* CUSTOMERS */}
-        {checkPermission('customers.view') && (
+        {checkPermission('customer.view') && (
           <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
             {dictionary['navigation'].customers}
           </MenuItem>
@@ -226,7 +226,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             <MenuItem href={`/${locale}/apps/ecommerce/referrals`}>{dictionary['navigation'].referrals}</MenuItem>
             <MenuItem href={`/${locale}/apps/ecommerce/settings`}>{dictionary['navigation'].settings}</MenuItem>
           </SubMenu> */}
-        {mounted && checkPermission('products.view') && (
+        {mounted && checkPermission('product.view') && (
           <SubMenu label={dictionary['navigation'].products} icon={<i className='bx-box' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/products/list`}>{dictionary['navigation'].list}</MenuItem>
             {/* <MenuItem href={`/${locale}/apps/ecommerce/products/add`}>{dictionary['navigation'].add}</MenuItem> */}

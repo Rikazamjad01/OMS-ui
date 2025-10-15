@@ -1,7 +1,7 @@
 'use client'
 
-// React Imports
 import { useMemo, useState } from 'react'
+import { useSelector } from 'react-redux'
 
 // MUI Imports
 import Grid from '@mui/material/Grid2'
@@ -17,18 +17,13 @@ import Typography from '@mui/material/Typography'
 import DialogCloseButton from '../DialogCloseButton'
 import CustomTextField from '@core/components/mui/TextField'
 
-// Local options (keep in sync with table)
-const courierPlatforms = {
-  // none: { text: 'None' },
-
-  leopard: { text: 'Leopards' }
-  // daewoo: { text: 'Daewoo' },
-  // postEx: { text: 'PostEx' },
-  // mp: { text: 'M&P' },
-  // tcs: { text: 'TCS' }
-}
+// Redux selector (make sure it’s exported from couriers.js)
+import { selectActiveCouriers } from '@/redux-store/slices/couriers'
 
 const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
+  // ✅ get active couriers from Redux
+  const activeCouriers = useSelector(selectActiveCouriers)
+
   const initial = useMemo(
     () => ({
       orderIds: data?.orderIds || [],
@@ -41,9 +36,14 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
   const [form, setForm] = useState(initial)
   const [submitting, setSubmitting] = useState(false)
 
+  // ✅ Build dropdown options dynamically from API-loaded couriers
   const options = useMemo(
-    () => Object.keys(courierPlatforms).map(key => ({ value: key, label: courierPlatforms[key].text })),
-    []
+    () =>
+      activeCouriers?.map(courier => ({
+        value: courier.platform,
+        label: courier.name
+      })) || [],
+    [activeCouriers]
   )
 
   const handleClose = () => {
@@ -66,7 +66,6 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
     }
 
     try {
-      console.log('form', form)
       await onSubmit?.(
         {
           orderIds: ids,
@@ -79,8 +78,11 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
           done: () => setSubmitting(false)
         }
       )
-    } finally {
-      // allow parent to call controls.done(); but ensure we don't leave it locked
+    }
+    catch (err) {
+      console.error(err, 'Failed to edit courier info')
+    }
+    finally {
       setSubmitting(false)
     }
   }
@@ -97,12 +99,14 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
       <DialogCloseButton onClick={handleClose} disableRipple>
         <i className='bx-x' />
       </DialogCloseButton>
+
       <DialogTitle variant='h4' className='flex gap-2 flex-col text-center sm:pbs-16 sm:pbe-6 sm:pli-16'>
         Edit Courier
         <Typography component='span' className='flex flex-col text-center'>
           Select a courier and provide a reason.
         </Typography>
       </DialogTitle>
+
       <form onSubmit={handleSubmit}>
         <DialogContent className='overflow-visible pbs-0 sm:pli-16' sx={{ overflowX: 'hidden' }}>
           <Grid container spacing={5}>
@@ -111,16 +115,17 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
                 select
                 fullWidth
                 label='Courier'
-                value={form.courier}
+                value={form.courier} // now this will store courier.id
                 onChange={e => setForm(prev => ({ ...prev, courier: e.target.value }))}
               >
-                {options.map(opt => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {activeCouriers.map(courier => (
+                  <MenuItem key={courier.id} value={courier.id}>
+                    {courier.name}
                   </MenuItem>
                 ))}
               </CustomTextField>
             </Grid>
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <CustomTextField
                 fullWidth
@@ -133,6 +138,7 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
             </Grid>
           </Grid>
         </DialogContent>
+
         <DialogActions className='justify-center pbs-0 sm:pbe-16 sm:pli-16'>
           <Button variant='contained' type='submit' disabled={submitting} className='max-sm:is-full'>
             {submitting ? 'Saving…' : 'Submit'}

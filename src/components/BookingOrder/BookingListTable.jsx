@@ -68,6 +68,13 @@ import {
   // updateOrdersStatusThunk
 } from '@/redux-store/slices/bookingSlice'
 
+import {
+  fetchCouriers,
+  selectCouriers,
+  selectActiveCouriers,
+  selectCouriersLoading
+} from '@/redux-store/slices/couriers'
+
 // Components
 import CustomAvatar from '@core/components/mui/Avatar'
 import OptionMenu from '@core/components/option-menu'
@@ -425,6 +432,22 @@ const BookingListTable = ({
   const [loadings, setLoadings] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
+  const couriers = useSelector(selectCouriers)
+
+  const activeCouriers = useSelector(selectActiveCouriers)?.map(courier => ({
+    label: courier.name,
+    value: courier.platform,
+    id: courier.id
+  }))
+
+  const courierLoading = useSelector(selectCouriersLoading)
+
+  useEffect(() => {
+    if (!couriers.length && !courierLoading) {
+      dispatch(fetchCouriers({ active: true, force: true }))
+    }
+  }, [])
+
   const [tagModal, setTagModal] = useState({
     open: false,
     orderId: null,
@@ -534,6 +557,8 @@ const BookingListTable = ({
     return true
   }
 
+  // fetch Active Couriers courier platforms from the redux
+
   // Map backend orders -> table rows
   const data = useMemo(() => {
     return (orderData || []).map(order => {
@@ -570,6 +595,8 @@ const BookingListTable = ({
 
       const addressObj = Array.isArray(order.address) && order.address.length > 0 ? order.address[0] : {}
       const fullAddress = addressObj.address1 || addressObj.address2 || ''
+
+      console.log(order, 'order')
 
       return {
         id: order.id,
@@ -827,11 +854,12 @@ const BookingListTable = ({
         accessorKey: 'courier', // fixed: lowercase
         header: 'Courier',
         cell: ({ row }) => {
-          const platformInfo = courierPlatforms[row.original.platform] ?? {
-            text: row.original.platform || 'Unknown',
-            color: 'default',
-            colorClassName: 'text-secondary'
-          }
+          const platform = row.original.platform?.toLowerCase()
+          const courier = activeCouriers.find(c => c.value.toLowerCase() === platform)
+
+          const platformInfo = courier
+            ? { text: courier.label, color: 'success', colorClassName: 'text-success' }
+            : { text: platform || 'Unknown', color: 'default', colorClassName: 'text-secondary' }
 
           return (
             <OpenDialogOnElementClick
@@ -845,51 +873,42 @@ const BookingListTable = ({
               dialog={EditCourierInfo}
               dialogProps={{
                 data: (() => {
-                  const inferCourierKey = name => {
-                    if (!name) return 'none'
-                    const n = String(name).toLowerCase()
-
-                    if (n.includes('leopard')) return 'leopard'
-
-                    // if (n.includes('daewoo')) return 'daewoo'
-                    // if (n.includes('post')) return 'postEx'
-                    // if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                    // if (n.includes('tcs')) return 'tcs'
-                    return 'none'
-                  }
-
-                  const defaultCourier = inferCourierKey(row.original.platform)
+                  const defaultCourier =
+                    activeCouriers.find(c => c.label.toLowerCase() === row.original.platform.toLowerCase())?.value ||
+                    'none'
 
                   return {
                     orderIds: [row.original.id],
                     courier: defaultCourier,
+                    id: defaultCourier.id,
                     reason: ''
                   }
                 })(),
                 onSubmit: async (payload, controls) => {
                   try {
-                    const courierApiMap = {
-                      // none: 'None',
-                      leopard: 'Leopard'
+                    // Destructure the required values from the payload
+                    const { orderIds, courier, reason } = payload
 
-                      // daewoo: 'Daewoo',
-                      // postEx: 'PostEx',
-                      // mp: 'M&P',
-                      // tcs: 'TCS'
-                    }
+                    // The courier value from the form is the ID. Find the full courier object.
+                    const selectedCourier = activeCouriers.find(c => c.id === courier)
+
+                    console.log(selectedCourier, 'selectedCourier in handleCourierUpdate')
 
                     const body = {
-                      orderId: [String(row.original.id)],
-                      courier: courierApiMap[payload.courier] || payload.courier,
-                      reason: payload.reason
+                      orderId: [row.original.id] ?? [],
+                      courier: selectedCourier?.id,
+                      reason: reason
                     }
+
+                    console.log('Courier assignment body:', body)
 
                     const res = await dispatch(courierAssignment(body)).unwrap()
 
                     setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
                     controls?.close()
                     controls?.reset()
-                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+
+                    await dispatch(fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true }))
                   } catch (err) {
                     setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
                   } finally {
@@ -1294,11 +1313,20 @@ const BookingListTable = ({
                       controls?.close()
                       controls?.reset()
                       setRowSelection({})
-                      await dispatch(fetchBookingOrders({ page, limit, force: true }))
+
+                      await dispatch(
+                        fetchBookingOrders({
+                          page: pagination.currentPage,
+                          limit: pagination.itemsPerPage,
+                          force: true
+                        })
+                      )
                     } catch (err) {
                       setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                      setRowSelection({})
                     } finally {
                       controls?.done?.()
+                      setRowSelection({})
                     }
                   }
                 }}
@@ -1354,7 +1382,9 @@ const BookingListTable = ({
                 onSuccess={async () => {
                   try {
                     // Refresh bookings list
-                    dispatch(fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true }))
+                    dispatch(
+                      fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true })
+                    )
                   } catch (e) {
                     setAlert({ open: true, message: e?.message || 'Failed to generate AWB', severity: 'error' })
                   }
@@ -1620,7 +1650,9 @@ const BookingListTable = ({
                     controls?.close()
                     controls?.reset()
                     setRowSelection({})
-                    await dispatch(fetchBookingOrders({ page, limit, force: true }))
+                    await dispatch(
+                      fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true })
+                    )
                   } catch (err) {
                     setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
                   } finally {
@@ -1720,7 +1752,9 @@ const BookingListTable = ({
                   toStatusKey: 'dispatching'
                 },
                 onSuccess: async () => {
-                  await dispatch(fetchBookingOrders({ page: 1, limit, force: true }))
+                  await dispatch(
+                    fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true })
+                  )
                   setRowSelection({})
                 }
               }}
@@ -1780,7 +1814,7 @@ const BookingListTable = ({
         <Autocomplete
           multiple
           fullWidth
-          options={courierPlatformsArray}
+          options={activeCouriers}
           getOptionLabel={option => option.label}
           value={filters.courierPlatforms || []}
           onChange={(e, newValue) => setFilters(prev => ({ ...prev, courierPlatforms: newValue }))}
@@ -1788,20 +1822,12 @@ const BookingListTable = ({
             value.map((option, index) => {
               const props = getTagProps({ index })
 
-              return (
-                <Chip
-                  {...props}
-                  key={option.value || index} // override key
-                  variant='outlined'
-                  label={option.label}
-                />
-              )
+              return <Chip {...props} key={option.value || index} variant='outlined' label={option.label} />
             })
           }
-          renderInput={params => (
-            <TextField {...params} fullWidth placeholder='Courier' label='Courier' size='medium' />
-          )}
+          renderInput={params => <TextField {...params} placeholder='Courier' label='Courier' size='medium' />}
         />
+
         <Autocomplete
           multiple
           fullWidth

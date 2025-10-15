@@ -28,7 +28,7 @@ const Timeline = styled(MuiTimeline)({
     '& .MuiTimelineContent-root:last-child': {
       paddingBottom: 0
     },
-    '&:nth-last-child(2) .MuiTimelineConnector-root': {
+    '&:nth-last-child(1) .MuiTimelineConnector-root': {
       backgroundColor: 'transparent',
       borderInlineStart: '1px dashed var(--mui-palette-divider)'
     },
@@ -37,6 +37,23 @@ const Timeline = styled(MuiTimeline)({
     }
   }
 })
+
+function formatDateToReadable(dateString) {
+  const date = new Date(dateString)
+
+  // Options for day name and time in 12-hour format
+  const options = {
+    weekday: 'long',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }
+
+  // Convert to readable format in your local timezone
+  const formatted = date.toLocaleString('en-US', options)
+
+  return formatted
+}
 
 // Mock Data (replace with API response later)
 const mockSteps = [
@@ -86,6 +103,7 @@ const mockSteps = [
 
 const ShippingActivity = ({ order }) => {
   const [shippingSteps, setShippingSteps] = useState(mockSteps)
+  const shippingStep = order.shippingActivity
 
   // Example: Later you can fetch from API
   /*
@@ -101,21 +119,23 @@ const ShippingActivity = ({ order }) => {
       <CardHeader title='Shipping Activity' />
       <CardContent>
         <Timeline>
-          {shippingSteps.map((step, index) => (
-            <TimelineItem key={step.id}>
+          {shippingStep?.map((step, index) => (
+            <TimelineItem key={index}>
               <TimelineSeparator>
-                <TimelineDot color={step.color} />
-                {index < shippingSteps.length - 1 && <TimelineConnector />}
+                <TimelineDot color={'primary'} />
+                {index < shippingStep.length - 1 && <TimelineConnector />}
               </TimelineSeparator>
               <TimelineContent>
                 <div className='flex flex-wrap items-center justify-between gap-x-2 mbe-2.5'>
                   <Typography variant='h6'>
                     {step.title}
-                    {step.id === 1 && ` (Order ID: #${order})`}
+                    {index === 0 && ` (Order ID: ${order.id})`}
                   </Typography>
-                  {step.date && <Typography variant='caption'>{step.date}</Typography>}
+                  {step?.createdAt && (
+                    <Typography variant='caption'>{formatDateToReadable(step?.createdAt)}</Typography>
+                  )}
                 </div>
-                <Typography className='mbe-2'>{step.subtitle}</Typography>
+                <Typography className='mbe-2'>{step.desc}</Typography>
               </TimelineContent>
             </TimelineItem>
           ))}

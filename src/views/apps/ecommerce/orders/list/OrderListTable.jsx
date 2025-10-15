@@ -803,7 +803,7 @@ const OrderListTable = ({
             <div className='flex items-center gap-1'>
               {/* <i className={classnames('bx-bxs-circle bs-2 is-2', platformInfo.colorClassName)} /> */}
               <Typography
-              
+
                 // color={`${orderPlatform[row.original.platform]?.color || 'default'}.main`}
                 className='font-medium'
               >
@@ -848,7 +848,7 @@ const OrderListTable = ({
                 }
               }}
               rows={2}
-              className=' bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
+              className='bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar'
               style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
               placeholder='—'
             />
@@ -1632,6 +1632,7 @@ const OrderListTable = ({
             message: 'Order created successfully!',
             severity: 'success'
           })
+        pagination
         }}
       />
       {/* Right-side Drawer for order details */}

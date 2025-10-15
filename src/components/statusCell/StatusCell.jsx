@@ -25,6 +25,8 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         ])
       } else if (status === 'onway') {
         setStatusArray([])
+      } else if (status === 'dispatching') {
+        setStatusArray([])
       } else {
         setStatusArray(
           Object.keys(statusChipColorForBooking).map(key => ({
