@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 // MUI Imports
@@ -21,6 +21,9 @@ import CustomTextField from '@core/components/mui/TextField'
 import { selectActiveCouriers } from '@/redux-store/slices/couriers'
 
 const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
+
+  console.log(data, 'data')
+
   // ✅ get active couriers from Redux
   const activeCouriers = useSelector(selectActiveCouriers)
 
@@ -33,18 +36,27 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
     [data]
   )
 
+  useEffect(() => {
+    if (!data) return
+
+    // Try to find the courier by id, platform, or name
+    const matchedCourier =
+      activeCouriers.find(
+        c =>
+          c.id === data.courier ||
+          c.name?.toLowerCase() === data.courier?.toLowerCase() ||
+          c.platform?.toLowerCase() === data.courier?.toLowerCase()
+      ) || null
+
+    setForm({
+      orderIds: data?.orderIds || [],
+      courier: matchedCourier?.id || '', // ✅ preselect actual id
+      reason: data?.reason || ''
+    })
+  }, [data, activeCouriers])
+
   const [form, setForm] = useState(initial)
   const [submitting, setSubmitting] = useState(false)
-
-  // ✅ Build dropdown options dynamically from API-loaded couriers
-  const options = useMemo(
-    () =>
-      activeCouriers?.map(courier => ({
-        value: courier.platform,
-        label: courier.name
-      })) || [],
-    [activeCouriers]
-  )
 
   const handleClose = () => {
     if (submitting) return
@@ -78,11 +90,9 @@ const EditCourierInfo = ({ open, setOpen, data, onSubmit }) => {
           done: () => setSubmitting(false)
         }
       )
-    }
-    catch (err) {
+    } catch (err) {
       console.error(err, 'Failed to edit courier info')
-    }
-    finally {
+    } finally {
       setSubmitting(false)
     }
   }

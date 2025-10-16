@@ -11,16 +11,19 @@ import MenuItem from '@mui/material/MenuItem'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
+import Cookies from 'js-cookie'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
 import CustomTextField from '@core/components/mui/TextField'
 import DialogCloseButton from '@components/dialogs/DialogCloseButton'
-import { useDispatch, useSelector } from 'react-redux'
 import { getAllRoles, getAllDepartments } from '@/redux-store/slices/roleSlice'
 import { createUserThunk, editUserThunk } from '@/redux-store/slices/authSlice'
+
+import { checkPermission, PERMISSIONS } from '@/hooks/Permissions'
 
 // Vars
 const initialData = {
@@ -35,8 +38,13 @@ const AddUserDrawer = props => {
 
   const isEdit = mode === 'edit'
 
+  const userCookie = Cookies.get('user')
+  const user = userCookie ? JSON.parse(userCookie) : null
+  const hasDepartmentView = checkPermission(PERMISSIONS['department.view'])
+
   // States
   const [formData, setFormData] = useState(initialData)
+  const [localDepartments, setLocalDepartments] = useState([])
   const dispatch = useDispatch()
   const { roles, departments } = useSelector(state => state.role)
   const authLoading = useSelector(state => state.auth.isLoading)
@@ -74,7 +82,12 @@ const AddUserDrawer = props => {
   useEffect(() => {
     if (open) {
       dispatch(getAllRoles({ params: { page: 1, limit: 100 }, force: false }))
-      dispatch(getAllDepartments({ params: { page: 1, limit: 100 }, force: false }))
+
+      if (hasDepartmentView) {
+        dispatch(getAllDepartments({ params: { page: 1, limit: 100 }, force: false }))
+      } else if (user?.department?._id && user?.department?.name) {
+        setLocalDepartments([user.department])
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -89,8 +102,10 @@ const AddUserDrawer = props => {
         lastName: data.lastName,
         email: data.email,
         roleId: data.role,
-        departmentId: data.department
+        departmentId: data.department,
+        departmentName: data.department?.name
       }
+
       await dispatch(editUserThunk(payload))
       handleClose()
       return
@@ -102,8 +117,12 @@ const AddUserDrawer = props => {
       lastName: data.lastName,
       email: data.email,
       roleId: data.role, // _id
-      departmentId: data.department // _id
+      departmentId: data.department,
+      departmentName: data.department?.name
     }
+
+    console.log(payload)
+
     const result = await dispatch(createUserThunk(payload))
 
     // The Redux store will automatically update with the new user from the API response
@@ -229,7 +248,7 @@ const AddUserDrawer = props => {
                 <MenuItem value='' disabled>
                   Select Department
                 </MenuItem>
-                {departments?.map(dept => (
+                {(hasDepartmentView ? departments : localDepartments)?.map(dept => (
                   <MenuItem key={dept?._id} value={dept?._id}>
                     {dept?.name}
                   </MenuItem>

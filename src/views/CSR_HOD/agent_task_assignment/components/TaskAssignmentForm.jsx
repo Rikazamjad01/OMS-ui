@@ -282,7 +282,7 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
             ) : (
               <>
                 <Divider />
-                <Grid container spacing={2}>
+                <Grid container spacing={2} className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
                   {agentOptions.map(agent => {
                     const count = assignedTasksMap?.[agent._id] ?? agentTaskCounts?.[agent._id] ?? 0
 

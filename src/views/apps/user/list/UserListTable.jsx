@@ -39,6 +39,7 @@ import {
 // Component Imports
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
+import { Menu } from '@mui/material'
 import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
@@ -54,7 +55,6 @@ import { getLocalizedUrl } from '@/utils/i18n'
 import tableStyles from '@core/styles/table.module.css'
 import { getAlUsersThunk, updateUserStatusThunk } from '@/redux-store/slices/authSlice'
 import { checkPermission } from '@/hooks/Permissions'
-import { Menu } from '@mui/material'
 
 // Styled Components
 const Icon = styled('i')({})

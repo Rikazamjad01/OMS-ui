@@ -21,7 +21,11 @@ import { toast } from 'react-toastify'
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
-import { fetchPlatformsThunk, addPlatformsThunk } from '@/redux-store/slices/taskAsssignment'
+import {
+  fetchPlatformsThunk,
+  addPlatformsThunk,
+  deleteUserFromPlatformThunk
+} from '@/redux-store/slices/taskAsssignment'
 
 const PlatformCreationForm = () => {
   const dispatch = useDispatch()
@@ -30,6 +34,7 @@ const PlatformCreationForm = () => {
   const [selectedAgents, setSelectedAgents] = useState([])
   const [selectedPlatforms, setSelectedPlatforms] = useState([])
   const [agents, setAgents] = useState([])
+  const [editModeId, setEditModeId] = useState(null)
 
   // const [platforms, setPlatforms] = useState([])
   const [loading, setLoading] = useState(false)
@@ -186,6 +191,26 @@ const PlatformCreationForm = () => {
 
   const isFormValid = selectedAgents.length > 0 && selectedPlatforms.length > 0
 
+  const handleRemoveAgent = async (platformId, userId) => {
+    try {
+      setLoading(true)
+      const res = await dispatch(deleteUserFromPlatformThunk({ platformId, userId }))
+
+      if (res.meta.requestStatus === 'fulfilled') {
+        toast.success('Agent removed successfully!')
+
+        // Refresh platforms to reflect updated state
+        dispatch(fetchPlatformsThunk({ limit: 10 }))
+      } else {
+        toast.error(res.payload || 'Failed to remove agent')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error removing agent')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Card>
       <CardHeader title='Platform Creation' />
@@ -268,7 +293,7 @@ const PlatformCreationForm = () => {
           <Stack spacing={3}>
             {platforms.map((item, i) => (
               <Card key={item?._id || i} variant='outlined'>
-                <CardContent>
+                <CardContent className='flex justify-between'>
                   <Box className='flex flex-col gap-3'>
                     <Box className='flex items-center gap-2'>
                       <Typography variant='subtitle1'>Platforms:</Typography>
@@ -278,14 +303,26 @@ const PlatformCreationForm = () => {
                         ))}
                       </Box>
                     </Box>
+
+                    {/* 🧩 Agents Section */}
                     <Box className='flex items-start gap-2'>
                       <Typography variant='subtitle1'>Agents:</Typography>
                       <Box className='flex flex-wrap gap-1'>
                         {item.agents?.map(a => (
-                          <Chip key={a._id} label={`${a.firstName} ${a.lastName}`} size='small' variant='tonal' />
+                          <Chip
+                            key={a._id}
+                            label={`${a.firstName} ${a.lastName}`}
+                            size='small'
+                            variant='filled'
+                            color={editModeId === item._id ? 'error' : 'default'}
+                            onDelete={editModeId === item._id ? () => handleRemoveAgent(item._id, a._id) : undefined}
+                            deleteIcon={editModeId === item._id ? undefined : null}
+                          />
                         ))}
                       </Box>
                     </Box>
+
+                    {/* Timestamps */}
                     <Typography variant='caption' color='text.secondary'>
                       Created:{' '}
                       {(() => {
@@ -301,6 +338,24 @@ const PlatformCreationForm = () => {
                       })()}
                     </Typography>
                   </Box>
+
+                  {/* 🧩 Edit / Done Toggle Button */}
+                  {editModeId === item._id ? (
+                    <Chip
+                      label='Done'
+                      color='success'
+                      variant='filled'
+                      onClick={() => setEditModeId(null)}
+                      className='cursor-pointer'
+                    />
+                  ) : (
+                    <Chip
+                      label='Edit'
+                      variant='outlined'
+                      className='cursor-pointer hover:bg-primary hover:text-white text-primary border-primary'
+                      onClick={() => setEditModeId(item._id)}
+                    />
+                  )}
                 </CardContent>
               </Card>
             ))}

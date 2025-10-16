@@ -436,7 +436,7 @@ const BookingListTable = ({
 
   const activeCouriers = useSelector(selectActiveCouriers)?.map(courier => ({
     label: courier.name,
-    value: courier.platform,
+    value: courier.id,
     id: courier.id
   }))
 
@@ -595,8 +595,6 @@ const BookingListTable = ({
 
       const addressObj = Array.isArray(order.address) && order.address.length > 0 ? order.address[0] : {}
       const fullAddress = addressObj.address1 || addressObj.address2 || ''
-
-      console.log(order, 'order')
 
       return {
         id: order.id,
@@ -851,66 +849,78 @@ const BookingListTable = ({
         }
       },
       {
-        accessorKey: 'courier', // fixed: lowercase
+        accessorKey: 'courier',
         header: 'Courier',
         cell: ({ row }) => {
-          const platform = row.original.platform?.toLowerCase()
-          const courier = activeCouriers.find(c => c.value.toLowerCase() === platform)
+          const courierName = row.original.platform?.toLowerCase() || 'unknown'
 
-          const platformInfo = courier
-            ? { text: courier.label, color: 'success', colorClassName: 'text-success' }
-            : { text: platform || 'Unknown', color: 'default', colorClassName: 'text-secondary' }
+          const couriers = activeCouriers.map(c => ({ id: c.id, label: c.label || c.value, value: c.value }))
+
+          console.log(courierName, 'courierName')
+
+          const displayName = couriers?.label || row.original.platform || 'Unknown'
 
           return (
             <OpenDialogOnElementClick
               element={Chip}
               elementProps={{
-                label: courierPlatforms[row.original.platform]?.text || row.original.platform || 'Unknown',
+                label: displayName,
                 variant: 'outlined',
                 size: 'small',
                 className: 'cursor-pointer'
               }}
               dialog={EditCourierInfo}
               dialogProps={{
-                data: (() => {
-                  const defaultCourier =
-                    activeCouriers.find(c => c.label.toLowerCase() === row.original.platform.toLowerCase())?.value ||
-                    'none'
-
-                  return {
-                    orderIds: [row.original.id],
-                    courier: defaultCourier,
-                    id: defaultCourier.id,
-                    reason: ''
-                  }
-                })(),
+                data: {
+                  orderIds: [row.original.id],
+                  courier: displayName,
+                  reason: ''
+                },
                 onSubmit: async (payload, controls) => {
                   try {
-                    // Destructure the required values from the payload
                     const { orderIds, courier, reason } = payload
+                    const selectedCourier = activeCouriers.find(c => c.value === courier)
 
-                    // The courier value from the form is the ID. Find the full courier object.
-                    const selectedCourier = activeCouriers.find(c => c.id === courier)
+                    console.log(selectedCourier, 'selectedCourier')
 
-                    console.log(selectedCourier, 'selectedCourier in handleCourierUpdate')
-
-                    const body = {
-                      orderId: [row.original.id] ?? [],
-                      courier: selectedCourier?.id,
-                      reason: reason
+                    if (!selectedCourier?.value) {
+                      setAlert({
+                        open: true,
+                        message: 'Please select a valid courier before submitting.',
+                        severity: 'error'
+                      })
+                      return
                     }
 
-                    console.log('Courier assignment body:', body)
+                    const body = {
+                      orderId: [row.original.id],
+                      courier: selectedCourier?.value, // name (since backend expects name)
+                      reason
+                    }
 
                     const res = await dispatch(courierAssignment(body)).unwrap()
 
-                    setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                    setAlert({
+                      open: true,
+                      message: res?.message || 'Courier updated',
+                      severity: 'success'
+                    })
                     controls?.close()
                     controls?.reset()
 
-                    await dispatch(fetchBookingOrders({ page: pagination.currentPage, limit: pagination.itemsPerPage, force: true }))
+                    await dispatch(
+                      fetchBookingOrders({
+                        page: pagination.currentPage,
+                        limit: pagination.itemsPerPage,
+                        force: true
+                      })
+                    )
                   } catch (err) {
-                    setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
+                    setAlert({
+                      open: true,
+                      message: err?.message || 'Failed to assign courier',
+                      severity: 'error'
+                    })
                   } finally {
                     controls?.done?.()
                   }
@@ -1417,7 +1427,7 @@ const BookingListTable = ({
         enableSorting: false
       }
     ],
-    [locale, tagsMap]
+    [activeCouriers, locale, tagsMap]
   )
 
   const [filters, setFilters] = useState({

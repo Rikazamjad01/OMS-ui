@@ -227,6 +227,23 @@ export const makeOrderPendingThunk = createAsyncThunk(
   }
 )
 
+export const deleteUserFromPlatformThunk = createAsyncThunk(
+  'platform/deleteUserFromPlatform',
+  async ({ platformId, userId }, { rejectWithValue }) => {
+    try {
+      const response = await postRequest('platform/deleteUserFromPlatform', { platformId, userId }, 'patch')
+
+      if (response.success) {
+        return { platformId, userId }
+      }
+
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const taskAsssignmentSlice = createSlice({
   name: 'taskAsssignment',
   initialState,
@@ -408,8 +425,35 @@ export const taskAsssignmentSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+      .addCase(deleteUserFromPlatformThunk.pending, state => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(deleteUserFromPlatformThunk.fulfilled, (state, action) => {
+        const { platformId, userId } = action.payload
+
+        // Update state.platforms to remove the user
+        state.platforms = state.platforms.map(platform => {
+          if (platform._id === platformId) {
+            return {
+              ...platform,
+              agents: platform.agents?.filter(agent => agent._id !== userId)
+            }
+          }
+
+          return platform
+        })
+
+        state.loading = false
+        state.error = null
+      })
+      .addCase(deleteUserFromPlatformThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.loading = false
+      })
+    }
   }
-})
+)
 
 export const { extractAgentsFromPlatform } = taskAsssignmentSlice.actions
 export default taskAsssignmentSlice.reducer
