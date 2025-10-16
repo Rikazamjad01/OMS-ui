@@ -48,7 +48,9 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
 
   // const [platforms, setPlatforms] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
-  const { platforms, extractedAgentsFromPlatform, unassignedTotal, assignedTasksMap, agentTaskCounts } = useSelector(state => state.taskAsssignment)
+  const { platforms, extractedAgentsFromPlatform, unassignedTotal, assignedTasksMap, agentTaskCounts } = useSelector(
+    state => state.taskAsssignment
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
@@ -64,14 +66,14 @@ const TaskAssignmentForm = ({ onCloseAssignmentForm }) => {
 
   // Fetch agents from API
   useEffect(() => {
-      if (selectedPlatform?._id) {
-        dispatch(extractAgentsFromPlatform({ id: selectedPlatform._id }))
-        setAssignedLoading(true)
-        dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
-          .unwrap()
-          .finally(() => setAssignedLoading(false))
-      }
-    }, [dispatch, selectedPlatform])
+    if (selectedPlatform?._id) {
+      dispatch(extractAgentsFromPlatform({ id: selectedPlatform._id }))
+      setAssignedLoading(true)
+      dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+        .unwrap()
+        .finally(() => setAssignedLoading(false))
+    }
+  }, [dispatch, selectedPlatform])
 
   const fetchPlatforms = async () => {
     try {
