@@ -38,7 +38,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
   const verticalNavOptions = useVerticalNav()
   const [mounted, setMounted] = useState(false)
   const [email, setEmail] = useState(null)
-
+  const user = Cookies.get('user')
+  const parsed = JSON.parse(user || '{}')
+  const isAdmin = parsed?.department?.name === 'administration'
   useEffect(() => {
     setMounted(true)
 
@@ -324,9 +326,11 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         {/* <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
           {dictionary['navigation'].settings}
         </MenuItem> */}
-        <MenuItem href={`/${locale}/couriers`} icon={<i className='bx-cog' />}>
-          {dictionary['navigation'].couriers}
-        </MenuItem>
+        {isAdmin && (
+          <MenuItem href={`/${locale}/couriers`} icon={<i className='bx-cog' />}>
+            {dictionary['navigation'].couriers}
+          </MenuItem>
+        )}
 
         {/* <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}> */}
         {/* <SubMenu label={dictionary['navigation'].login}>
