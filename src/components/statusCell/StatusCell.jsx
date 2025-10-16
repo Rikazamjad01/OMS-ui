@@ -27,6 +27,8 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         setStatusArray([])
       } else if (status === 'dispatching') {
         setStatusArray([])
+      } else if (status === 'cancelled') {
+        setStatusArray([])
       } else {
         setStatusArray(
           Object.keys(statusChipColorForBooking).map(key => ({
