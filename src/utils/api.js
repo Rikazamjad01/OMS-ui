@@ -58,7 +58,9 @@ export const getRequest = async endPoint => {
       Cookies.remove('email')
       Cookies.remove('user')
     }
+
     console.log(endPoint, 'response', response)
+
     if (response.status >= 200 && response.status < 300) {
       // console.log(response.data);
       return response.data

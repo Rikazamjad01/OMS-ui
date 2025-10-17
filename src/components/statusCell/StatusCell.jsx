@@ -19,8 +19,15 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
       if (status === 'confirmed') {
         setStatusArray([{ value: 'cancelled', label: 'Cancel' }])
       } else if (status === 'processing') {
-        setStatusArray([{ value: 'onWay', label: 'On Way' }])
+        setStatusArray([
+          { value: 'onWay', label: 'On Way' },
+          { value: 'cancelled', label: 'Cancel' },
+        ])
       } else if (status === 'onway') {
+        setStatusArray([])
+      } else if (status === 'dispatching') {
+        setStatusArray([])
+      } else if (status === 'cancelled') {
         setStatusArray([])
       } else {
         setStatusArray(

@@ -60,13 +60,23 @@ function isValidPakistaniPhone(phone) {
   return regex.test(s)
 }
 
-const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
+const CreateOrderDialog = ({ open, setOpen, onSuccess, pagination }) => {
   const dispatch = useDispatch()
   const allProducts = useSelector(selectProducts)
   const loading = useSelector(selectProductsLoading)
   const [loadings, setLoading] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
   const [searchQuery, setSearchQuery] = useState('')
+
+  console.log(pagination, 'pagination')
+
+  const defaultShipping = {
+    id: 1,
+    title: 'Standard Shipping',
+    code: 'Standard Shipping',
+    price: 180,
+    source: 'shopify'
+  }
 
   // Customer/order details
   const [orderData, setOrderData] = useState({
@@ -80,7 +90,8 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     province: '',
     zip: '',
     platform: '',
-    payment_gateway_names: ['Cash on Delivery']
+    payment_gateway_names: ['Cash on Delivery'],
+    shipping_line: defaultShipping
   })
 
   const [products, setProducts] = useState([])
@@ -190,7 +201,6 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
     setOrderData(prev => ({ ...prev, [field]: value }))
   }
 
-
   const addNewProduct = product => {
     if (products.find(p => p.id === product.id)) return
     setProducts(prev => [...prev, { ...product, quantity: 1 }])
@@ -264,12 +274,13 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
           province: '',
           zip: '',
           platform: '',
-          payment_gateway_names: ['Cash on Delivery']
+          payment_gateway_names: ['Cash on Delivery'],
+          shipping_line: '',
         })
         setHasPartialPayment(false)
         setPartialAmount('')
         setPartialAttachment(null)
-        dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
+        dispatch(fetchOrders({ page: 1, limit: 50, force: true }))
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed: ' + err, severity: 'error' }))
       .finally(() => setLoading(false))
@@ -403,8 +414,7 @@ const CreateOrderDialog = ({ open, setOpen, onSuccess }) => {
                   options={shipping_lines_data}
                   getOptionLabel={option => option.title}
                   value={orderData.shipping_line}
-                  onChange={(event, newValue) => updateField('shipping_line', newValue)}
-                  defaultValue={shipping_lines_data[0]}
+                  onChange={(event, newValue) => updateField('shipping_line', newValue || defaultShipping)}
                   renderInput={params => <TextField {...params} label='Shipping Method' fullWidth required />}
                 />
               </div>

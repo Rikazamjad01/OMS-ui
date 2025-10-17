@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField'
 
 import { Paper } from '@mui/material'
 
+import Cookies from 'js-cookie'
 import { updateOrderCommentsAndRemarks } from '@/redux-store/slices/order'
 
 // Component Imports
@@ -41,14 +42,18 @@ const CommentsAndRemarks = ({ order }) => {
 
   // const comments = order?.comments || []
   // const remarks = order?.remarks || []
-
+  console.log(comments, remarks, 'comments and remarks in orderComments')
   const dispatch = useDispatch()
+  const user = JSON.parse(Cookies.get('user') || '{}')
 
   const handleAddComment = () => {
     if (newComment.trim()) {
       const commentToAdd = newComment.trim()
 
-      setComments(prev => [...prev, commentToAdd])
+      setComments(prev => [
+        ...prev,
+        { comment: commentToAdd, createdBy: { firstName: user?.firstName, lastName: user?.lastName } }
+      ])
       setNewComment('')
       dispatch(
         updateOrderCommentsAndRemarks({
@@ -68,7 +73,10 @@ const CommentsAndRemarks = ({ order }) => {
     if (newRemark.trim()) {
       const remarkToAdd = newRemark.trim()
 
-      setRemarks(prev => [...prev, remarkToAdd])
+      setRemarks(prev => [
+        ...prev,
+        { remark: remarkToAdd, createdBy: { firstName: user?.firstName, lastName: user?.lastName } }
+      ])
       setNewRemark('')
 
       dispatch(
@@ -106,9 +114,9 @@ const CommentsAndRemarks = ({ order }) => {
           {comments.length > 0 ? (
             comments.map((c, i) => (
               <Paper key={i} variant='outlined' sx={{ p: 1.5, borderRadius: 2, mb: 1 }}>
-                <Typography variant='body2'>{c}</Typography>
+                <Typography variant='body2'>{c.comment}</Typography>
                 <Typography variant='subtitle2' color='text.secondary'>
-                  by {order.agentName || 'Unknown Agent'}
+                  by {c.createdBy?.firstName} {c.createdBy?.lastName || 'Unknown'}
                 </Typography>
               </Paper>
             ))
@@ -148,9 +156,9 @@ const CommentsAndRemarks = ({ order }) => {
           {remarks.length > 0 ? (
             remarks.map((r, i) => (
               <Paper key={i} variant='outlined' sx={{ p: 1.5, borderRadius: 2, mb: 1 }}>
-                <Typography variant='body2'>{r}</Typography>
+                <Typography variant='body2'>{r.remark}</Typography>
                 <Typography variant='subtitle2' color='text.secondary'>
-                  by {order.agentName || 'Unknown Agent'}
+                  by {r.createdBy?.firstName} {r.createdBy?.lastName || 'Unknown'}
                 </Typography>
               </Paper>
             ))

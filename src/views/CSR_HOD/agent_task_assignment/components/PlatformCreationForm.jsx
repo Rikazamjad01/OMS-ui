@@ -21,7 +21,11 @@ import { toast } from 'react-toastify'
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
-import { fetchPlatformsThunk, addPlatformsThunk } from '@/redux-store/slices/taskAsssignment'
+import {
+  fetchPlatformsThunk,
+  addPlatformsThunk,
+  deleteUserFromPlatformThunk
+} from '@/redux-store/slices/taskAsssignment'
 
 const PlatformCreationForm = () => {
   const dispatch = useDispatch()
@@ -30,9 +34,12 @@ const PlatformCreationForm = () => {
   const [selectedAgents, setSelectedAgents] = useState([])
   const [selectedPlatforms, setSelectedPlatforms] = useState([])
   const [agents, setAgents] = useState([])
+  const [editModeId, setEditModeId] = useState(null)
+
   // const [platforms, setPlatforms] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
   // const [success, setSuccess] = useState(false)
   // const [platformAssignments, setPlatformAssignments] = useState([])
   const [platformsLoading, setPlatformsLoading] = useState(false)
@@ -55,14 +62,16 @@ const PlatformCreationForm = () => {
   const fetchAgents = async () => {
     try {
       setLoading(true)
+
       // TODO: Replace with actual API call
       // const response = await dispatch(getUsers())
       // setAgents(response.data || [])
 
       // Mock data for now
       const response = await dispatch(getAlUsersThunk({ params: { role: 'agent' } }))
-      console.log(response)
+
       setAgents(response.payload.users || [])
+
       // Mock data for now
       // setAgents([
       //   {
@@ -94,7 +103,7 @@ const PlatformCreationForm = () => {
       // const list = res.payload?.data?.platformAssignment || []
       // setPlatformAssignments(list)
       const response = await dispatch(fetchPlatformsThunk({ limit: 10 }))
-      console.log(response)
+
       // setPlatformAssignments(response.payload.platformAssignment || [])
       // Mocked from provided response shape
       // const mock = {
@@ -141,26 +150,38 @@ const PlatformCreationForm = () => {
       setLoading(true)
       setError(null)
 
-      // Prepare API body
-      const requestBody = {
-        agents: selectedAgents.map(agent => agent._id),
-        platforms: selectedPlatforms.map(platform => platform.value)
+      const selectedPlatformValues = selectedPlatforms.map(p => p.value)
+      const selectedAgentIds = selectedAgents.map(a => a._id)
+
+      // 🧩 Check if this combination already exists in `platforms`
+      const duplicate = platforms.some(
+        item =>
+          item.platforms.some(p => selectedPlatformValues.includes(p)) &&
+          item.agents.some(a => selectedAgentIds.includes(a._id))
+      )
+
+      if (duplicate) {
+        toast.error('One or more selected agents are already assigned to this platform.')
+        setLoading(false)
+        return
       }
 
-      console.log('Platform Creation Request Body:', requestBody)
+      // ✅ Prepare API body if no duplicate found
+      const requestBody = {
+        agents: selectedAgentIds,
+        platforms: selectedPlatformValues
+      }
 
-      // TODO: Replace with actual API call
-      // await dispatch(createPlatformAssignment(requestBody))
       const response = await dispatch(addPlatformsThunk(requestBody))
-      console.log(response)
+
       if (response.meta.requestStatus === 'fulfilled') {
         toast.success('Platform assignment created successfully!')
         setSelectedAgents([])
         setSelectedPlatforms([])
+      } else {
+        toast.error(response.payload || 'Failed to create platform assignment')
       }
-      toast.error(response.payload || 'Failed to create platform assignment')
     } catch (err) {
-      console.log(err)
       toast.error(err.message || 'Failed to create platform assignment')
       setError(err.message || 'Failed to create platform assignment')
     } finally {
@@ -169,6 +190,26 @@ const PlatformCreationForm = () => {
   }
 
   const isFormValid = selectedAgents.length > 0 && selectedPlatforms.length > 0
+
+  const handleRemoveAgent = async (platformId, userId) => {
+    try {
+      setLoading(true)
+      const res = await dispatch(deleteUserFromPlatformThunk({ platformId, userId }))
+
+      if (res.meta.requestStatus === 'fulfilled') {
+        toast.success('Agent removed successfully!')
+
+        // Refresh platforms to reflect updated state
+        dispatch(fetchPlatformsThunk({ limit: 10 }))
+      } else {
+        toast.error(res.payload || 'Failed to remove agent')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error removing agent')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <Card>
@@ -252,7 +293,7 @@ const PlatformCreationForm = () => {
           <Stack spacing={3}>
             {platforms.map((item, i) => (
               <Card key={item?._id || i} variant='outlined'>
-                <CardContent>
+                <CardContent className='flex justify-between'>
                   <Box className='flex flex-col gap-3'>
                     <Box className='flex items-center gap-2'>
                       <Typography variant='subtitle1'>Platforms:</Typography>
@@ -262,27 +303,70 @@ const PlatformCreationForm = () => {
                         ))}
                       </Box>
                     </Box>
+
+                    {/* 🧩 Agents Section */}
                     <Box className='flex items-start gap-2'>
                       <Typography variant='subtitle1'>Agents:</Typography>
                       <Box className='flex flex-wrap gap-1'>
-                        {item.agents?.map(a => (
-                          <Chip key={a._id} label={`${a.firstName} ${a.lastName}`} size='small' variant='tonal' />
-                        ))}
+                        {item.agents?.map(a => {
+                          const isSingleAgent = item.agents.length === 1
+                          const isEditable = editModeId === item._id && !isSingleAgent
+
+                          return (
+                            <Chip
+                              key={a._id}
+                              label={`${a.firstName} ${a.lastName}`}
+                              size='small'
+                              variant='filled'
+                              color={isEditable ? 'error' : 'default'}
+                              onDelete={isEditable ? () => handleRemoveAgent(item._id, a._id) : undefined}
+                              deleteIcon={isEditable ? undefined : null}
+                            />
+                          )
+                        })}
                       </Box>
                     </Box>
+
+                    {/* Timestamps */}
                     <Typography variant='caption' color='text.secondary'>
                       Created:{' '}
                       {(() => {
                         const d = item?.createdAt ? new Date(item.createdAt) : null
+
                         return d ? d.toISOString().replace('T', ' ').slice(0, 19) : '—'
                       })()}{' '}
                       | Updated:{' '}
                       {(() => {
                         const d = item?.updatedAt ? new Date(item.updatedAt) : null
+
                         return d ? d.toISOString().replace('T', ' ').slice(0, 19) : '—'
                       })()}
                     </Typography>
                   </Box>
+
+                  {/* 🧩 Edit / Done Toggle Button */}
+                  {item.agents.length !== 1 &&
+                    (
+                      <>
+                        {editModeId === item._id ? (
+                          <Chip
+                            label='Done'
+                            color='success'
+                            variant='filled'
+                            onClick={() => setEditModeId(null)}
+                            className='cursor-pointer'
+                          />
+                        ) : (
+                          <Chip
+                            label='Edit'
+                            variant='outlined'
+                            className='cursor-pointer hover:bg-primary hover:text-white text-primary border-primary'
+                            onClick={() => setEditModeId(item._id)}
+                          />
+                        )}
+                      </>
+                    )
+                  }
                 </CardContent>
               </Card>
             ))}

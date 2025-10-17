@@ -16,6 +16,8 @@ import Button from '@mui/material/Button'
 import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
+import Cookies from 'js-cookie'
 import DialogCloseButton from '../DialogCloseButton'
 import CustomTextField from '@core/components/mui/TextField'
 
@@ -23,11 +25,9 @@ import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 
 // Redux
-import { useDispatch, useSelector } from 'react-redux'
 import { addRole, updateRole, getAllDepartments } from '@/redux-store/slices/roleSlice'
 
 // Cookies
-import Cookies from 'js-cookie'
 
 const RoleDialog = ({ open, setOpen, title, role }) => {
   const dispatch = useDispatch()
@@ -37,6 +37,7 @@ const RoleDialog = ({ open, setOpen, title, role }) => {
   const cookieUser = useMemo(() => {
     try {
       const str = Cookies.get('user')
+
       return str ? JSON.parse(str) : null
     } catch {
       return null
@@ -50,13 +51,16 @@ const RoleDialog = ({ open, setOpen, title, role }) => {
   // Group permissions by resource (before the dot), with actions as the part after the dot
   const groupedPermissions = useMemo(() => {
     const groups = {}
+
     for (const perm of availablePermissions) {
       if (!perm?.name) continue
       const [resource, action] = perm.name.split('.')
+
       if (!resource || !action) continue
       if (!groups[resource]) groups[resource] = []
       groups[resource].push({ _id: perm._id, action })
     }
+
     return groups
   }, [availablePermissions])
 
@@ -98,6 +102,12 @@ const RoleDialog = ({ open, setOpen, title, role }) => {
     } else {
       await dispatch(addRole(payload))
     }
+
+    setName('')
+    setDescription('')
+    setScopeType('organization')
+    setRefIds([])
+    setSelectedPermissions([])
 
     handleClose()
   }

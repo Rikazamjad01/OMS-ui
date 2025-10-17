@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 
-import { getRequest } from '@/utils/api' // your api.js helper
+import { getRequest, apiRequest } from '@/utils/api'
 
 // Async thunk to fetch single user
 export const fetchUser = createAsyncThunk('users/getUserById', async (userId, { rejectWithValue }) => {

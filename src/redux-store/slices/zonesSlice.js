@@ -67,8 +67,6 @@ export const updateZone = createAsyncThunk(
     try {
       const response = await postRequest(`zones/${id}`, { config: { cities }, couriers, name }, 'patch')
 
-      console.log('Update Zone Response:', response)
-
       if (response.status) {
         // If name was provided, override the server response
         if (name) {
@@ -88,8 +86,6 @@ export const updateZone = createAsyncThunk(
 export const removeCity = createAsyncThunk('zones/removeCity', async ({ id, city }, { rejectWithValue }) => {
   try {
     const response = await postRequest(`zones/remove-city/${id}`, { city }, 'patch')
-
-    console.log(response, 'response in removeCity')
 
     if (response.status) {
       return response.data

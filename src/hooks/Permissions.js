@@ -31,6 +31,7 @@ const toLower = v => (typeof v === 'string' ? v.toLowerCase() : '')
 
 const getUserFromCookie = () => {
   const raw = Cookies.get('user')
+
   if (!raw) return null
 
   // Already JSON string? Try to parse safely
@@ -44,6 +45,7 @@ const getUserFromCookie = () => {
 
 const extractPermissionNames = userObj => {
   if (!userObj || typeof userObj !== 'object') return []
+
   // Prefer role.permissions, else direct permissions
   const perms = Array.isArray(userObj?.role?.permissions)
     ? userObj.role.permissions
@@ -59,6 +61,7 @@ const extractPermissionNames = userObj => {
 
 export const getUserPermissions = () => {
   const userObj = getUserFromCookie()
+
   return extractPermissionNames(userObj)
 }
 
@@ -68,6 +71,7 @@ export const getUserPermissions = () => {
 //         'all'           → true only if user has all of them
 export const checkPermission = (permissionOrList, mode = 'any') => {
   const userPermissions = getUserPermissions()
+
   if (!permissionOrList) return false
 
   const baseRequested = Array.isArray(permissionOrList) ? permissionOrList.map(toLower) : [toLower(permissionOrList)]
@@ -75,10 +79,13 @@ export const checkPermission = (permissionOrList, mode = 'any') => {
   // Generate simple alias variants (e.g., orders.view -> order.view)
   const requested = baseRequested.flatMap(p => {
     const [maybePlural, ...rest] = p.split('.')
+
     if (maybePlural && maybePlural.endsWith('s')) {
       const singular = `${maybePlural.slice(0, -1)}${rest.length ? `.${rest.join('.')}` : ''}`
+
       return [p, singular]
     }
+
     return [p]
   })
 

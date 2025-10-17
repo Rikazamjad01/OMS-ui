@@ -24,8 +24,6 @@ export const fetchOrders = createAsyncThunk(
 
       const filterParams = {}
 
-      console.log('filters', filters)
-
       if (filters.amountMin) filterParams.min_total = filters.amountMin
       if (filters.amountMax) filterParams.max_total = filters.amountMax
       if (filters.dateFrom) filterParams.start_date = filters.dateFrom
@@ -126,6 +124,24 @@ export const updateOrderCommentsAndRemarks = createAsyncThunk(
   }
 )
 
+export const updateOrderRemarksThunk = createAsyncThunk(
+  'orders/updateRemarks',
+  async ({ id, remarks }, { rejectWithValue }) => {
+    try {
+      // Make the same API call your main thunk uses, but simplified
+      const response = await postRequest('orders/add', { id, remarks })
+
+      if (response.status) {
+        return { id, remarks: response.data?.remarks || remarks }
+      }
+
+      return rejectWithValue(response.message)
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const fetchOrderById = createAsyncThunk('orders/fetchOrderById', async (orderId, { rejectWithValue }) => {
   try {
     const response = await getRequest(`orders/${orderId}`)
@@ -197,8 +213,6 @@ export const updateOrderProducts = createAsyncThunk(
         quantity: p.quantity || 1,
         variant_id: p.variant?.id || p.id
       }))
-
-      console.log(line_items, 'line_items')
 
       const response = await apiRequest('orders', {
         method: 'PATCH',
@@ -343,6 +357,12 @@ export const uploadAttachmentThunk = createAsyncThunk('orders/uploadAttachment',
     return rejectWithValue(error.message)
   }
 })
+
+//  /make-order-pending
+// body: {
+//  userId: the id of the agent
+//  platform: the id of hte platform
+// }
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -510,6 +530,7 @@ const ordersSlice = createSlice({
         const { orderIds, newStatus: status } = action.payload
 
         state.orders = state.orders.map(order =>
+
           // orderIds.map(String).includes(String(order.id)) ? { ...order, status } : order
           orderIds.includes(order.id) ? { ...order, status } : order
         )
@@ -636,7 +657,6 @@ const ordersSlice = createSlice({
         //   if (current_total_discounts != null)
         //     state.selectedOrders.current_total_discounts = Number(current_total_discounts) || 0
         // }
-        console.log(current_total_price, 'current_total_price in addPartialPaymentThunk')
         state.orders = state.orders.map(o =>
           String(o.id) === String(id)
             ? {

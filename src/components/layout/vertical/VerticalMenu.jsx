@@ -1,6 +1,6 @@
 // Next Imports
-import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
@@ -9,6 +9,7 @@ import { useTheme } from '@mui/material/styles'
 import PerfectScrollbar from 'react-perfect-scrollbar'
 
 // Component Imports
+import Cookies from 'js-cookie'
 import { Menu, SubMenu, MenuItem, MenuSection } from '@menu/vertical-menu'
 import CustomChip from '@core/components/mui/Chip'
 
@@ -22,7 +23,6 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 // Style Imports
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
-import Cookies from 'js-cookie'
 import { checkPermission } from '@/hooks/Permissions'
 
 const RenderExpandIcon = ({ open, transitionDuration }) => (
@@ -38,12 +38,17 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
   const verticalNavOptions = useVerticalNav()
   const [mounted, setMounted] = useState(false)
   const [email, setEmail] = useState(null)
+  const user = Cookies.get('user')
+  const parsed = JSON.parse(user || '{}')
+  const isAdmin = parsed?.department?.name === 'administration'
 
   useEffect(() => {
     setMounted(true)
+
     try {
       const user = Cookies.get('user')
       const parsed = JSON.parse(user || '{}')
+
       setEmail(parsed?.email || null)
     } catch (err) {
       setEmail(null)
@@ -122,7 +127,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         )} */}
 
         {/* CUSTOMERS */}
-        {checkPermission('customers.view') && (
+        {checkPermission('customer.view') && (
           <MenuItem href={`/${locale}/apps/ecommerce/customers/list`} icon={<i className='bx-user' />}>
             {dictionary['navigation'].customers}
           </MenuItem>
@@ -224,7 +229,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             <MenuItem href={`/${locale}/apps/ecommerce/referrals`}>{dictionary['navigation'].referrals}</MenuItem>
             <MenuItem href={`/${locale}/apps/ecommerce/settings`}>{dictionary['navigation'].settings}</MenuItem>
           </SubMenu> */}
-        {mounted && checkPermission('products.view') && (
+        {mounted && checkPermission('product.view') && (
           <SubMenu label={dictionary['navigation'].products} icon={<i className='bx-box' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/products/list`}>{dictionary['navigation'].list}</MenuItem>
             {/* <MenuItem href={`/${locale}/apps/ecommerce/products/add`}>{dictionary['navigation'].add}</MenuItem> */}
@@ -319,9 +324,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           </SubMenu>
           */}
 
-          <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
-            {dictionary['navigation'].settings}
-          </MenuItem> 
+        {/* <MenuItem href={`/${locale}/setting`} icon={<i className='bx-cog' />}>
+          {dictionary['navigation'].settings}
+        </MenuItem> */}
+        {isAdmin && (
+          <MenuItem href={`/${locale}/couriers`} icon={<i className='bx-cog' />}>
+            {dictionary['navigation'].couriers}
+          </MenuItem>
+        )}
 
         {/* <SubMenu label={dictionary['navigation'].authPages} icon={<i className='bx-lock-open-alt' />}> */}
         {/* <SubMenu label={dictionary['navigation'].login}>

@@ -38,6 +38,8 @@ import {
 
 // Component Imports
 import { useDispatch, useSelector } from 'react-redux'
+import { toast } from 'react-toastify'
+import { Menu } from '@mui/material'
 import TableFilters from './TableFilters'
 import AddUserDrawer from './AddUserDrawer'
 import OptionMenu from '@core/components/option-menu'
@@ -51,9 +53,8 @@ import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import { getAlUsersThunk } from '@/redux-store/slices/authSlice'
+import { getAlUsersThunk, updateUserStatusThunk } from '@/redux-store/slices/authSlice'
 import { checkPermission } from '@/hooks/Permissions'
-import { toast } from 'react-toastify'
 
 // Styled Components
 const Icon = styled('i')({})
@@ -131,7 +132,7 @@ const UserListTable = ({ tableData }) => {
       const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email || 'Unknown'
 
       // Handle role mapping - check for roleName first (from createUserThunk), then role.name, then fallback
-      const roleName = (user.roleName || user.role?.name || 'subscriber').toLowerCase()
+      const roleName = (user.roleName || user.role?.name || 'subscriber')
 
       // Handle department mapping - check for departmentName first (from createUserThunk), then department.name, then fallback
       const departmentName = user.departmentName || user.department?.name || 'standard'
@@ -220,19 +221,13 @@ const UserListTable = ({ tableData }) => {
                   color: `var(--mui-palette-${userRoleObj[row.original.role]?.color || userRoleObj.subscriber.color}-main)`
                 }}
               />
-              <Typography className='capitalize' color='text.primary'>
-                {row.original.role}
-              </Typography>
+              <Typography color='text.primary'>{row.original.role}</Typography>
             </div>
           )
         }),
         columnHelper.accessor('currentPlan', {
           header: 'Department',
-          cell: ({ row }) => (
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.currentPlan}
-            </Typography>
-          )
+          cell: ({ row }) => <Typography color='text.primary'>{row.original.currentPlan}</Typography>
         }),
         columnHelper.accessor('billing', {
           header: 'Created at',
@@ -240,17 +235,49 @@ const UserListTable = ({ tableData }) => {
         }),
         columnHelper.accessor('status', {
           header: 'Status',
-          cell: ({ row }) => (
-            <div className='flex items-center gap-3'>
-              <Chip
-                variant='tonal'
-                label={row.original.status}
-                size='small'
-                color={userStatusObj[row.original.status]}
-                className='capitalize'
-              />
-            </div>
-          )
+          cell: ({ row }) => {
+            const [anchorEl, setAnchorEl] = useState(null)
+            const open = Boolean(anchorEl)
+
+            const handleMenuOpen = event => setAnchorEl(event.currentTarget)
+            const handleMenuClose = () => setAnchorEl(null)
+
+            const currentStatus = row.original.status
+            const oppositeStatus = currentStatus === 'active' ? 'inactive' : 'active'
+
+            const handleStatusChange = async () => {
+              try {
+                const response = await dispatch(
+                  updateUserStatusThunk({
+                    userId: row.original.id,
+                    newStatus: oppositeStatus
+                  })
+                ).unwrap()
+
+                toast.success(`User status changed to ${response.newStatus}`)
+              } catch (error) {
+                toast.error(error || 'Failed to update user status')
+              } finally {
+                handleMenuClose()
+              }
+            }
+
+            return (
+              <div className='flex items-center gap-3'>
+                <Chip
+                  variant='tonal'
+                  label={currentStatus}
+                  size='small'
+                  color={userStatusObj[currentStatus]}
+                  className='capitalize cursor-pointer'
+                  onClick={handleMenuOpen}
+                />
+                <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+                  <MenuItem onClick={handleStatusChange}>{oppositeStatus}</MenuItem>
+                </Menu>
+              </div>
+            )
+          }
         })
       ]
 
@@ -263,6 +290,7 @@ const UserListTable = ({ tableData }) => {
                 <IconButton
                   onClick={() => {
                     const full = allUsers?.find(u => (u._id || u.id) === row.original.id)
+
                     setSelectedUser(full || null)
                     setEditUserOpen(true)
                   }}
@@ -324,6 +352,7 @@ const UserListTable = ({ tableData }) => {
   const currentPageZeroBased = Math.max(0, Number(allUsersPagination.page) - 1 || 0)
   const currentLimit = Math.max(1, Number(allUsersPagination.limit) || 10)
   const totalCount = Math.max(0, Number(allUsersPagination.total) || 0)
+
   return (
     <>
       <Card>

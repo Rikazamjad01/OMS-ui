@@ -120,7 +120,7 @@ const CustomerDetails = ({ order }) => {
           <div className='flex flex-col gap-1'>
             <div className='flex justify-between items-center'>
               <Typography variant='h6'>Contact info</Typography>
-              <OpenDialogOnElementClick
+              {/* <OpenDialogOnElementClick
                 element={Typography}
                 elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
                 dialog={EditUserInfo}
@@ -136,7 +136,7 @@ const CustomerDetails = ({ order }) => {
                     address2: customer?.addresses?.[0]?.address2 || ''
                   }
                 }}
-              />
+              /> */}
             </div>
             <Typography variant='body2'>Email: {order.email || 'N/A'}</Typography>
             <Typography variant='body2'>

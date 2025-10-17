@@ -37,7 +37,7 @@ const BillingAddress = ({ address }) => {
         <div className='flex flex-col gap-2'>
           <div className='flex justify-between items-center'>
             <Typography variant='h6'>Billing Address</Typography>
-            <OpenDialogOnElementClick
+            {/* <OpenDialogOnElementClick
               element={Typography}
               elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
               dialog={AddAddress}
@@ -53,7 +53,7 @@ const BillingAddress = ({ address }) => {
                   contact: address.phone || ''
                 } : {}
               }}
-            />
+            /> */}
           </div>
           <div className='flex flex-col'>
             {address ? (
