@@ -308,17 +308,22 @@ const PlatformCreationForm = () => {
                     <Box className='flex items-start gap-2'>
                       <Typography variant='subtitle1'>Agents:</Typography>
                       <Box className='flex flex-wrap gap-1'>
-                        {item.agents?.map(a => (
-                          <Chip
-                            key={a._id}
-                            label={`${a.firstName} ${a.lastName}`}
-                            size='small'
-                            variant='filled'
-                            color={editModeId === item._id ? 'error' : 'default'}
-                            onDelete={editModeId === item._id ? () => handleRemoveAgent(item._id, a._id) : undefined}
-                            deleteIcon={editModeId === item._id ? undefined : null}
-                          />
-                        ))}
+                        {item.agents?.map(a => {
+                          const isSingleAgent = item.agents.length === 1
+                          const isEditable = editModeId === item._id && !isSingleAgent
+
+                          return (
+                            <Chip
+                              key={a._id}
+                              label={`${a.firstName} ${a.lastName}`}
+                              size='small'
+                              variant='filled'
+                              color={isEditable ? 'error' : 'default'}
+                              onDelete={isEditable ? () => handleRemoveAgent(item._id, a._id) : undefined}
+                              deleteIcon={isEditable ? undefined : null}
+                            />
+                          )
+                        })}
                       </Box>
                     </Box>
 
@@ -340,22 +345,28 @@ const PlatformCreationForm = () => {
                   </Box>
 
                   {/* 🧩 Edit / Done Toggle Button */}
-                  {editModeId === item._id ? (
-                    <Chip
-                      label='Done'
-                      color='success'
-                      variant='filled'
-                      onClick={() => setEditModeId(null)}
-                      className='cursor-pointer'
-                    />
-                  ) : (
-                    <Chip
-                      label='Edit'
-                      variant='outlined'
-                      className='cursor-pointer hover:bg-primary hover:text-white text-primary border-primary'
-                      onClick={() => setEditModeId(item._id)}
-                    />
-                  )}
+                  {item.agents.length !== 1 &&
+                    (
+                      <>
+                        {editModeId === item._id ? (
+                          <Chip
+                            label='Done'
+                            color='success'
+                            variant='filled'
+                            onClick={() => setEditModeId(null)}
+                            className='cursor-pointer'
+                          />
+                        ) : (
+                          <Chip
+                            label='Edit'
+                            variant='outlined'
+                            className='cursor-pointer hover:bg-primary hover:text-white text-primary border-primary'
+                            onClick={() => setEditModeId(item._id)}
+                          />
+                        )}
+                      </>
+                    )
+                  }
                 </CardContent>
               </Card>
             ))}

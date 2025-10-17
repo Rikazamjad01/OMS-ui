@@ -43,7 +43,8 @@ import {
   Menu,
   Drawer,
   IconButton,
-  Box
+  Box,
+  CircularProgress
 } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -473,7 +474,8 @@ const OrderListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true }))
+      dispatch(fetchOrders({ page: pagination.currentPage, limit, force: true, filters: emptyFilters }))
+      await setFilters(emptyFilters)
 
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
@@ -1560,7 +1562,7 @@ const OrderListTable = ({
             {loading ? (
               <tr>
                 <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                  Loading orders...
+                  <CircularProgress color='primary'></CircularProgress>
                 </td>
               </tr>
             ) : data.length > 0 ? (

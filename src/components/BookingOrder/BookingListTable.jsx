@@ -42,7 +42,8 @@ import {
   IconButton,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  CircularProgress
 } from '@mui/material'
 
 import { rankItem } from '@tanstack/match-sorter-utils'
@@ -98,7 +99,6 @@ import ConfirmationDialog from '../dialogs/confirmation-dialog'
 import {
   addPartialPaymentThunk,
   changeCityThunk,
-  fetchOrders,
   updateOrderAddressThunk,
   updateOrderCommentsAndRemarks,
   updateOrderRemarksThunk,
@@ -503,7 +503,8 @@ const BookingListTable = ({
       }
 
       // Refresh data
-      dispatch(fetchBookingOrders({ page: pagination.currentPage, limit, force: true }))
+      dispatch(fetchBookingOrders({ page: pagination.currentPage, limit, force: true, filters: emptyFilters }))
+      await setFilters(emptyFilters)
 
       // dispatch(updateOrdersStatus({ id: idsArray, status: newStatus}))
     } catch (error) {
@@ -1126,13 +1127,15 @@ const BookingListTable = ({
             <div className='flex flex-col gap-1'>
               {/* First row: Tags */}
               <div
-                className='flex gap-2 cursor-pointer overflow-scroll no-scrollbar'
-                onClick={() => openTagEditor(row.original.id, displayedTags)}
+                className='flex flex-col gap-2 cursor-default max-w-40 w-full overflow-scroll no-scrollbar'
+
+                // onClick={() => openTagEditor(row.original.id, displayedTags)}
                 role='button'
                 tabIndex={0}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
-                }}
+
+                // onKeyDown={e => {
+                //   if (e.key === 'Enter') openTagEditor(row.original.id, displayedTags)
+                // }}
               >
                 {hasTags ? (
                   displayedTags.map((tag, i) => (
@@ -2011,7 +2014,7 @@ const BookingListTable = ({
             {loading ? (
               <tr>
                 <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                  Loading orders...
+                  <CircularProgress color='primary' />
                 </td>
               </tr>
             ) : data.length > 0 ? (

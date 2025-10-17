@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 import Cookies from 'js-cookie'
+import { toast } from 'react-toastify'
 
 // Third-party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -107,6 +108,8 @@ const AddUserDrawer = props => {
       }
 
       await dispatch(editUserThunk(payload))
+      await toast.success('User updated successfully')
+      props.onSuccess?.()
       handleClose()
       return
     }

@@ -135,7 +135,7 @@ const ShippingActivity = ({ order }) => {
                     <Typography variant='caption'>{formatDateToReadable(step?.createdAt)}</Typography>
                   )}
                 </div>
-                <Typography className='mbe-2'>{step.desc}</Typography>
+                <Typography className='mbe-2'>{step.doneBy?.fullName || 'Unknown'}</Typography>
               </TimelineContent>
             </TimelineItem>
           ))}

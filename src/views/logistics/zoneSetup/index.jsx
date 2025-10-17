@@ -317,8 +317,6 @@ export default function ZoneSetup({ initialZone = null }) {
   const openNewZone = useCallback(() => {
     const label = generateUniqueZoneLabel()
 
-    console.log('Opening new zone with label:', label)
-
     // Clear the selected zone ID to indicate new zone creation
     setSelectedZoneId('')
     setSelectedCities([])
@@ -678,7 +676,6 @@ export default function ZoneSetup({ initialZone = null }) {
       const currentZoneName = rows[0]?.zone
       const payload = buildPayloadFromRows()
 
-      console.log('Saving with intended name:', currentZoneName)
 
       if (!selectedZoneId) {
         // Create - pass the name explicitly
@@ -696,13 +693,15 @@ export default function ZoneSetup({ initialZone = null }) {
             id: selectedZoneId,
             cities: payload.cities,
             couriers: payload.couriers,
-            name: currentZoneName // Pass name for updates too
+            name: currentZoneName
           })
         ).unwrap()
 
         setAlert({ open: true, message: 'Zone updated successfully', severity: 'success' })
+
         await dispatch(fetchZones())
-        hydrateFromApi(updated)
+        
+        // hydrateFromApi(updated)
       }
     } catch (e) {
       console.error('Error in handleSave:', e)

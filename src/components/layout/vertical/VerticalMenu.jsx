@@ -41,6 +41,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
   const user = Cookies.get('user')
   const parsed = JSON.parse(user || '{}')
   const isAdmin = parsed?.department?.name === 'administration'
+
   useEffect(() => {
     setMounted(true)
 

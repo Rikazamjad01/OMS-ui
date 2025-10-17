@@ -132,7 +132,7 @@ const UserListTable = ({ tableData }) => {
       const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email || 'Unknown'
 
       // Handle role mapping - check for roleName first (from createUserThunk), then role.name, then fallback
-      const roleName = (user.roleName || user.role?.name || 'subscriber').toLowerCase()
+      const roleName = (user.roleName || user.role?.name || 'subscriber')
 
       // Handle department mapping - check for departmentName first (from createUserThunk), then department.name, then fallback
       const departmentName = user.departmentName || user.department?.name || 'standard'

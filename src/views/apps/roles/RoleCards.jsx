@@ -80,7 +80,7 @@ const RoleCards = () => {
                 </div>
                 <div className='flex justify-between items-start'>
                   <div className='flex flex-col items-start gap-1'>
-                    <Typography variant='h5' className='uppercase'>
+                    <Typography variant='h5'>
                       {role?.name}
                     </Typography>
                     {role?.description ? (

@@ -43,6 +43,7 @@ import {
   selectIsLoading,
   clearError
 } from '@/redux-store/slices/authSlice'
+import { checkPermission } from '@/hooks/Permissions'
 
 // Styled Custom Components
 const LoginIllustration = styled('img')(({ theme }) => ({
@@ -110,8 +111,21 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const target = '/apps/ecommerce/orders/list'
-      router.replace(getLocalizedUrl(target, locale))
+      if (checkPermission('order.view')) {
+        const target = '/apps/ecommerce/orders/list'
+
+        router.replace(getLocalizedUrl(target, locale))
+
+      }
+      else if (checkPermission('courier.view')) {
+        // go to booking order list page
+        const target = `/bookingTeam`
+
+        router.replace(getLocalizedUrl(target, locale))
+      }
+
+      const permissionChecker = checkPermission('order.view')
+
     }
   }, [isAuthenticated, locale, router, searchParams])
 
