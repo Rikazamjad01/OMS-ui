@@ -676,7 +676,6 @@ export default function ZoneSetup({ initialZone = null }) {
       const currentZoneName = rows[0]?.zone
       const payload = buildPayloadFromRows()
 
-
       if (!selectedZoneId) {
         // Create - pass the name explicitly
         const created = await dispatch(createZone({ ...payload, name: currentZoneName })).unwrap()
@@ -700,7 +699,7 @@ export default function ZoneSetup({ initialZone = null }) {
         setAlert({ open: true, message: 'Zone updated successfully', severity: 'success' })
 
         await dispatch(fetchZones())
-        
+
         // hydrateFromApi(updated)
       }
     } catch (e) {
@@ -783,11 +782,7 @@ export default function ZoneSetup({ initialZone = null }) {
               getOptionLabel={option => option.label}
               isOptionEqualToValue={(option, value) => option.value === value.value}
               getOptionDisabled={option => usedCitiesSet.has(option.label) || selectedLabelSet.has(option.label)}
-              value={(selectedCities || []).map(c => {
-                const label = normalizeCity(c)
-
-                return { label, value: label }
-              })}
+              value={selectedCities}
               onChange={(_e, newValue) => setSelectedCities(newValue || [])}
               filterSelectedOptions
               renderTags={(value, getTagProps) =>
