@@ -19,7 +19,13 @@ import classnames from 'classnames'
 import { useDispatch } from 'react-redux'
 
 import { mergeOrders, splitOrder } from '@/utils/api'
-import { fetchOrderById, fetchOrderByIds, splitOrderProductSetting } from '@/redux-store/slices/order'
+import {
+  fetchOrderById,
+  fetchOrderByIds,
+  splitOrderProductSetting,
+  fetchOrders,
+  updateOrdersStatusThunk
+} from '@/redux-store/slices/order'
 import { generateAirwayBill, fetchBookingOrder, fetchBookingOrders } from '@/redux-store/slices/bookingSlice'
 
 const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }) => {
@@ -38,18 +44,20 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
   const isMerge = type === 'merge-orders' || type === 'merge-order'
   const isSplit = type === 'split-order'
   const isUpsell = type === 'upsell-order'
+  const isUpdateStatus = type === 'update-status'
   const isGenerateAwb = type === 'generate-airway-bill'
   const isGenerateAirwayBill = type === 'generate-airway-bill'
   const isDownloadLoadSheet = type === 'download-load-sheet'
   const isCancelAwb = type === 'cancel-awb'
   const Wrapper = type === 'suspend-account' ? 'div' : Fragment
+  const isActivateCourier = type === 'activate-courier'
+  const isDeactivateCourier = type === 'deactivate-courier'
+  const isDeleteCourier = type === 'delete-courier'
 
   // Initialize quantities when dialog opens
   useEffect(() => {
     if (isSplit && open && payload?.selectedLineItems) {
       const initial = {}
-
-      console.log(payload?.selectedLineItems, 'selectedLineItems')
 
       payload.selectedLineItems.forEach(item => {
         initial[item.id] = item.quantity // start with full qty
@@ -105,6 +113,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         if (response.status) {
           // dispatch(splitOrderProductSetting(enrichedResponse))
           dispatch(fetchOrderByIds(orderId))
+          dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
         }
       } else if (isDownloadLoadSheet) {
         onSuccess?.(payload) // Call site can trigger the actual download
@@ -138,8 +147,7 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           setResultSubtitle(`${successes?.length || 0} success${(successes?.length || 0) !== 1 ? 'es' : ''}.`)
         }
 
-        // Refresh bookings list
-        dispatch(fetchBookingOrders({ page: 1, limit: 25, force: true }))
+        onSuccess?.(payload)
       } else if (type === 'confirm-city') {
         const { orderId, city } = payload
 
@@ -154,6 +162,32 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
 
         // Let parent handle actual API dispatch
         onSuccess?.(payload)
+      } else if (isUpdateStatus) {
+        const orderIds = payload?.orderIds ?? []
+        const status = payload?.toStatusKey
+
+        if (!orderIds || !status) throw new Error('Order ID and status are required.')
+
+        try {
+          await dispatch(updateOrdersStatusThunk({ orderIds, status })).unwrap()
+          onSuccess?.(payload)
+        } catch (error) {
+          toast.error(error?.message || 'Failed to update order status')
+        }
+      } else if (isActivateCourier || isDeactivateCourier) {
+        const courierId = payload?.id
+
+        if (!courierId) throw new Error('Courier ID is required.')
+
+        // Delegate API handling to parent component
+        await onSuccess?.(payload)
+      } else if (isDeleteCourier) {
+        const courierId = payload?.id
+
+        if (!courierId) throw new Error('Courier ID is required.')
+
+        // Delegate API handling to parent component
+        await onSuccess?.(payload)
       }
 
       // Success
@@ -206,6 +240,14 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return `Do you want to confirm "${payload?.city}" city for this order?`
       case 'upsell-order':
         return 'Do you really want to upsell this order?'
+      case 'update-status':
+        return 'Do you really want to update this order status?'
+      case 'delete-courier':
+        return 'Delete Courier?'
+      case 'activate-courier':
+        return 'Activate Courier?'
+      case 'deactivate-courier':
+        return 'Deactivate Courier?'
       default:
         return 'Are you sure?'
     }
@@ -237,6 +279,14 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'Yes, Confirm City!'
       case 'upsell-order':
         return 'Yes, Upsell Order!'
+      case 'update-status':
+        return 'Yes, Update Status!'
+      case 'delete-courier':
+        return 'Yes, Delete'
+      case 'activate-courier':
+        return 'Yes, Activate'
+      case 'deactivate-courier':
+        return 'Yes, Dectivate'
       default:
         return 'Yes'
     }
@@ -272,6 +322,14 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
         return 'City Confirmed'
       case 'upsell-order':
         return 'Upsell Processed'
+      case 'update-status':
+        return 'Status Updated'
+      case 'delete-courier':
+        return 'Courier deleted successfully!'
+      case 'activate-courier':
+        return 'Courier Deactivated!'
+      case 'deactivate-courier':
+        return 'Courier Activated!'
       default:
         return 'Done'
     }
@@ -305,6 +363,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'City confirmed successfully.'
         case 'upsell-order':
           return 'Order upsell process initiated.'
+        case 'update-status':
+          return 'Order status updated successfully.'
         default:
           return 'Operation completed successfully.'
       }
@@ -335,6 +395,8 @@ const ConfirmationDialog = ({ open, setOpen, type, payload, onSuccess, onError }
           return 'City Confirmation Cancelled'
         case 'upsell-order':
           return 'Order Upsell Cancelled'
+        case 'update-status':
+          return 'Order Status Update Cancelled'
         default:
           return 'Action Cancelled'
       }

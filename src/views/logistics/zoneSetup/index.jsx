@@ -43,6 +43,12 @@ import {
   removeCity
 } from '@/redux-store/slices/zonesSlice'
 import cities from '@/data/cities/cities'
+import {
+  fetchCouriers,
+  selectActiveCouriers,
+  selectCouriers,
+  selectCouriersLoading
+} from '@/redux-store/slices/couriers'
 
 const courierOptions = [
   { value: 'none', label: 'None' },
@@ -94,6 +100,32 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Zone options derived from store; keep above effects that depend on them
   const zoneOptions = useMemo(() => (zones || []).map(z => ({ id: z._id || z.id, label: z.name, raw: z })), [zones])
+
+  const couriers = useSelector(selectCouriers)
+  const courierLoading = useSelector(selectCouriersLoading)
+  const activeCouriersFromStore = useSelector(selectActiveCouriers) || []
+
+  // Fetch active couriers if not loaded
+  useEffect(() => {
+    if ((!couriers || couriers.length === 0) && !courierLoading) {
+      dispatch(fetchCouriers({ active: true, force: true }))
+    }
+  }, [couriers, courierLoading, dispatch])
+
+  // Map exactly what comes from backend
+  const activeCouriers = useMemo(() => {
+    if (!Array.isArray(activeCouriersFromStore)) return []
+    return activeCouriersFromStore.map(courier => ({
+      id: courier.id ?? courier._id,
+      label: courier.name ?? courier.platform ?? 'Unnamed Courier',
+      value: courier.name ?? courier.platform ?? courier.id // ✅ real API name
+    }))
+  }, [activeCouriersFromStore])
+
+  // Include "None" as default + all active couriers
+  const courierOptions = useMemo(() => {
+    return [{ value: 'none', label: 'None' }, ...activeCouriers]
+  }, [activeCouriers])
 
   const dedupedZoneOptions = useMemo(() => {
     const seen = new Set()
@@ -285,8 +317,6 @@ export default function ZoneSetup({ initialZone = null }) {
   const openNewZone = useCallback(() => {
     const label = generateUniqueZoneLabel()
 
-    console.log('Opening new zone with label:', label)
-
     // Clear the selected zone ID to indicate new zone creation
     setSelectedZoneId('')
     setSelectedCities([])
@@ -383,9 +413,7 @@ export default function ZoneSetup({ initialZone = null }) {
                   : null
 
         if (key) {
-          const mapped = apiCourierToKey[c?.courierName] || 'none'
-
-          prMap[key] = mapped
+          prMap[key] = c?.courierName || 'none'
         }
       })
 
@@ -489,26 +517,26 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // Keep tabIndex in sync with selectedZoneId using the deduped list
   useEffect(() => {
-    const findId = selectedZoneId || '__new__';
-    const idx = (dynamicTabs || []).findIndex(z => z.id === findId);
+    const findId = selectedZoneId || '__new__'
+    const idx = (dynamicTabs || []).findIndex(z => z.id === findId)
 
     if (idx >= 0) {
-      setTabIndex(idx);
-      return;
+      setTabIndex(idx)
+      return
     }
 
-    const firstExistingIdx = (dynamicTabs || []).findIndex(z => z.id !== '__new__');
+    const firstExistingIdx = (dynamicTabs || []).findIndex(z => z.id !== '__new__')
 
     if (firstExistingIdx >= 0) {
-      setTabIndex(firstExistingIdx);
-      setSelectedZoneId(dynamicTabs[firstExistingIdx].id);
+      setTabIndex(firstExistingIdx)
+      setSelectedZoneId(dynamicTabs[firstExistingIdx].id)
     } else if ((dynamicTabs || []).length > 0) {
       // only the new tab exists
-      setTabIndex(dynamicTabs.length - 1);
-      setSelectedZoneId('');
+      setTabIndex(dynamicTabs.length - 1)
+      setSelectedZoneId('')
     } else {
-      setTabIndex(0);
-      setSelectedZoneId('');
+      setTabIndex(0)
+      setSelectedZoneId('')
     }
   }, [dynamicTabs, selectedZoneId])
 
@@ -573,9 +601,29 @@ export default function ZoneSetup({ initialZone = null }) {
 
   // console.log(cityOptions, 'cityOptions here')
 
-  const filteredCityOptions = cityOptions.filter(
-    opt => !rows.some(row => row.city.toLowerCase() === opt.label.toLowerCase())
-  )
+  const filteredCityOptions = useMemo(() => {
+    // Get all cities that are currently used in ANY zone (from server data)
+    const allUsedCities = new Set()
+
+    // Add cities from all zones in the store
+    ;(zones || []).forEach(zone => {
+      ;(zone.config?.cities || []).forEach(city => {
+        allUsedCities.add(normalizeCity(city).toLowerCase())
+      })
+    })
+
+    // Add cities from current rows (being edited)
+    rows.forEach(row => {
+      const city = normalizeCity(row.city)
+
+      if (city) {
+        allUsedCities.add(city.toLowerCase())
+      }
+    })
+
+    // Filter cityOptions to exclude any cities that are already used
+    return cityOptions.filter(opt => !allUsedCities.has(opt.label.toLowerCase()))
+  }, [cityOptions, zones, rows, normalizeCity])
 
   const canAddCity = useMemo(() => (selectedCities || []).length > 0, [selectedCities])
 
@@ -591,10 +639,21 @@ export default function ZoneSetup({ initialZone = null }) {
     const priorities = [head.priority1, head.priority2, head.priority3, head.priority4]
 
     const couriers = priorities
-      .map((k, idx) => ({ key: k || 'none', pr: `PR${idx + 1}` }))
+      .map((key, idx) => {
+        const match = courierOptions.find(c => c.value === key)
+
+        return {
+          key: key || 'none',
+          id: match?.id || null,
+          pr: `PR${idx + 1}`
+        }
+      })
       .filter(p => p.key && p.key !== 'none')
 
-    const couriersApi = couriers.map(p => ({ priority: p.pr, courierName: keyToApiCourier[p.key] || 'None' }))
+    const couriersApi = couriers.map(p => ({
+      priority: p.pr,
+      courierName: p.id
+    }))
 
     const payload = {
       name,
@@ -617,7 +676,6 @@ export default function ZoneSetup({ initialZone = null }) {
       const currentZoneName = rows[0]?.zone
       const payload = buildPayloadFromRows()
 
-      console.log('Saving with intended name:', currentZoneName)
 
       if (!selectedZoneId) {
         // Create - pass the name explicitly
@@ -635,13 +693,15 @@ export default function ZoneSetup({ initialZone = null }) {
             id: selectedZoneId,
             cities: payload.cities,
             couriers: payload.couriers,
-            name: currentZoneName // Pass name for updates too
+            name: currentZoneName
           })
         ).unwrap()
 
         setAlert({ open: true, message: 'Zone updated successfully', severity: 'success' })
+
         await dispatch(fetchZones())
-        hydrateFromApi(updated)
+        
+        // hydrateFromApi(updated)
       }
     } catch (e) {
       console.error('Error in handleSave:', e)
@@ -718,8 +778,6 @@ export default function ZoneSetup({ initialZone = null }) {
           <Grid size={{ xs: 12, md: 9 }}>
             <Autocomplete
               multiple
-              
-              // pedz
               disableCloseOnSelect
               options={filteredCityOptions}
               getOptionLabel={option => option.label}
@@ -894,16 +952,28 @@ export default function ZoneSetup({ initialZone = null }) {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Chip label={row.priority1 || 'none'} size='small' />
+                      <Chip
+                        label={courierOptions.find(opt => opt.value === row.priority1)?.label || 'none'}
+                        size='small'
+                      />
                     </TableCell>
                     <TableCell>
-                      <Chip label={row.priority2 || 'none'} size='small' />
+                      <Chip
+                        label={courierOptions.find(opt => opt.value === row.priority2)?.label || 'none'}
+                        size='small'
+                      />
                     </TableCell>
                     <TableCell>
-                      <Chip label={row.priority3 || 'none'} size='small' />
+                      <Chip
+                        label={courierOptions.find(opt => opt.value === row.priority3)?.label || 'none'}
+                        size='small'
+                      />
                     </TableCell>
                     <TableCell>
-                      <Chip label={row.priority4 || 'none'} size='small' />
+                      <Chip
+                        label={courierOptions.find(opt => opt.value === row.priority4)?.label || 'none'}
+                        size='small'
+                      />
                     </TableCell>
                     <TableCell align='right' className='flex gap-2'>
                       <Tooltip title='Delete row'>

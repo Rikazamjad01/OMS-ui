@@ -36,7 +36,7 @@ const ShippingAddress = ({ address }) => {
       <CardContent className='flex flex-col gap-2'>
         <div className='flex justify-between items-center'>
           <Typography variant='h6'>Shipping Address</Typography>
-          <OpenDialogOnElementClick
+          {/* <OpenDialogOnElementClick
             element={Typography}
             elementProps={typographyProps('Edit', 'primary', 'cursor-pointer font-medium')}
             dialog={AddAddress}
@@ -52,7 +52,7 @@ const ShippingAddress = ({ address }) => {
                 contact: address.phone || ''
               } : {}
             }}
-          />
+          /> */}
         </div>
         <div className='flex flex-col'>
           {address ? (

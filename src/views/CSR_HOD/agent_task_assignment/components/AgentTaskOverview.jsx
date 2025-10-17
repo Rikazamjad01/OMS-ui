@@ -18,13 +18,14 @@ import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 
 // App Imports
+import { toast } from 'react-toastify'
 import {
   fetchPlatformsThunk,
   fetchAssignedTasksThunk,
   extractAgentsFromPlatform,
-  markAbsentAndReassignThunk
+  markAbsentAndReassignThunk,
+  makeOrderPendingThunk
 } from '@/redux-store/slices/taskAsssignment'
-import { toast } from 'react-toastify'
 
 const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
   const dispatch = useDispatch()
@@ -63,15 +64,31 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
     }
   }, [dispatch, selectedPlatform])
 
-  // Optional: keep function if needed elsewhere
-  const handleMarkAbsent = async () => {}
+  const handleMarkAbsent = async () => {
+    if (!selectedPlatform?._id || !absentAgent?._id) return
+
+    await dispatch(
+      makeOrderPendingThunk({
+        platform: selectedPlatform._id,
+        absentAgentId: absentAgent._id
+      })
+    ).unwrap()
+    dispatch(fetchAssignedTasksThunk({ platform: selectedPlatform._id }))
+      .unwrap()
+      .finally(() => setAssignedLoading(false))
+    toast.success('Tasks Made Pending')
+
+    // dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
+  }
 
   const handleReassign = async () => {
     if (!selectedPlatform?._id || !absentAgent?._id || (reassignToAgents || []).length === 0) return
+
     if (reassignToAgents.some(a => a?._id === absentAgent._id)) {
       toast.error('Cannot reassign to the same agent')
       return
     }
+
     await dispatch(
       markAbsentAndReassignThunk({
         platform: selectedPlatform._id,
@@ -83,7 +100,8 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
       .unwrap()
       .finally(() => setAssignedLoading(false))
     toast.success('Tasks reassigned')
-    dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
+
+    // dispatch(fetchAgentTaskCountsThunk({ platformId: selectedPlatform._id }))
   }
 
   return (
@@ -115,6 +133,7 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
                 <Grid container spacing={2}>
                   {agentOptions.map(agent => {
                     const count = assignedTasksMap?.[agent._id] ?? agentTaskCounts?.[agent._id] ?? 0
+
                     return (
                       <Grid item xs={12} md={6} lg={4} key={agent._id}>
                         <Card variant='outlined'>
@@ -185,14 +204,21 @@ const AgentTaskOverview = ({ onOpenAssignmentForm }) => {
               />
             </Grid>
             <Grid item xs={12} md={4}>
-              <Box className='flex gap-2'>
+              <Box className='flex gap-4'>
                 {/* Mark Absent handled via mark-absent API on reassign */}
                 <Button
                   variant='contained'
                   onClick={handleReassign}
-                  disabled={!selectedPlatform || !absentAgent || (reassignToAgents || []).length === 0 || loading}
+                  disabled={!selectedPlatform || !reassignToAgents.length || !absentAgent || loading}
                 >
                   Reassign Tasks
+                </Button>
+                <Button
+                  variant='contained'
+                  disabled={!selectedPlatform || !absentAgent || loading}
+                  onClick={handleMarkAbsent}
+                >
+                  Make Tasks Spending
                 </Button>
               </Box>
             </Grid>

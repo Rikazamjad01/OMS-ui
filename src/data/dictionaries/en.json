@@ -15,10 +15,10 @@
         "CSRHead": "CSR HOD",
         "agentTaskAssignment": "Agent Task Assignment",
         "setupComissions": "Setup Comissions",
-        "courier": "Courier",
+        "couriers": "Couriers Settings",
         "Agents": "Agents",
         "returnCouriers": "Couriers Details",
-        "booking": "Booking Order Team",
+        "booking": "Booking Order",
         "bookingList": "List",
         "academy": "Academy",
         "logistics": "Logistics",
@@ -41,7 +41,7 @@
         "manageReviews": "Manage Reviews",
         "referrals": "Referrals",
         "settings": "Settings",
-        
+
         "myCourses": "My Courses",
         "courseDetails": "Course Details",
         "fleet": "Fleet",

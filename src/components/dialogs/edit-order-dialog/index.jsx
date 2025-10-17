@@ -21,7 +21,7 @@ import { Add, Remove } from '@mui/icons-material'
 
 // Redux
 import { fetchProducts, selectProducts, selectProductsLoading } from '@/redux-store/slices/products'
-import { fetchOrderById, fetchOrderByIds, updateOrderProducts } from '@/redux-store/slices/order'
+import { fetchOrderById, fetchOrderByIds, fetchOrders, updateOrderProducts } from '@/redux-store/slices/order'
 
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
@@ -137,6 +137,7 @@ const EditOrderDialog = ({ open, setOpen, order, onSuccess }) => {
       .then(() => {
         dispatch(fetchOrderByIds(order.id))
         setOpen(false)
+        dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
       })
       .catch(err => setSnackbar({ open: true, message: 'Failed to update order: ' + err, severity: 'error' }))
       .finally(() => setIsUpselling(false))

@@ -48,7 +48,13 @@ import Link from '@components/Link'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import { handleOrder, handleFindOrder, selectOrders, setSelectedProducts } from '@/redux-store/slices/order'
+import {
+  handleOrder,
+  handleFindOrder,
+  selectOrders,
+  setSelectedProducts,
+  fetchOrders
+} from '@/redux-store/slices/order'
 import EditOrderModal from './EditOrderModal'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
 
@@ -422,6 +428,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
       await dispatch(updateOrderDiscountThunk({ id: order?.id, discountedPrice: parsed })).unwrap()
       setSnackbar({ open: true, message: 'Discount updated successfully.', severity: 'success' })
       setDiscountModalOpen(false)
+      await dispatch(fetchOrders({ page: 1, limit: 25, force: true }))
     } catch (err) {
       setSnackbar({ open: true, message: err || 'Failed to update discount.', severity: 'error' })
     } finally {

@@ -1,5 +1,5 @@
-import { getRequest, postRequest } from '@/utils/api'
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { getRequest, postRequest } from '@/utils/api'
 
 const initialState = {
   roles: [],
@@ -17,14 +17,18 @@ export const getAllRoles = createAsyncThunk(
     try {
       const state = getState().role
       const { roles, rolePagination } = state
+
       if (roles.length > 1 && !force) {
         // Return in the same shape as API response
         return { roles, pagination: rolePagination }
       }
+
       const response = await getRequest(`roles/getRoles?${new URLSearchParams(params)}`)
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -38,14 +42,18 @@ export const getAllDepartments = createAsyncThunk(
     try {
       const state = getState().role
       const { departments, departmentPagination } = state
+
       if (departments.length > 0 && !force) {
         // Return in the same shape as API response
         return { departments, pagination: departmentPagination }
       }
+
       const response = await getRequest(`departments/getDepartments?${new URLSearchParams(params)}`)
+
       if (response.success) {
         return response.data
       }
+
       return rejectWithValue(response.message)
     } catch (error) {
       return rejectWithValue(error.message)
@@ -56,9 +64,11 @@ export const getAllDepartments = createAsyncThunk(
 export const addRole = createAsyncThunk('role/add', async (data, { rejectWithValue }) => {
   try {
     const response = await postRequest('roles/addRole', data)
+
     if (response.success) {
       return response
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -77,9 +87,11 @@ export const updateRole = createAsyncThunk('role/update', async (data, { rejectW
       },
       'put'
     )
+
     if (response.success) {
       return response
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -89,9 +101,11 @@ export const updateRole = createAsyncThunk('role/update', async (data, { rejectW
 export const addDepartment = createAsyncThunk('department/add', async (data, { rejectWithValue }) => {
   try {
     const response = await postRequest('departments/addDepartment', data)
+
     if (response.success) {
       return response
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
@@ -102,9 +116,11 @@ export const updateDepartment = createAsyncThunk('department/update', async (dat
   try {
     const { _id, ...rest } = data
     const response = await postRequest(`departments/updateDepartment/${_id}`, rest, 'put')
+
     if (response.success) {
       return response
     }
+
     return rejectWithValue(response.message)
   } catch (error) {
     return rejectWithValue(error.message)
