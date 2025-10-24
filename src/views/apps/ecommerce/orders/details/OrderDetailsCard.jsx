@@ -53,13 +53,14 @@ import {
   handleFindOrder,
   selectOrders,
   setSelectedProducts,
-  fetchOrders
+  fetchOrders,
+  updateOrderDiscountThunk
 } from '@/redux-store/slices/order'
 import EditOrderModal from './EditOrderModal'
 import OpenDialogOnElementClick from '@/components/dialogs/OpenDialogOnElementClick'
 
 import EditOrderDialog from '@components/dialogs/edit-order-dialog'
-import { updateOrderDiscountThunk } from '@/redux-store/slices/order'
+import { checkPermission } from '@/hooks/Permissions'
 
 // 💰 Price formatter for PKR
 const formatPrice = amount => {
@@ -140,6 +141,7 @@ const OrderTable = ({ data, onSelectionChange }) => {
         header: 'Qty',
         cell: ({ row }) => <Typography>{row.original.quantity}</Typography>
       }),
+
       // columnHelper.accessor('discountedPrice', {
       //   header: 'Discounted Price',
       //   cell: ({ row }) => {
@@ -379,6 +381,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
   // 💰 Calculations
   const subtotal = tableData.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
   // const discountedSubtotal = tableData.reduce((acc, item) => acc + item.discountedPrice * item.quantity, 0)
   const discountedSubtotal = Number(order?.current_total_discounts) || 0
   const shippingFee = Number(order?.shipping_lines?.[0]?.price) || 0
@@ -397,13 +400,16 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
     // if (base > 0) {
     currentPercent = Math.round((Number(discountedSubtotal) / base) * 100)
+
     // }
 
     // Find nearest allowed percent
     let nearest = allowedPercents[0]
     let minDiff = Math.abs(nearest - currentPercent)
+
     for (const p of allowedPercents) {
       const d = Math.abs(p - currentPercent)
+
       if (d < minDiff) {
         minDiff = d
         nearest = p
@@ -412,6 +418,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
 
     setDiscountPercent(String(currentPercent || ''))
     const computedValue = Math.max(0, Math.round((nearest / 100) * base))
+
     setDiscountValue(computedValue)
     setDiscountModalOpen(true)
   }
@@ -419,6 +426,7 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
   const handleSubmitDiscount = async () => {
     setDiscountedLoading(true)
     const parsed = Number(discountPercent || discountedSubtotalInput)
+
     if (Number.isNaN(parsed)) {
       setSnackbar({ open: true, message: 'Please enter a valid number.', severity: 'error' })
       return
@@ -450,20 +458,26 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
     className
   })
 
+  const canUpdateOrder = checkPermission('orders.update')
+
   return (
     <Card>
       <CardHeader
         title='Order Details'
         action={
-          <OpenDialogOnElementClick
-            element={Typography}
-            elementProps={typographyProps('Upsell & Edit', 'primary', 'cursor-pointer font-medium')}
-            dialog={EditOrderDialog}
-            dialogProps={{
-              order,
-              products: orderProducts // Pass transformed products here
-            }}
-          />
+          <>
+            {canUpdateOrder && (
+              <OpenDialogOnElementClick
+                element={Typography}
+                elementProps={typographyProps('Upsell & Edit', 'primary', 'cursor-pointer font-medium')}
+                dialog={EditOrderDialog}
+                dialogProps={{
+                  order,
+                  products: orderProducts // Pass transformed products here
+                }}
+              />
+            )}
+          </>
         }
       />
 
@@ -485,9 +499,11 @@ const OrderDetailsCard = ({ order: initialOrder }) => {
               <Typography variant='h6' onClick={handleOpenDiscountModal} className='cursor-pointer'>
                 {formatPrice(discountedSubtotal)}
               </Typography>
-              <IconButton size='small' onClick={handleOpenDiscountModal} aria-label='Edit discounted subtotal'>
-                <i className='bx-edit' />
-              </IconButton>
+              {canUpdateOrder && (
+                <IconButton size='small' onClick={handleOpenDiscountModal} aria-label='Edit discounted subtotal'>
+                  <i className='bx-edit' />
+                </IconButton>
+              )}
             </div>
           </div>
           <div className='flex items-center gap-12'>

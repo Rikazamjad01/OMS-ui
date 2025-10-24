@@ -23,6 +23,7 @@ import {
 import ConfirmationDialog from '@components/dialogs/confirmation-dialog'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 import { selectSelectedProducts } from '@/redux-store/slices/products'
+import { checkPermission } from '@/hooks/Permissions'
 
 export const paymentStatus = {
   paid: { text: 'Paid', color: 'success' },
@@ -109,6 +110,8 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
     setSnackbar(prev => ({ ...prev, open: false }))
   }
 
+  const canUpdateOrder = checkPermission('order.update')
+
   return (
     <>
       <div className='flex flex-wrap justify-between sm:items-center max-sm:flex-col gap-y-4'>
@@ -145,7 +148,7 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
 
         <div className={'flex gap-2'}>
           {/* 👇 Hide Cancel Order button if already cancelled */}
-          {order?.orderStatus !== 'cancelled' && (
+          {order?.orderStatus !== 'cancelled' && canUpdateOrder && (
             <OpenDialogOnElementClick
               element={Button}
               elementProps={{ color: 'error', variant: 'tonal', children: 'Cancel Order' }}
@@ -160,34 +163,36 @@ const OrderDetailHeader = ({ order: initialOrder, id }) => {
             />
           )}
 
-          <OpenDialogOnElementClick
-            element={Button}
-            elementProps={{
-              children: 'Split Order',
-              color: 'success',
-              variant: 'tonal',
-              disabled: !canSplitOrder || selectedProductIds.length === 0
-            }}
-            dialog={ConfirmationDialog}
-            dialogProps={{
-              type: 'split-order',
-              payload: {
-                orderIds: order.id,
-                selectedLineItems: selectedProductIds?.map(id => {
-                  const product = order?.line_items?.find(item => item.id === id)
-                  const prodName = order?.products?.find(item => item.id === id) || {}
+          {canUpdateOrder && (
+            <OpenDialogOnElementClick
+              element={Button}
+              elementProps={{
+                children: 'Split Order',
+                color: 'success',
+                variant: 'tonal',
+                disabled: !canSplitOrder || selectedProductIds.length === 0
+              }}
+              dialog={ConfirmationDialog}
+              dialogProps={{
+                type: 'split-order',
+                payload: {
+                  orderIds: order.id,
+                  selectedLineItems: selectedProductIds?.map(id => {
+                    const product = order?.line_items?.find(item => item.id === id)
+                    const prodName = order?.products?.find(item => item.id === id) || {}
 
-                  return {
-                    id: product?.id,
-                    quantity: product?.quantity,
-                    name: prodName?.title,
-                    img: prodName?.image?.src,
-                    prodVarientId: product?.variant_id
-                  }
-                })
-              }
-            }}
-          />
+                    return {
+                      id: product?.id,
+                      quantity: product?.quantity,
+                      name: prodName?.title,
+                      img: prodName?.image?.src,
+                      prodVarientId: product?.variant_id
+                    }
+                  })
+                }
+              }}
+            />
+          )}
         </div>
       </div>
 

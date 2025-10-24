@@ -132,7 +132,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             {dictionary['navigation'].customers}
           </MenuItem>
         )}
-        {checkPermission('customers.view') && (
+        {/* {checkPermission('customers.view') && (
           <SubMenu label={dictionary['navigation'].customers} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/apps/ecommerce/customers/list`}>{dictionary['navigation'].list}</MenuItem>
             <MenuItem
@@ -143,7 +143,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               {dictionary['navigation'].details}
             </MenuItem>
           </SubMenu>
-        )}
+        )} */}
         {/* <SubMenu label={dictionary['navigation'].academy} icon={<i className='bx-book-open' />}>
             <MenuItem href={`/${locale}/apps/academy/dashboard`}>{dictionary['navigation'].dashboard}</MenuItem>
             <MenuItem href={`/${locale}/apps/academy/my-courses`}>{dictionary['navigation'].myCourses}</MenuItem>
@@ -153,9 +153,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           </SubMenu> */}
 
         {/* Booking Team Section */}
-        {mounted && checkPermission('courier.view') && (
+        {mounted && (checkPermission('courier.view') || checkPermission('dispatch.view')) && (
           <MenuItem href={`/${locale}/bookingTeam`} icon={<i className='bx-group' />}>
-            {dictionary['navigation'].booking}
+            {checkPermission('courier.view') ? dictionary['navigation'].booking : dictionary['navigation'].shipping}
           </MenuItem>
         )}
 

@@ -39,7 +39,7 @@ export const addCourier = createAsyncThunk('couriers/addCourier', async (payload
 // ✏️ Update courier
 export const updateCourier = createAsyncThunk('couriers/updateCourier', async (payload, { rejectWithValue }) => {
   try {
-    const { id, ...updateData } = payload
+    const { id, name } = payload
 
     console.log(payload, 'payload')
     const res = await postRequest(`couriers/update`,payload, 'patch')

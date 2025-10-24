@@ -187,6 +187,21 @@ export const updateUserStatusThunk = createAsyncThunk(
 )
 
 // =============================
+// RESET PASSWORD THUNK
+// =============================
+export const resetPasswordThunk = createAsyncThunk('auth/resetPassword', async (data, { rejectWithValue }) => {
+  try {
+    const response = await postRequest('auth/reset-password', data)
+
+    if (response.success) return response
+    return rejectWithValue(response.message)
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
+
+// =============================
 // SLICE
 // =============================
 export const authSlice = createSlice({
@@ -309,6 +324,18 @@ export const authSlice = createSlice({
         state.allUsers = state.allUsers.map(user =>
           user._id === userId ? { ...user, isVerified: newStatus === 'active' } : user
         )
+      })
+
+      // RESET PASSWORD
+      .addCase(resetPasswordThunk.pending, state => {
+        state.isLoading = true
+      })
+      .addCase(resetPasswordThunk.fulfilled, state => {
+        state.isLoading = false
+      })
+      .addCase(resetPasswordThunk.rejected, (state, action) => {
+        state.error = action.payload
+        state.isLoading = false
       })
   }
 })

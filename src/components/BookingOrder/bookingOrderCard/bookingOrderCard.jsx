@@ -12,16 +12,16 @@ import classnames from 'classnames'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
-const OrderCard = ({ orderStats }) => {
+const BookingOrderCard = ({ orderStats }) => {
   const isBelowMdScreen = useMediaQuery(theme => theme.breakpoints.down('md'))
   const isBelowSmScreen = useMediaQuery(theme => theme.breakpoints.down('sm'))
 
   // Map API response to stats array
   const statsData = [
     { key: 'total', title: 'Total Orders', icon: 'bx-calendar' },
-    { key: 'completed', title: 'Completed Orders', icon: 'bx-check-double' },
-    { key: 'pending', title: 'Pending Orders', icon: 'bx-hourglass' },
-    { key: 'cancelled', title: 'Cancelled Orders', icon: 'bx-error-alt' }
+    { key: 'confirmed', title: 'Confirmed Orders', icon: 'bx-check-double' },
+    { key: 'processing', title: 'Processing Orders', icon: 'bx-hourglass' },
+    { key: 'onWay', title: 'On Way Orders', icon: 'bx-car' }
   ].map(item => ({
     ...item,
     value: orderStats?.[item.key] ?? 0
@@ -66,4 +66,4 @@ const OrderCard = ({ orderStats }) => {
   )
 }
 
-export default OrderCard
+export default BookingOrderCard

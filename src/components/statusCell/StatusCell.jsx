@@ -5,7 +5,7 @@ import { Chip, Menu, MenuItem } from '@mui/material'
 import { statusChipColor, orderStatusArray } from '@/views/apps/ecommerce/orders/list/OrderListTable'
 import { statusChipColorForBooking } from '../BookingOrder/BookingListTable'
 
-const StatusCell = ({ row, onStatusChange, booking = false }) => {
+const StatusCell = ({ row, onStatusChange, booking = false, shipping = false }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [statusArray, setStatusArray] = useState(orderStatusArray)
   const open = Boolean(anchorEl)
@@ -21,7 +21,7 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
       } else if (status === 'processing') {
         setStatusArray([
           { value: 'onWay', label: 'On Way' },
-          { value: 'cancelled', label: 'Cancel' },
+          { value: 'cancelled', label: 'Cancel' }
         ])
       } else if (status === 'onway') {
         setStatusArray([])
@@ -29,6 +29,16 @@ const StatusCell = ({ row, onStatusChange, booking = false }) => {
         setStatusArray([])
       } else if (status === 'cancelled') {
         setStatusArray([])
+      }
+
+      if (shipping) {
+        // shipping status logic
+        if (status === 'dispatching') {
+          setStatusArray([
+            { value: 'dispatched', label: 'Dispatched' },
+            { value: 'cancelled', label: 'Cancel' }
+          ])
+        }
       } else {
         setStatusArray(
           Object.keys(statusChipColorForBooking).map(key => ({

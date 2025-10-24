@@ -1,8 +1,9 @@
 'use client'
 
 // Next Imports
+import { useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 // MUI Imports
 import Typography from '@mui/material/Typography'
@@ -13,12 +14,15 @@ import { styled, useTheme } from '@mui/material/styles'
 import classnames from 'classnames'
 
 // Component Imports
+import { useDispatch, useSelector } from 'react-redux'
+import { toast } from 'react-toastify'
 import DirectionalIcon from '@components/DirectionalIcon'
 import Logo from '@components/layout/shared/Logo'
 import CustomTextField from '@core/components/mui/TextField'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
+import { resetPasswordThunk, selectIsLoading } from '@/redux-store/slices/authSlice'
 
 // Styled Custom Components
 const ForgotPasswordIllustration = styled('img')(({ theme }) => ({
@@ -36,9 +40,34 @@ const ForgotPasswordIllustration = styled('img')(({ theme }) => ({
 }))
 
 const ForgotPassword = () => {
+  const [email, setEmail] = useState('')
+
+  const dispatch = useDispatch()
+
   // Hooks
   const { lang: locale } = useParams()
   const theme = useTheme()
+
+  const router = useRouter()
+
+  const resetPasswordLoading = useSelector(selectIsLoading)
+
+  const handleSubmit = async e => {
+    e.preventDefault()
+
+    const resetPassword = await dispatch(
+      resetPasswordThunk({
+        email
+      })
+    ).unwrap()
+
+    if (resetPassword.success) {
+      toast.success(resetPassword.message)
+      router.push(getLocalizedUrl('/login', locale))
+    } else {
+      toast.error(resetPassword.message)
+    }
+  }
 
   return (
     <div className='flex bs-full justify-center'>
@@ -61,9 +90,16 @@ const ForgotPassword = () => {
             <Typography variant='h4'>Forgot Password 🔒</Typography>
             <Typography>Enter your email and we&#39;ll send you instructions to reset your password</Typography>
           </div>
-          <form noValidate autoComplete='off' onSubmit={e => e.preventDefault()} className='flex flex-col gap-6'>
-            <CustomTextField autoFocus fullWidth label='Email' placeholder='Enter your email' />
-            <Button fullWidth variant='contained' type='submit'>
+          <form noValidate autoComplete='off' onSubmit={handleSubmit} className='flex flex-col gap-6'>
+            <CustomTextField
+              autoFocus
+              fullWidth
+              label='Email'
+              placeholder='Enter your email'
+              onChange={e => setEmail(e.target.value)}
+              value={email}
+            />
+            <Button fullWidth variant='contained' type='submit' disabled={resetPasswordLoading}>
               Send reset link
             </Button>
             <Typography className='flex justify-center items-center' color='primary.main'>

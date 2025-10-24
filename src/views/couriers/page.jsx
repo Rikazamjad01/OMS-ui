@@ -65,11 +65,12 @@ import CourierFormDialog from '@/components/dialogs/CourierFormDialog'
 import { CourierRow } from './CourierRow'
 
 const courierPlatforms = [
-  { title: 'Leopards', code: 'leopard', img: '/images/couriers/leopards.png' },
+  { title: 'Leopard', code: 'leopard', img: '/images/couriers/leopards.png' },
   { title: 'Daewoo', code: 'daewoo', img: '/images/couriers/daewoo.png' },
-  { title: 'Post Ex', code: 'postEx', img: '/images/couriers/postEx.jpg' },
-  { title: 'M&P', code: 'mp', img: '/images/couriers/m&p.jpg' },
-  { title: 'TCS', code: 'tcs', img: '/images/couriers/tcs.jpg' }
+  { title: 'Post Ex', code: 'postEx', img: '/images/couriers/postEx.jpg' }
+
+  // { title: 'M&P', code: 'mp', img: '/images/couriers/m&p.jpg' },
+  // { title: 'TCS', code: 'tcs', img: '/images/couriers/tcs.jpg' }
 ]
 
 const CouriersPage = () => {
@@ -77,7 +78,8 @@ const CouriersPage = () => {
 
   const allCouriers = useSelector(selectCouriers)
   const activatedCouriers = useSelector(state => state.couriers.couriers?.filter(c => c.active))
-  const courierLoading = useSelector(selectCouriersLoading)
+
+  // const courierLoading = useSelector(selectCouriersLoading)
 
   const [openForm, setOpenForm] = useState(false)
   const [editData, setEditData] = useState(null)
@@ -86,17 +88,9 @@ const CouriersPage = () => {
     dispatch(fetchCouriers())
   }, [dispatch])
 
-  const handleStatusToggle = courier => {
-    dispatch(updateCourier({ id: courier.id, active: !courier.active }))
-  }
-
   const handleEdit = courier => {
     setEditData(courier)
     setOpenForm(true)
-  }
-
-  const handleDelete = id => {
-    dispatch(deleteCourier(id))
   }
 
   return (
@@ -116,7 +110,7 @@ const CouriersPage = () => {
             />
           </div>
           {/* show loading */}
-            <CardContent>
+          <CardContent>
             <div className='flex flex-col gap-4 w-full'>
               {allCouriers.map((courier, index) => (
                 <div key={index} className='flex justify-between items-center w-full'>

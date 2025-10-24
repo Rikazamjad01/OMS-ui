@@ -104,6 +104,7 @@ import {
   updateOrderRemarksThunk,
   updateOrdersStatusThunk
 } from '@/redux-store/slices/order'
+import { checkPermission } from '@/hooks/Permissions'
 
 /* ---------------------------- helper maps --------------------------- */
 export const paymentStatus = {
@@ -713,6 +714,12 @@ const BookingListTable = ({
     await dispatch(updateOrderCommentsAndRemarks({ orderId: id, remarks })).unwrap()
   }
 
+  const hasPermission = checkPermission('courier.view')
+  const canGenerateAwb = checkPermission('awb.create') || checkPermission('courier.update')
+  const canGenerateLoadsheet = checkPermission('loadsheet.create')
+  const canCancelAwb = checkPermission('awb.cancel')
+  const canChangeCourier = checkPermission('courier.update')
+
   const columns = useMemo(
     () => [
       {
@@ -803,13 +810,32 @@ const BookingListTable = ({
 
           return (
             <div className='flex items-center gap-2'>
-              {isPending ? (
-                <>
-                  {/* <Menu
+              {hasPermission ? (
+                isPending ? (
+                  <>
+                    {/* <Menu
                     open={false}
                     anchorEl={null}
                     // Placeholder to keep imports happy; real menu shown via inline trigger below
                   /> */}
+                    <OpenDialogOnElementClick
+                      element={IconButton}
+                      elementProps={{
+                        // size: 'small',
+                        className: 'hover:rounded-4xl',
+                        children: (
+                          <Typography
+                            className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                          >
+                            {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                          </Typography>
+                        )
+                      }}
+                      dialog={PartialPaymentInlineDialog}
+                      dialogProps={{ onSubmitPartial, orderId: row.original.id }}
+                    />
+                  </>
+                ) : (
                   <OpenDialogOnElementClick
                     element={IconButton}
                     elementProps={{
@@ -826,24 +852,13 @@ const BookingListTable = ({
                     dialog={PartialPaymentInlineDialog}
                     dialogProps={{ onSubmitPartial, orderId: row.original.id }}
                   />
-                </>
+                )
               ) : (
-                <OpenDialogOnElementClick
-                  element={IconButton}
-                  elementProps={{
-                    // size: 'small',
-                    className: 'hover:rounded-4xl',
-                    children: (
-                      <Typography
-                        className={`font-medium ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
-                      >
-                        {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
-                      </Typography>
-                    )
-                  }}
-                  dialog={PartialPaymentInlineDialog}
-                  dialogProps={{ onSubmitPartial, orderId: row.original.id }}
-                />
+                <Typography
+                  className={`font-medium cursor-pointer ${paymentStatus[row.original.payment]?.colorClassName || 'text-default'}`}
+                >
+                  {paymentStatus[row.original.payment]?.text || row.original.payment || 'Unknown'}
+                </Typography>
               )}
             </div>
           )
@@ -853,81 +868,81 @@ const BookingListTable = ({
         accessorKey: 'courier',
         header: 'Courier',
         cell: ({ row }) => {
-          const courierName = row.original.platform?.toLowerCase() || 'unknown'
-
-          const couriers = activeCouriers.map(c => ({ id: c.id, label: c.label || c.value, value: c.value }))
-
-          console.log(courierName, 'courierName')
-
-          const displayName = couriers?.label || row.original.platform || 'Unknown'
+          const hasPermission = checkPermission('courier.view')
+          const displayName = row.original.platform || 'Unknown'
 
           return (
-            <OpenDialogOnElementClick
-              element={Chip}
-              elementProps={{
-                label: displayName,
-                variant: 'outlined',
-                size: 'small',
-                className: 'cursor-pointer'
-              }}
-              dialog={EditCourierInfo}
-              dialogProps={{
-                data: {
-                  orderIds: [row.original.id],
-                  courier: displayName,
-                  reason: ''
-                },
-                onSubmit: async (payload, controls) => {
-                  try {
-                    const { orderIds, courier, reason } = payload
-                    const selectedCourier = activeCouriers.find(c => c.value === courier)
+            <>
+              {hasPermission || canChangeCourier ? (
+                <OpenDialogOnElementClick
+                  element={Chip}
+                  elementProps={{
+                    label: displayName,
+                    variant: 'outlined',
+                    size: 'small',
+                    className: 'cursor-pointer'
+                  }}
+                  dialog={EditCourierInfo}
+                  dialogProps={{
+                    data: {
+                      orderIds: [row.original.id],
+                      courier: displayName,
+                      reason: ''
+                    },
+                    onSubmit: async (payload, controls) => {
+                      try {
+                        const { courier, reason } = payload
+                        const selectedCourier = activeCouriers.find(c => c.value === courier)
 
-                    console.log(selectedCourier, 'selectedCourier')
+                        if (!selectedCourier?.value) {
+                          setAlert({
+                            open: true,
+                            message: 'Please select a valid courier before submitting.',
+                            severity: 'error'
+                          })
+                          return
+                        }
 
-                    if (!selectedCourier?.value) {
-                      setAlert({
-                        open: true,
-                        message: 'Please select a valid courier before submitting.',
-                        severity: 'error'
-                      })
-                      return
+                        const body = {
+                          orderId: [row.original.id],
+                          courier: selectedCourier.value,
+                          reason
+                        }
+
+                        const res = await dispatch(courierAssignment(body)).unwrap()
+
+                        setAlert({
+                          open: true,
+                          message: res?.message || 'Courier updated',
+                          severity: 'success'
+                        })
+
+                        controls?.close()
+                        controls?.reset()
+
+                        await dispatch(
+                          fetchBookingOrders({
+                            page: pagination.currentPage,
+                            limit: pagination.itemsPerPage,
+                            force: true
+                          })
+                        )
+                      } catch (err) {
+                        setAlert({
+                          open: true,
+                          message: err?.message || 'Failed to assign courier',
+                          severity: 'error'
+                        })
+                      } finally {
+                        controls?.done?.()
+                      }
                     }
-
-                    const body = {
-                      orderId: [row.original.id],
-                      courier: selectedCourier?.value, // name (since backend expects name)
-                      reason
-                    }
-
-                    const res = await dispatch(courierAssignment(body)).unwrap()
-
-                    setAlert({
-                      open: true,
-                      message: res?.message || 'Courier updated',
-                      severity: 'success'
-                    })
-                    controls?.close()
-                    controls?.reset()
-
-                    await dispatch(
-                      fetchBookingOrders({
-                        page: pagination.currentPage,
-                        limit: pagination.itemsPerPage,
-                        force: true
-                      })
-                    )
-                  } catch (err) {
-                    setAlert({
-                      open: true,
-                      message: err?.message || 'Failed to assign courier',
-                      severity: 'error'
-                    })
-                  } finally {
-                    controls?.done?.()
-                  }
-                }
-              }}
-            />
+                  }}
+                />
+              ) : (
+                <Chip label={displayName} variant='outlined' size='small' className='opacity-50 cursor-default' />
+              )}
+            </>
           )
         }
       },
@@ -935,7 +950,14 @@ const BookingListTable = ({
         accessorKey: 'status',
         header: 'Order Status',
         cell: props => {
-          return <StatusCell {...props} onStatusChange={handleSingleStatusChange} booking />
+          return (
+            <StatusCell
+              {...props}
+              onStatusChange={handleSingleStatusChange}
+              booking
+              shipping={checkPermission('dispatch.view')}
+            />
+          )
         }
       },
       {
@@ -1043,7 +1065,7 @@ const BookingListTable = ({
       {
         accessorKey: 'address',
         header: 'Address',
-        meta: { width: '450px' },
+        meta: { width: '350px' },
         cell: ({ row }) => {
           const initialAddress = row.original.address || ''
           const [value, setValue] = useState(initialAddress)
@@ -1058,23 +1080,31 @@ const BookingListTable = ({
           }, [])
 
           return (
-            <textarea
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              onBlur={async () => {
-                const trimmed = String(value || '').trim()
-                const prev = String(original || '').trim()
+            <>
+              {hasPermission ? (
+                <textarea
+                  value={value}
+                  onChange={e => setValue(e.target.value)}
+                  onBlur={async () => {
+                    const trimmed = String(value || '').trim()
+                    const prev = String(original || '').trim()
 
-                if (trimmed !== prev) {
-                  await updateAddressApi({ id: row.original.id, address: trimmed })
-                  setOriginal(trimmed)
-                }
-              }}
-              rows={2}
-              className={`bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar ${updating ? 'opacity-60' : ''}`}
-              style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
-              placeholder='—'
-            />
+                    if (trimmed !== prev) {
+                      await updateAddressApi({ id: row.original.id, address: trimmed })
+                      setOriginal(trimmed)
+                    }
+                  }}
+                  rows={2}
+                  className={`bg-transparent border-0 outline-none w-[250px] text-gray-800 resize-none whitespace-pre-wrap break-words no-scrollbar ${updating ? 'opacity-60' : ''}`}
+                  style={{ fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
+                  placeholder='—'
+                />
+              ) : (
+                <Typography rows={2} className='font-medium text-gray-800'>
+                  {row.original.address || '—'}
+                </Typography>
+              )}
+            </>
           )
         }
       },
@@ -1103,7 +1133,7 @@ const BookingListTable = ({
             <Chip
               variant='tonal'
               color={getTagColor(lastOrderStatus)}
-              className='font-medium text-gray-800'
+              className='font-medium text-gray-800 cursor-default'
               label={lastOrderStatus || '—'}
             ></Chip>
           )
@@ -1128,7 +1158,6 @@ const BookingListTable = ({
               {/* First row: Tags */}
               <div
                 className='flex flex-col gap-2 cursor-default max-w-40 w-full overflow-scroll no-scrollbar'
-
                 // onClick={() => openTagEditor(row.original.id, displayedTags)}
                 role='button'
                 tabIndex={0}
@@ -1147,14 +1176,16 @@ const BookingListTable = ({
               </div>
 
               {/* Second row: "+" button */}
-              <div>
-                <Chip
-                  label='+ Add Tag'
-                  variant='outlined'
-                  size='small'
-                  onClick={() => openTagEditor(row.original.id, displayedTags)}
-                />
-              </div>
+              {hasPermission && (
+                <div>
+                  <Chip
+                    label='+ Add Tag'
+                    variant='outlined'
+                    size='small'
+                    onClick={() => openTagEditor(row.original.id, displayedTags)}
+                  />
+                </div>
+              )}
             </div>
           )
         }
@@ -1211,31 +1242,32 @@ const BookingListTable = ({
               >
                 {normalizedCity || '—'}
               </Typography>
-
-              <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
-                <DialogTitle>Select City</DialogTitle>
-                <DialogContent className='pt-2'>
-                  <Autocomplete
-                    fullWidth
-                    options={cityOptions}
-                    value={selectedCity}
-                    onChange={(_e, newValue) => setSelectedCity(newValue)}
-                    getOptionLabel={option => option.label}
-                    isOptionEqualToValue={(option, value) => option.value === value.value}
-                    renderInput={params => (
-                      <TextField {...params} fullWidth label='City' placeholder='Search cities and select' />
-                    )}
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button variant='tonal' color='secondary' onClick={() => setOpen(false)} disabled={submitting}>
-                    Cancel
-                  </Button>
-                  <Button variant='contained' onClick={onSubmit} disabled={!selectedCity?.label || submitting}>
-                    {submitting ? 'Submitting...' : 'Submit'}
-                  </Button>
-                </DialogActions>
-              </Dialog>
+              {hasPermission && (
+                <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth='xs'>
+                  <DialogTitle>Select City</DialogTitle>
+                  <DialogContent className='pt-2'>
+                    <Autocomplete
+                      fullWidth
+                      options={cityOptions}
+                      value={selectedCity}
+                      onChange={(_e, newValue) => setSelectedCity(newValue)}
+                      getOptionLabel={option => option.label}
+                      isOptionEqualToValue={(option, value) => option.value === value.value}
+                      renderInput={params => (
+                        <TextField {...params} fullWidth label='City' placeholder='Search cities and select' />
+                      )}
+                    />
+                  </DialogContent>
+                  <DialogActions>
+                    <Button variant='tonal' color='secondary' onClick={() => setOpen(false)} disabled={submitting}>
+                      Cancel
+                    </Button>
+                    <Button variant='contained' onClick={onSubmit} disabled={!selectedCity?.label || submitting}>
+                      {submitting ? 'Submitting...' : 'Submit'}
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+              )}
 
               <Snackbar
                 open={snackbar.open}
@@ -1262,119 +1294,131 @@ const BookingListTable = ({
 
           if (row.original.platform === 'none') {
             return (
-              <OpenDialogOnElementClick
-                element={Chip}
-                elementProps={{
-                  label: 'Assign',
-                  variant: 'outlined',
-                  size: 'small',
-                  className: 'cursor-pointer w-full'
-                }}
-                dialog={EditCourierInfo}
-                dialogProps={{
-                  data: (() => {
-                    const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
+              <>
+                {hasPermission || canGenerateAwb ? (
+                  <OpenDialogOnElementClick
+                    element={Chip}
+                    elementProps={{
+                      label: 'Assign',
+                      variant: 'outlined',
+                      size: 'small',
+                      className: 'cursor-pointer w-full'
+                    }}
+                    dialog={EditCourierInfo}
+                    dialogProps={{
+                      data: (() => {
+                        const firstSelected = table.getSelectedRowModel().flatRows[0]?.original
 
-                    const inferCourierKey = name => {
-                      if (!name) return 'none'
-                      const n = String(name).toLowerCase()
+                        const inferCourierKey = name => {
+                          if (!name) return 'none'
+                          const n = String(name).toLowerCase()
 
-                      if (n.includes('leopard')) return 'leopard'
+                          if (n.includes('leopard')) return 'leopard'
 
-                      // if (n.includes('daewoo')) return 'daewoo'
-                      // if (n.includes('post')) return 'postEx'
-                      // if (n.includes('m&p') || n.includes('mp')) return 'mp'
-                      // if (n.includes('tcs')) return 'tcs'
-                      return 'none'
-                    }
+                          // if (n.includes('daewoo')) return 'daewoo'
+                          // if (n.includes('post')) return 'postEx'
+                          // if (n.includes('m&p') || n.includes('mp')) return 'mp'
+                          // if (n.includes('tcs')) return 'tcs'
+                          return 'none'
+                        }
 
-                    const defaultCourier = inferCourierKey(firstSelected?.platform)
+                        const defaultCourier = inferCourierKey(firstSelected?.platform)
 
-                    return {
-                      orderIds: selectedIds.length > 0 ? selectedIds : [row.original.id],
-                      courier: defaultCourier,
-                      reason: ''
-                    }
-                  })(),
-                  onSubmit: async (payload, controls) => {
-                    try {
-                      const courierApiMap = {
-                        // none: 'None',
-                        leopard: 'Leopard'
+                        return {
+                          orderIds: selectedIds.length > 0 ? selectedIds : [row.original.id],
+                          courier: defaultCourier,
+                          reason: ''
+                        }
+                      })(),
+                      onSubmit: async (payload, controls) => {
+                        try {
+                          const courierApiMap = {
+                            // none: 'None',
+                            leopard: 'Leopard'
 
-                        // daewoo: 'Daewoo',
-                        // postEx: 'PostEx',
-                        // mp: 'M&P',
-                        // tcs: 'TCS'
+                            // daewoo: 'Daewoo',
+                            // postEx: 'PostEx',
+                            // mp: 'M&P',
+                            // tcs: 'TCS'
+                          }
+
+                          const freshSelectedIds = (() => {
+                            const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
+
+                            return ids.length > 0 ? ids : [row.original.id]
+                          })()
+
+                          const body = {
+                            orderId: freshSelectedIds.map(id => String(id)),
+                            courier: courierApiMap[payload.courier] || payload.courier,
+                            reason: payload.reason
+                          }
+
+                          const res = await dispatch(courierAssignment(body)).unwrap()
+
+                          setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
+                          controls?.close()
+                          controls?.reset()
+                          setRowSelection({})
+
+                          await dispatch(
+                            fetchBookingOrders({
+                              page: pagination.currentPage,
+                              limit: pagination.itemsPerPage,
+                              force: true
+                            })
+                          )
+                        } catch (err) {
+                          setAlert({
+                            open: true,
+                            message: err?.message || 'Failed to assign courier',
+                            severity: 'error'
+                          })
+                          setRowSelection({})
+                        } finally {
+                          controls?.done?.()
+                          setRowSelection({})
+                        }
                       }
-
-                      const freshSelectedIds = (() => {
-                        const ids = table.getSelectedRowModel().flatRows.map(r => r.original.id)
-
-                        return ids.length > 0 ? ids : [row.original.id]
-                      })()
-
-                      const body = {
-                        orderId: freshSelectedIds.map(id => String(id)),
-                        courier: courierApiMap[payload.courier] || payload.courier,
-                        reason: payload.reason
-                      }
-
-                      const res = await dispatch(courierAssignment(body)).unwrap()
-
-                      setAlert({ open: true, message: res?.message || 'Courier updated', severity: 'success' })
-                      controls?.close()
-                      controls?.reset()
-                      setRowSelection({})
-
-                      await dispatch(
-                        fetchBookingOrders({
-                          page: pagination.currentPage,
-                          limit: pagination.itemsPerPage,
-                          force: true
-                        })
-                      )
-                    } catch (err) {
-                      setAlert({ open: true, message: err?.message || 'Failed to assign courier', severity: 'error' })
-                      setRowSelection({})
-                    } finally {
-                      controls?.done?.()
-                      setRowSelection({})
-                    }
-                  }
-                }}
-              />
+                    }}
+                  />
+                ) : (
+                  <Typography className='font-medium text-gray-800 cursor-pointer hover:text-primary'>-</Typography>
+                )}
+              </>
             )
           }
 
           if (row.original.awb) {
             return (
               <div className='flex flex-col gap-1'>
-                <OpenDialogOnElementClick
-                  element={Chip}
-                  elementProps={{ label: 'Cancel', variant: 'outlined', size: 'small', className: 'cursor-pointer' }}
-                  dialog={ConfirmationDialog}
-                  dialogProps={{
-                    type: 'cancel-awb',
-                    payload: { trackNumbers: [row.original.trackNumber] },
-                    onSuccess: async ({ trackNumbers }) => {
-                      try {
-                        const res = await dispatch(cancelAwb({ trackNumber: trackNumbers })).unwrap()
+                {canCancelAwb && (
+                  <OpenDialogOnElementClick
+                    element={Chip}
+                    elementProps={{ label: 'Cancel', variant: 'outlined', size: 'small', className: 'cursor-pointer' }}
+                    dialog={ConfirmationDialog}
+                    dialogProps={{
+                      type: 'cancel-awb',
+                      payload: { trackNumbers: [row.original.trackNumber] },
+                      onSuccess: async ({ trackNumbers }) => {
+                        try {
+                          const res = await dispatch(cancelAwb({ trackNumber: trackNumbers })).unwrap()
 
-                        setAlert({ open: true, message: res?.message || 'AWB cancelled', severity: 'success' })
-                        await dispatch(
-                          fetchBookingOrders({
-                            page: pagination.currentPage,
-                            limit: pagination.itemsPerPage,
-                            force: true
-                          })
-                        )
-                      } catch (e) {
-                        setAlert({ open: true, message: e?.message || 'Failed to cancel AWB', severity: 'error' })
+                          setAlert({ open: true, message: res?.message || 'AWB cancelled', severity: 'success' })
+                          await dispatch(
+                            fetchBookingOrders({
+                              page: pagination.currentPage,
+                              limit: pagination.itemsPerPage,
+                              force: true
+                            })
+                          )
+                        } catch (e) {
+                          setAlert({ open: true, message: e?.message || 'Failed to cancel AWB', severity: 'error' })
+                        }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                )}
                 <Chip
                   label='View'
                   variant='outlined'
@@ -1606,7 +1650,7 @@ const BookingListTable = ({
           {/* <DateRangePicker /> */}
 
           {/* Add the Change Status button - only shows when orders are selected */}
-          {selectedCount >= 1 && (
+          {selectedCount >= 1 && hasPermission && (
             <OpenDialogOnElementClick
               element={Button}
               elementProps={{ children: 'Change Courier', color: 'info', variant: 'tonal' }}
@@ -1676,7 +1720,7 @@ const BookingListTable = ({
             />
           )}
 
-          {selectedCount >= 1 && (
+          {selectedCount >= 1 && canGenerateLoadsheet && (
             <OpenDialogOnElementClick
               element={Button}
               elementProps={{ children: 'Download Load Sheet', color: 'primary', variant: 'tonal' }}
@@ -1736,7 +1780,7 @@ const BookingListTable = ({
           </Button>
         )} */}
 
-          {selectedCount >= 1 && (
+          {selectedCount >= 1 && canGenerateAwb && (
             <OpenDialogOnElementClick
               element={Button}
               elementProps={{ children: 'Generate Airway Bill', color: 'primary', variant: 'tonal' }}
@@ -1840,32 +1884,33 @@ const BookingListTable = ({
           }
           renderInput={params => <TextField {...params} placeholder='Courier' label='Courier' size='medium' />}
         />
+        {hasPermission && (
+          <Autocomplete
+            multiple
+            fullWidth
+            options={orderStatusArray}
+            getOptionLabel={option => option.label}
+            value={filters.orderStatus || []}
+            onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const props = getTagProps({ index })
 
-        <Autocomplete
-          multiple
-          fullWidth
-          options={orderStatusArray}
-          getOptionLabel={option => option.label}
-          value={filters.orderStatus || []}
-          onChange={(e, newValue) => setFilters(prev => ({ ...prev, orderStatus: newValue }))}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const props = getTagProps({ index })
-
-              return (
-                <Chip
-                  {...props}
-                  key={option.value || index} // override key
-                  variant='outlined'
-                  label={option.label}
-                />
-              )
-            })
-          }
-          renderInput={params => (
-            <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
-          )}
-        />
+                return (
+                  <Chip
+                    {...props}
+                    key={option.value || index} // override key
+                    variant='outlined'
+                    label={option.label}
+                  />
+                )
+              })
+            }
+            renderInput={params => (
+              <TextField {...params} fullWidth placeholder='Order Status' label='Order Status' size='medium' />
+            )}
+          />
+        )}
         <Autocomplete
           multiple
           fullWidth

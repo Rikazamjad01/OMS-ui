@@ -14,16 +14,14 @@ import {
 import Grid from '@mui/material/Grid2'
 import { useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
-import CustomTextField from '@core/components/mui/TextField'
 import DialogCloseButton from '../DialogCloseButton'
 import { addCourier, updateCourier, fetchCouriers } from '@/redux-store/slices/couriers'
+import cities from '@/data/cities/cities'
 
 const platforms = [
   { label: 'Leopard', value: 'leopard' },
   { label: 'Daewoo', value: 'daewoo' },
-  { label: 'PostEx', value: 'postEx' },
-  { label: 'TCS', value: 'tcs' },
-  { label: 'M&P', value: 'mp' }
+  { label: 'PostEx', value: 'postEx' }
 ]
 
 const CourierFormDialog = ({ open, setOpen, editData = null }) => {
@@ -32,21 +30,41 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
 
   const [formData, setFormData] = useState({
     name: '',
+    platform: '',
     courierApiKey: '',
     courierApiPassword: '',
-    platform: ''
+    courierApiUser: '',
+    originLocation: '',
+    courierToken: ''
   })
 
   useEffect(() => {
     if (editData) {
       setFormData({
         name: editData.name || '',
-        platform: editData.platform || ''
+        platform: editData.platform || '',
+        courierApiKey: editData.courierApiKey || '',
+        courierApiPassword: editData.courierApiPassword || '',
+        courierApiUser: editData.courierApiUser || '',
+        originLocation: editData.originLocation || '',
+        courierToken: editData.courierToken || ''
       })
     } else {
-      setFormData({ name: '', courierApiKey: '', courierApiPassword: '', platform: '' })
+      resetForm()
     }
   }, [editData])
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      platform: '',
+      courierApiKey: '',
+      courierApiPassword: '',
+      courierApiUser: '',
+      originLocation: '',
+      courierToken: ''
+    })
+  }
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -54,7 +72,7 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
 
     try {
       if (editData) {
-        await dispatch(updateCourier({ id: editData.id, name: formData.name })).unwrap()
+        await dispatch(updateCourier({ id: editData.id, name: formData.name, })).unwrap()
         toast.success('Courier updated successfully!')
       } else {
         await dispatch(addCourier(formData)).unwrap()
@@ -76,8 +94,6 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
     }
   }
 
-  const handleClose = () => setOpen(false)
-
   return (
     <Dialog
       open={open}
@@ -87,7 +103,7 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
       scroll='body'
       sx={{ '& .MuiDialog-paper': { overflow: 'visible' } }}
     >
-      <DialogCloseButton onClick={handleClose} disableRipple>
+      <DialogCloseButton onClick={() => setOpen(false)} disableRipple>
         <i className='bx-x' />
       </DialogCloseButton>
 
@@ -95,18 +111,40 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
 
       <form onSubmit={handleSubmit}>
         <DialogContent>
-          <div className='w-full grid md:grid-cols-2 gap-4'>
-            <div className='w-full'>
-              <TextField
-                fullWidth
-                label='Courier Name'
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
+          <div className={`w-full grid ${ editData ? 'md:grid-cols-1' : 'md:grid-cols-2 gap-4'}`}>
+            {/* Select Platform */}
             {!editData && (
-              <div className='w-full'>
+              <Autocomplete
+                options={platforms}
+                getOptionLabel={option => option.label}
+                value={platforms.find(p => p.value === formData.platform) || null}
+                onChange={(event, newValue) =>
+                  setFormData({
+                    ...formData,
+                    platform: newValue ? newValue.value : '',
+                    courierApiKey: '',
+                    courierApiPassword: '',
+                    courierApiUser: '',
+                    originLocation: '',
+                    courierToken: ''
+                  })
+                }
+                renderInput={params => <TextField {...params} label='Platform' fullWidth required />}
+              />
+            )}
+
+            {/* Courier Name */}
+            <TextField
+              fullWidth
+              label='Courier Name'
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+
+            {/* Leopard Fields */}
+            {formData.platform === 'leopard' && !editData && (
+              <>
                 <TextField
                   fullWidth
                   label='Courier API Key'
@@ -115,37 +153,72 @@ const CourierFormDialog = ({ open, setOpen, editData = null }) => {
                   required
                   type='password'
                 />
-              </div>
-            )}
-            {!editData && (
-              <div className='w-full'>
                 <TextField
                   fullWidth
-                  label='Courier Secret / Password'
+                  label='Courier API Password'
                   value={formData.courierApiPassword}
                   onChange={e => setFormData({ ...formData, courierApiPassword: e.target.value })}
                   type='password'
                   required
                 />
-              </div>
+              </>
             )}
-            <div className='w-full'>
-              <Autocomplete
-                options={platforms}
-                getOptionLabel={option => option.label}
-                value={platforms.find(p => p.value === formData.platform) || null}
-                onChange={(event, newValue) => setFormData({ ...formData, platform: newValue ? newValue.value : '' })}
-                filterSelectedOptions
-                renderInput={params => <TextField {...params} label='Platform' fullWidth required />}
-                style={{ width: '100%' }}
-                className='full-width-autocomplete'
-              />
-            </div>
+
+            {/* Daewoo Fields */}
+            {formData.platform === 'daewoo' && !editData && (
+              <>
+                <TextField
+                  fullWidth
+                  label='Courier API Key'
+                  value={formData.courierApiKey}
+                  onChange={e => setFormData({ ...formData, courierApiKey: e.target.value })}
+                  required
+                  type='password'
+                />
+
+                <TextField
+                  fullWidth
+                  label='Courier API User'
+                  value={formData.courierApiUser}
+                  onChange={e => setFormData({ ...formData, courierApiUser: e.target.value })}
+                  required
+                />
+
+                <Autocomplete
+                  options={cities}
+                  onChange={(e, newValue) => setFormData({ ...formData, originLocation: newValue || '' })}
+                  value={formData.originLocation || ''}
+                  renderInput={params => <TextField {...params} label='Origin Location' fullWidth required />}
+                />
+
+                <TextField
+                  fullWidth
+                  label='Courier API Password'
+                  value={formData.courierApiPassword}
+                  onChange={e => setFormData({ ...formData, courierApiPassword: e.target.value })}
+                  type='password'
+                  required
+                />
+              </>
+            )}
+
           </div>
+          {/* PostEx Fields */}
+          {formData.platform === 'postEx' && (
+            <TextField
+              fullWidth
+              label='Courier Token'
+              value={formData.courierToken}
+              onChange={e => setFormData({ ...formData, courierToken: e.target.value })}
+              required
+              type='password'
+              className='mt-4'
+            />
+          )}
         </DialogContent>
 
         <DialogActions>
-          <Button type='submit' variant='contained'>
+          <Button type='submit' variant='contained' disabled={loading}>
             {editData ? 'Update' : 'Add'}
           </Button>
           <Button variant='tonal' color='secondary' onClick={() => setOpen(false)}>

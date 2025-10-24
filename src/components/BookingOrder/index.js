@@ -5,15 +5,17 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Grid from '@mui/material/Grid2'
 
-import { fetchBookingOrder } from '@/redux-store/slices/bookingSlice' // <-- import it
-import OrderCard from '@/views/apps/ecommerce/orders/list/OrderCard'
+import { fetchBookingOrder } from '@/redux-store/slices/bookingSlice'
 import BookingListTable from './BookingListTable'
+import BookingOrderCard from './bookingOrderCard/bookingOrderCard'
 
 // import OrderListTable from '@/views/apps/ecommerce/orders/list/OrderListTable'
 
 const BookingOrder = () => {
   const dispatch = useDispatch()
   const { orders, loading, error, pagination, orderStats } = useSelector(state => state.booking)
+
+  console.log(orderStats, 'order stats')
 
   // Parent-controlled params (decouple from redux pagination to avoid loops)
   const [page, setPage] = useState(1)
@@ -34,7 +36,7 @@ const BookingOrder = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <OrderCard orderStats={orderStats} />
+        <BookingOrderCard orderStats={orderStats} />
       </Grid>
 
       <Grid size={{ xs: 12 }}>

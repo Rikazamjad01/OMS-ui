@@ -1,6 +1,7 @@
 'use client'
 
 // Next Imports
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
@@ -13,19 +14,18 @@ import { styled, useTheme } from '@mui/material/styles'
 import classnames from 'classnames'
 
 // Component Imports
+import InputAdornment from '@mui/material/InputAdornment'
+import IconButton from '@mui/material/IconButton'
+import { useDispatch } from 'react-redux'
+import cookies from 'js-cookie'
+import { toast } from 'react-toastify'
 import DirectionalIcon from '@components/DirectionalIcon'
 import Logo from '@components/layout/shared/Logo'
 import CustomTextField from '@core/components/mui/TextField'
-import InputAdornment from '@mui/material/InputAdornment'
-import IconButton from '@mui/material/IconButton'
-import { useEffect, useState } from 'react'
-import { useDispatch } from 'react-redux'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import cookies from 'js-cookie'
 import { changePasswordThunk } from '@/redux-store/slices/authSlice'
-import { toast } from 'react-toastify'
 
 // Styled Custom Components
 const ForgotPasswordIllustration = styled('img')(({ theme }) => ({
@@ -54,11 +54,16 @@ const ForgotPassword = () => {
   const dispatch = useDispatch()
   const resetToken = cookies.get('resetToken')
   const router = useRouter()
+  const params = useSearchParams()
+
+  // get token from params (url of page)
+  const token = params.get('token')
+
   useEffect(() => {
-    if (!resetToken) {
+    if (!token) {
       router.push(getLocalizedUrl('/login', locale))
     }
-  }, [resetToken])
+  }, [token])
 
   return (
     <div className='flex bs-full justify-center'>
@@ -86,11 +91,14 @@ const ForgotPassword = () => {
             autoComplete='off'
             onSubmit={async e => {
               e.preventDefault()
+
               // simple client validation
               if (newPassword.length < minLength) return
               if (newPassword !== confirmPassword) return
+
               // TODO: integrate API call here when ready
-              const response = await dispatch(changePasswordThunk({ newPassword, resetToken: resetToken }))
+              const response = await dispatch(changePasswordThunk({ newPassword, resetToken: token }))
+
               if (response.payload.success) {
                 toast.success('Password changed successfully')
                 router.push(getLocalizedUrl('/login', locale))

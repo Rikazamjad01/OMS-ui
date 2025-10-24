@@ -45,7 +45,7 @@ export const CourierRow = ({ courier, onUpdate }) => {
       className='grid grid-cols-[2fr_1fr_1fr] items-center gap-4 py-2 px-2 hover:bg-gray-50 rounded-md transition'
     >
       <div>
-        <Typography variant='h6'>{courier.name}</Typography>
+        <Typography variant='body1'>{courier.name}</Typography>
         <Typography variant='body2' color='text.secondary'>
           {courier.subtitle}
         </Typography>
