@@ -56,6 +56,17 @@ const colorSchemes = skin => {
           darkOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.32)',
           darkerOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.38)'
         },
+        orange: {
+          main: '#FFAB00',
+          light: '#FFBC33',
+          dark: '#E69A00',
+          contrastText: '#FFF',
+          lighterOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.08)',
+          lightOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.16)',
+          mainOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.24)',
+          darkOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.32)',
+          darkerOpacity: 'rgb(var(--mui-palette-info-mainChannel) / 0.38)'
+        },
         success: {
           main: '#71DD37',
           light: '#8DE45F',

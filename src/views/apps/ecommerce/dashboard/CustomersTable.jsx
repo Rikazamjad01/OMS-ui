@@ -151,18 +151,15 @@ const CustomersTable = () => {
         )
       }),
       columnHelper.accessor('category', {
-        header: 'Category',
+        header: 'Brand',
         cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <CustomAvatar skin='light' color={productCategoryObj[row.original.category].color} size={28}>
-              <i className={classnames(productCategoryObj[row.original.category].icon, 'text-base')} />
-            </CustomAvatar>
-            <Typography>{row.original.category}</Typography>
-          </div>
+          <Typography variant='body2' color='textSecondary'>
+            {row.original?.brand || 'N/A'}
+          </Typography>
         )
       }),
       columnHelper.accessor('amountPaid', {
-        header: 'Payment',
+        header: 'Price',
         cell: ({ row }) => (
           <>
             <Typography>
@@ -181,20 +178,11 @@ const CustomersTable = () => {
         )
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: 'Sold Pieces',
         cell: ({ row }) => (
-          <Chip
-            variant='tonal'
-            label={row.original.status}
-            size='small'
-            color={
-              row.original.status === 'Completed'
-                ? 'success'
-                : row.original.status === 'Confirmed'
-                  ? 'primary'
-                  : 'error'
-            }
-          />
+          <Typography variant='body2' color='textSecondary'>
+            {row.original?.sold || 10}
+          </Typography>
         )
       }),
       columnHelper.accessor('action', {

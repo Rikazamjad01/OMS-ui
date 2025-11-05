@@ -97,7 +97,7 @@ const LineAreaSessionsChart = () => {
     <Card className='pbe-6'>
       <CardHeader
         className='pb-3'
-        title='Sessions'
+        title='Total Number of visitors'
         subheader='2845'
         titleTypographyProps={{
           variant: 'body1'
@@ -107,7 +107,7 @@ const LineAreaSessionsChart = () => {
             fontSize: '1.5rem !important',
             color: 'var(--mui-palette-text-primary) !important',
             fontWeight: '500 !important',
-            marginBlockStart: '0.125rem'
+            marginBlockStart: '0.01rem'
           }
         }}
       />

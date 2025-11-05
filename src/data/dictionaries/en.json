@@ -42,7 +42,12 @@
         "manageReviews": "Manage Reviews",
         "referrals": "Referrals",
         "settings": "Settings",
-
+        "incentives": "Setup Incentives Calculation",
+        "upsellCommissions": "Setup Upsell Commissions",
+        "defaultersManagement": "Defaulters Management",
+        "attemptsManagement": "Attempts Management",
+        "ledger": "Ledgers",
+        "returnManagement": "Return Management",
         "myCourses": "My Courses",
         "courseDetails": "Course Details",
         "fleet": "Fleet",

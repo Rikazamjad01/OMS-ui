@@ -5,7 +5,7 @@ import { Chip, Menu, MenuItem } from '@mui/material'
 import { statusChipColor, orderStatusArray } from '@/views/apps/ecommerce/orders/list/OrderListTable'
 import { statusChipColorForBooking } from '../BookingOrder/BookingListTable'
 
-const StatusCell = ({ row, onStatusChange, booking = false, shipping = false }) => {
+const StatusCell = ({ row, onStatusChange, booking = false, shipping = false, returnManagement = false }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [statusArray, setStatusArray] = useState(orderStatusArray)
   const open = Boolean(anchorEl)
@@ -47,7 +47,14 @@ const StatusCell = ({ row, onStatusChange, booking = false, shipping = false }) 
           }))
         )
       }
-    } else {
+    } else if (returnManagement) {
+      if (status === 'returned') {
+        setStatusArray(
+          orderStatusArray.filter(s => s.value === 'damaged')
+        )
+      }
+    }
+    else {
       // Regular order status logic
       if (status === 'pending') {
         setStatusArray(

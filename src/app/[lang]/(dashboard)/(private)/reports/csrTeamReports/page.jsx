@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -28,6 +29,8 @@ import {
 import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
 import classNames from 'classnames'
+import Meta from 'antd/es/card/Meta'
+import { fetchReports, selectReports, selectReportsLoading } from '@/redux-store/slices/reports'
 
 import DownloadDialog from '../downloadDialogue/page'
 
@@ -35,27 +38,13 @@ const { RangePicker } = DatePicker
 
 // 🔹 CSR Reports Tabs
 const csrReportsTabs = [
-  {
-    key: 'agentReports',
-    label: 'Agent Reports',
-    subReports: [
-      { key: 'agentOrderReport', label: 'Agent Order Report' },
-      { key: 'agentIncentiveReport', label: 'Agent Incentive Report' },
-      { key: 'agentChannelReport', label: 'Agent Channel Report' }
-    ]
-  },
-  {
-    key: 'courierReports',
-    label: 'Courier Reports',
-    subReports: [
-      { key: 'courierDeliveryReport', label: 'Courier Delivery Report' },
-      { key: 'courierFocReport', label: 'Courier FOC Report' },
-      { key: 'dispatchReport', label: 'Dispatch Report' }
-    ]
-  },
-  { key: 'productUnitReport', label: 'Product Unit Report' },
-  { key: 'bookingUnitReport', label: 'Booking Unit Report' },
-  { key: 'channelOrderReport', label: 'Channel Order Report' }
+  { key: 'agentOrderReports', label: 'Agent Reports' },
+  { key: 'productUnitReports', label: 'Product Unit Reports' },
+  { key: 'agentChannelReports', label: 'Courier Reports' },
+  { key: 'demandSheet', label: 'Demand Sheet' },
+  { key: 'arrivalReport', label: 'Arrival Report' },
+  { key: 'channelOrderReport', label: 'Channel Order Report' },
+  { key: 'orderGenerationReport', label: 'Order Generation Report' }
 ]
 
 const valueColorMap = {
@@ -91,13 +80,27 @@ const exportToCSV = (data, fileName) => {
 
 // PDF Export
 const exportToPDF = (data, columns, fileName) => {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: 'landscape' })
 
-  doc.text('Admin Report', 14, 10)
-  const truncate = (str, maxLength = 15) => (str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str)
+  doc.text('CSR Team Report', 14, 10)
+
+  const truncate = (str, maxLength = 15) =>
+    str && str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str
 
   const headers = columns.map(col => col.header)
-  const rows = data.map(row => columns.map(col => truncate(row[col.accessorKey], 20)))
+
+  const rows = data.map(row =>
+    columns.map(col => {
+      const value = row[col.accessorKey]
+
+      if (value === null || value === undefined) return '—'
+      if (typeof value === 'object')
+        return Object.entries(value)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ')
+      return truncate(String(value), 20)
+    })
+  )
 
   autoTable(doc, {
     head: [headers],
@@ -106,14 +109,14 @@ const exportToPDF = (data, columns, fileName) => {
     styles: {
       fontSize: 8,
       cellPadding: 3,
-      overflow: 'ellipsize', // show dots instead of wrapping
+      overflow: 'ellipsize',
       lineWidth: 0.1,
       lineColor: [0, 0, 0]
     },
     headStyles: {
-      fillColor: [41, 128, 185], // nice blue header
+      fillColor: [41, 128, 185],
       textColor: 255,
-      halign: 'center'
+      halign: 'left'
     }
   })
 
@@ -123,8 +126,9 @@ const exportToPDF = (data, columns, fileName) => {
 export default function CSRReportsPage() {
   const [selectedTab, setSelectedTab] = useState('')
   const [selectedSubTab, setSelectedSubTab] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [data, setData] = useState([])
+  const dispatch = useDispatch()
+  const data = useSelector(selectReports)
+  const loading = useSelector(selectReportsLoading)
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({})
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
@@ -136,53 +140,124 @@ export default function CSRReportsPage() {
     const activeKey = selectedSubTab || selectedTab
 
     if (!activeKey) return
-    setLoading(true)
 
-    setTimeout(() => {
-      let apiData = []
+    const reportTypeMap = {
+      agentOrderReports: 'agentOrderReport',
+      productUnitReports: 'productUnitReport',
+      agentChannelReports: 'agentChannelReport',
+      demandSheet: 'demandSheet',
+      arrivalReport: 'arrivalReport',
+      channelOrderReport: 'channelOrderReport',
+      orderGenerationReport: 'orderGenerationReport'
+    }
 
-      if (activeKey === 'agentOrderReport') {
-        apiData = [
-          { agent: 'Ali', orders: 50, confirmed: 40, returned: 5 },
-          { agent: 'Sara', orders: 70, confirmed: 60, returned: 7 }
-        ]
-      } else if (activeKey === 'productUnitReport') {
-        apiData = [
-          { product: 'Shirts', units: 120, confirmed: 100 },
-          { product: 'Shoes', units: 80, confirmed: 65 }
-        ]
-      } else if (activeKey === 'courierDeliveryReport') {
-        apiData = [
-          { courier: 'TCS', parcels: 200, delivered: 180, ratio: '90%' },
-          { courier: 'Leopard', parcels: 150, delivered: 123, ratio: '82%' }
-        ]
-      } else if (activeKey === 'dispatchReport') {
-        apiData = [
-          { courier: 'TCS', dispatched: 300, charges: 5000 },
-          { courier: 'Leopard', dispatched: 220, charges: 3700 }
-        ]
-      }
+    const reportType = reportTypeMap[activeKey]
 
-      const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info', 'default']
+    if (!reportType) return
 
-      const dynamicCols = Object.keys(apiData[0] || {}).map(key => ({
-        accessorKey: key,
-        header: key.charAt(0).toUpperCase() + key.slice(1),
-        cell: ({ getValue }) => {
-          const value = getValue()
+    const dateStart = filters.startDate || ''
+    const dateEnd = filters.endDate || ''
+    const brand = filters.brand?.[0]?.value || ''
+    const channel = filters.platform?.[0]?.value || ''
 
-          // Pick a random color for this render
-          const randomColor = chipColors[Math.floor(Math.random() * chipColors.length)]
+    dispatch(fetchReports({ reportType, brand, channel, dateStart, dateEnd }))
+  }, [dispatch, selectedTab, selectedSubTab, filters])
 
-          return <Chip label={value} size='small' variant='tonal' color={randomColor} />
+  const columnNameMap = {
+    noPick: 'No Pick',
+    PaymentPending: 'Payment Pending',
+    UnitGenerated: 'Units Generated',
+    UnitConfirmed: 'Units Confirmed',
+    UnitNoPick: 'Units Not Picked',
+    paymentPending: 'Payment Pending',
+    unitGenerated: 'Units Generated',
+    unitConfirmed: 'Units Confirmed',
+    unitNoPick: 'Units Not Picked',
+    UnitCancel: 'Units Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrdersCancelled: 'Orders Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrderCancelled: 'Orders Cancelled',
+    NoOfUnits: 'No of Units',
+    ChannelName: 'Channel Name',
+    ShopifyAddress: 'Shopify Address',
+    NoOfOrders: 'No of Orders'
+  }
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const activeKey = selectedSubTab || selectedTab
+
+      // Determine the report key part for highlighting
+      const activeReportKeyword = activeKey
+        ?.replace(/([A-Z])/g, ' $1') // make camelCase readable
+        ?.toLowerCase()
+        ?.split(' ')[0] // e.g. "agentOrderReports" → "agent"
+
+      const baseColumns = [
+        {
+          accessorKey: 'serial',
+          header: 'Sr. No',
+          size: 80,
+          enableSorting: false,
+          cell: ({ row }) => row.index + 1 // shows 1,2,3...
         }
-      }))
+      ]
 
-      setData(apiData)
-      setColumns(dynamicCols)
-      setLoading(false)
-    })
-  }, [selectedTab, selectedSubTab])
+      const dynamicCols = Object.keys(data[0])
+        .filter(key => key !== '_id')
+        .map(key => ({
+          accessorKey: key,
+          header:
+            columnNameMap[key] ||
+            columnNameMap[key.toLowerCase()] ||
+            columnNameMap[key.charAt(0).toUpperCase() + key.slice(1)] ||
+            key,
+          cell: ({ getValue }) => {
+            const value = getValue()
+
+            const isHighlight = activeReportKeyword && key.toLowerCase().includes(activeReportKeyword)
+
+            // Handle null or undefined values
+            if (value === null || value === undefined) return '—'
+
+            // Highlighted column: use chip with color
+            if (isHighlight) {
+              return (
+                <Chip
+                  label={String(value)}
+                  size='small'
+                  color='primary'
+                  className='text-white'
+                  sx={{
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
+                  }}
+                />
+              )
+            }
+
+            // Normal columns: plain readable text
+            if (Array.isArray(value)) return value.join(', ')
+            if (typeof value === 'object')
+              return Object.entries(value)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ')
+            return String(value)
+          }
+        }))
+
+      dynamicCols.sort((a, b) => a.header.localeCompare(b.header))
+
+      setColumns([...baseColumns, ...dynamicCols])
+    } else {
+      setColumns([])
+    }
+  }, [data, selectedTab, selectedSubTab])
 
   const table = useReactTable({
     data,
@@ -207,8 +282,9 @@ export default function CSRReportsPage() {
               variant={selectedTab === tab.key ? 'contained' : 'outlined'}
               onClick={() => {
                 setSelectedTab(tab.key)
-                setSelectedSubTab('') // reset when switching main tab
+                setSelectedSubTab('')
               }}
+              className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
             >
               {tab.label}
             </Button>
@@ -224,6 +300,7 @@ export default function CSRReportsPage() {
                   key={sub.key}
                   variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
                   onClick={() => setSelectedSubTab(sub.key)}
+                  className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
                 >
                   {sub.label}
                 </Button>
@@ -264,8 +341,7 @@ export default function CSRReportsPage() {
                 className='flex flex-1'
                 options={[
                   { label: 'Shopify', value: 'shopify' },
-                  { label: 'Whatsapp', value: 'whatsapp' },
-                  { label: 'Manual', value: 'manual' }
+                  { label: 'Whatsapp', value: 'whatsapp' }
                 ]}
                 getOptionLabel={option => option.label}
                 value={filters.platform || []}
@@ -287,7 +363,7 @@ export default function CSRReportsPage() {
                 renderInput={params => <TextField {...params} label='Brand' size='small' />}
               />
 
-              <Autocomplete
+              {/* <Autocomplete
                 multiple
                 fullWidth
                 className='flex flex-1'
@@ -302,14 +378,14 @@ export default function CSRReportsPage() {
                 value={filters.courier || []}
                 onChange={(e, newValue) => setFilters(prev => ({ ...prev, courier: newValue }))}
                 renderInput={params => <TextField {...params} label='Courier' size='small' />}
-              />
+              /> */}
             </Box>
 
             <Box className='flex gap-4 w-full items-center justify-end'>
               <Button variant='outlined' color='error' onClick={() => setFilters({})}>
                 Reset Filters
               </Button>
-              <Button variant='contained' onClick={() => console.log('Apply Filters:', filters)}>
+              <Button variant='contained' className='text-white' onClick={() => console.log('Apply Filters:', filters)}>
                 Apply Filters
               </Button>
             </Box>
@@ -323,13 +399,13 @@ export default function CSRReportsPage() {
               <table className='min-w-full border-collapse'>
                 <thead className='border-y'>
                   {table.getHeaderGroups().map(hg => (
-                    <tr key={hg.id}>
+                    <tr key={hg.id} className='max-w-[250px]'>
                       {hg.headers.map(h => (
                         <th
                           key={h.id}
                           className={classNames(
-                            'px-4 py-2 border-b text-left font-medium text-gray-700 whitespace-nowrap',
-                            { 'cursor-pointer select-none': h.column.getCanSort?.() }
+                            'px-4 py-2 border-b text-left font-medium text-white bg-primary whitespace-nowrap',
+                            { 'cursor-pointer select-none capitalize': h.column.getCanSort?.() }
                           )}
                           onClick={h.column.getToggleSortingHandler?.()}
                         >
@@ -344,7 +420,8 @@ export default function CSRReportsPage() {
                     table.getRowModel().rows.map(row => (
                       <tr key={row.id} className='hover:bg-gray-50'>
                         {row.getVisibleCells().map(cell => (
-                          <td key={cell.id} className='px-4 py-2 border-b text-gray-800'>
+                          <td key={cell.id} className='px-4 py-2 border-b border-x text-gray-800 '>
+                            {/* serial number */}
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         ))}
@@ -389,6 +466,7 @@ export default function CSRReportsPage() {
           <Button
             variant='contained'
             color='primary'
+            className='text-white'
             onClick={() => setDownloadDialogOpen(true)} // <-- open modal
           >
             Download Report

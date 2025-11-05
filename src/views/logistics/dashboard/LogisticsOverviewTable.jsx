@@ -100,11 +100,11 @@ const LogisticsOverviewTable = ({ vehicleData }) => {
         )
       },
       columnHelper.accessor('location', {
-        header: 'Location',
+        header: 'City Name',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <CustomAvatar skin='light' size={40} color='secondary'>
-              <i className='bx-bxs-truck' />
+              <i className='bx-map' />
             </CustomAvatar>
             <Typography
               variant='h6'
@@ -118,15 +118,15 @@ const LogisticsOverviewTable = ({ vehicleData }) => {
         )
       }),
       columnHelper.accessor('startCity', {
-        header: 'Starting Route',
+        header: 'Total Number of Parcels',
         cell: ({ row }) => <Typography>{`${row.original.startCity}, ${row.original.startCountry}`}</Typography>
       }),
       columnHelper.accessor('endCity', {
-        header: 'Ending Route',
+        header: 'Highest Ordered Product',
         cell: ({ row }) => <Typography>{`${row.original.endCity}, ${row.original.endCountry}`}</Typography>
       }),
       columnHelper.accessor('warnings', {
-        header: 'Warnings',
+        header: 'Highest Delivery Exception',
         cell: ({ row }) => (
           <Chip
             variant='tonal'
@@ -137,7 +137,7 @@ const LogisticsOverviewTable = ({ vehicleData }) => {
         )
       }),
       columnHelper.accessor('progress', {
-        header: 'Progress',
+        header: 'Successful Deliveries',
         cell: ({ row }) => (
           <div className='flex items-center gap-2 min-is-48'>
             <LinearProgress
@@ -182,7 +182,7 @@ const LogisticsOverviewTable = ({ vehicleData }) => {
 
   return (
     <Card>
-      <CardHeader title='On route vehicles' action={<OptionMenu options={['Refresh', 'Update', 'Share']} />} />
+      <CardHeader title='City wise delivery status' action={<OptionMenu options={['Refresh', 'Update', 'Share']} />} />
       <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>

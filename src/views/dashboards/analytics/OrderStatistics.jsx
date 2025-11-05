@@ -30,13 +30,6 @@ const data = [
     stat: '23.8k'
   },
   {
-    avatarIcon: 'bx-home-alt',
-    avatarColor: 'info',
-    title: 'Decor',
-    subtitle: 'Fine Art, Dining',
-    stat: '849'
-  },
-  {
     avatarIcon: 'bx-football',
     avatarColor: 'secondary',
     title: 'Sports',
@@ -62,7 +55,7 @@ const OrderStatistics = () => {
     tooltip: { enabled: false },
     dataLabels: { enabled: false },
     stroke: { width: 4, lineCap: 'round', colors: ['var(--mui-palette-background-paper)'] },
-    labels: ['Fashion', 'Electronic', 'Sports', 'Decor'],
+    labels: ['Fashion', 'Electronic', 'Sports'],
     states: {
       hover: {
         filter: { type: 'none' }
@@ -106,9 +99,9 @@ const OrderStatistics = () => {
   return (
     <Card>
       <CardHeader
-        title='Order Statistics'
+        title='Store Wise Order Statistics'
         subheader='42.82k Total Sales'
-        action={<OptionMenu options={['Last Week', 'Last Month', 'Last Year']} />}
+        action={<OptionMenu options={['Sukooon Wellness', 'Glorify']} />}
       />
       <CardContent className='flex flex-col gap-6'>
         <div className='flex items-center justify-between flex-wrap gap-x-4 gap-y-1'>

@@ -110,7 +110,7 @@ const data = {
       color: 'secondary'
     }
   ],
-  country: [
+  city: [
     {
       imgSrc: '/images/cards/us.png',
       title: 'USA',
@@ -171,7 +171,7 @@ const TableWithTabs = () => {
           <CustomTabList onChange={handleChange} variant='scrollable' pill='true'>
             <Tab value='browser' label='Browser' />
             <Tab value='operating-system' label='Operating System' />
-            <Tab value='country' label='Country' />
+            <Tab value='city' label='City' />
           </CustomTabList>
         </CardContent>
         <Divider />

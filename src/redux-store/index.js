@@ -16,6 +16,7 @@ import authReducer from '@/redux-store/slices/authSlice'
 import roleReducer from '@/redux-store/slices/roleSlice'
 import taskAsssignmentReducer from '@/redux-store/slices/taskAsssignment'
 import couriersReducer from '@/redux-store/slices/couriers'
+import reportsReducer from '@/redux-store/slices/reports'
 
 export const store = configureStore({
   reducer: {
@@ -32,7 +33,8 @@ export const store = configureStore({
     auth: authReducer,
     role: roleReducer,
     taskAsssignment: taskAsssignmentReducer,
-    couriers: couriersReducer
+    couriers: couriersReducer,
+    reports: reportsReducer
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware({ serializableCheck: false })
 })

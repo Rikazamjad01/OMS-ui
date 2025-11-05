@@ -86,6 +86,33 @@ const projectTable = [
     email: 'eduke1z@dell.com',
     name: 'Etienne Duke',
     methodImg: '/images/apps/ecommerce/mastercard.png'
+  },
+  {
+    id: 7,
+    avatarSrc: '/images/avatars/1.png',
+    status: 'paid',
+    amount: '$794.97',
+    email: 'mnealeyf@kapanpost.jp',
+    name: 'Maurits Nealey',
+    methodImg: '/images/apps/ecommerce/mastercard.png'
+  },
+  {
+    id: 8,
+    avatarSrc: '/images/avatars/3.png',
+    status: 'paid',
+    amount: '$19.49',
+    email: 'ugoodlife2p@blogger.com',
+    name: 'Ulysses Goodlife',
+    methodImg: '/images/apps/ecommerce/mastercard.png'
+  },
+  {
+    id: 9,
+    avatarSrc: '/images/avatars/2.png',
+    status: 'failed',
+    amount: '$636.27',
+    email: 'eduke1z@dell.com',
+    name: 'Etienne Duke',
+    methodImg: '/images/apps/ecommerce/mastercard.png'
   }
 ]
 
@@ -127,31 +154,23 @@ const CustomersTable = () => {
           </div>
         )
       }),
-      columnHelper.accessor('amount', {
-        header: 'Amount',
-        cell: ({ row }) => <Typography>{row.original.amount}</Typography>
+      columnHelper.accessor('totalOrders', {
+        header: 'Total Orders',
+        cell: ({ row }) => <Typography>{row.original.totalOrders || 0}</Typography>
       }),
-      columnHelper.accessor('status', {
-        header: 'Status',
+      columnHelper.accessor('successfulOrders', {
+        header: 'Successful Orders',
         cell: ({ row }) => (
           <>
-            <Chip
-              className='capitalize'
-              size='small'
-              label={row.original.status}
-              color={
-                row.original.status === 'paid' ? 'success' : row.original.status === 'pending' ? 'warning' : 'error'
-              }
-              variant='tonal'
-            />
+            <Typography>{row.original.successfulOrders || 0}</Typography>
           </>
         )
       }),
-      columnHelper.accessor('methodImg', {
-        header: 'Method',
+      columnHelper.accessor('mostBuyedProduct', {
+        header: 'Most Buyed Product',
         cell: ({ row }) => (
           <div className='flex items-center justify-center plb-2 pli-3 rounded bg-actionHover is-[32px] bs-5'>
-            <img src={row.original.methodImg} className='bs-3' />
+            <Typography variant='body2'>{row.original?.mostBuyedProduct || '-'} </Typography>
           </div>
         )
       }),
@@ -182,7 +201,7 @@ const CustomersTable = () => {
     },
     initialState: {
       pagination: {
-        pageSize: 7
+        pageSize: 10
       }
     },
     enableRowSelection: true, //enable row selection for all rows

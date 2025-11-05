@@ -83,7 +83,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         renderExpandedMenuItemIcon={{ icon: <i className='bx-bxs-circle' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {checkPermission('dashboard.view') && (
+        {/* {checkPermission('dashboard.view') && ( */}
           <SubMenu
             label={dictionary['navigation'].dashboards}
             icon={<i className='bx-home-smile' />}
@@ -94,7 +94,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             <MenuItem href={`/${locale}/dashboards/analyticsII`}>{dictionary['navigation'].eCommerce}</MenuItem>
             <MenuItem href={`/${locale}/dashboards/logistics`}>{dictionary['navigation'].logistics}</MenuItem>
           </SubMenu>
-        )}
+        {/* )} */}
 
         {/* Reports Section */}
         {checkPermission('reports.view') && (
@@ -185,6 +185,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           <SubMenu label={dictionary['navigation'].CSRHead} icon={<i className='bx-user' />}>
             <MenuItem href={`/${locale}/CSR_HOD/agent_task_assignment`}>
               {dictionary['navigation'].agentTaskAssignment}
+            </MenuItem>
+
+            <MenuItem href={`/${locale}/incentives`}>
+              {dictionary['navigation'].incentives}
+            </MenuItem>
+
+            <MenuItem href={`/${locale}/upsellCommissions`}>
+              {dictionary['navigation'].upsellCommissions}
             </MenuItem>
             {/* <MenuItem href={`/${locale}/CSR_HOD/setup_comissions`}>{dictionary['navigation'].setupComissions}</MenuItem> */}
           </SubMenu>
@@ -330,6 +338,30 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         {isAdmin && (
           <MenuItem href={`/${locale}/couriers`} icon={<i className='bx-cog' />}>
             {dictionary['navigation'].couriers}
+          </MenuItem>
+        )}
+
+        {isAdmin && (
+          <MenuItem href={`/${locale}/ledger`} icon={<i className='bx-dollar' />}>
+            {dictionary['navigation'].ledger}
+          </MenuItem>
+        )}
+
+        {isAdmin && (
+          <MenuItem href={`/${locale}/returnManagement`} icon={<i className='bx-box' />}>
+            {dictionary['navigation'].returnManagement}
+          </MenuItem>
+        )}
+
+        {isAdmin && (
+          <MenuItem href={`/${locale}/defaultersManagement`} icon={<i className='bx-user' />}>
+              {dictionary['navigation'].defaultersManagement}
+            </MenuItem>
+        )}
+
+        {isAdmin && (
+          <MenuItem href={`/${locale}/attemptsManagement`} icon={<i className='bx-user' />}>
+            {dictionary['navigation'].attemptsManagement}
           </MenuItem>
         )}
 

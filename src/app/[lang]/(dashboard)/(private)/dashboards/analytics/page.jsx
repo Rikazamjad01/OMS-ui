@@ -38,7 +38,7 @@ const DashboardAnalytics = () => {
             <TotalRevenueReport />
           </Grid>
           <Grid size={{ xs: 12, lg: 4 }} order={{ xs: 1, lg: 2 }}>
-            <Grid container spacing={6}>
+            {/* <Grid container spacing={6}>
               <Grid size={{ xs: 12, sm: 6, md: 4, lg: 6 }}>
                 <Vertical
                   title='Payments'
@@ -54,23 +54,23 @@ const DashboardAnalytics = () => {
               <Grid size={{ xs: 12, md: 4, lg: 12 }}>
                 <LineProfitReportChart />
               </Grid>
+            </Grid> */}
+            <Grid>
+              <OrderStatistics />
             </Grid>
           </Grid>
         </Grid>
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <OrderStatistics />
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <FinancialStatsTabs />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Transactions />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      {/* <Grid size={{ xs: 12, md: 6 }}>
         <ActivityTimeline />
-      </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      </Grid> */}
+      <Grid size={{ xs: 12 }}>
         <TableWithTabs />
       </Grid>
     </Grid>

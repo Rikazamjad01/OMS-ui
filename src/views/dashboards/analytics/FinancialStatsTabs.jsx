@@ -13,10 +13,12 @@ import Tab from '@mui/material/Tab'
 import TabPanel from '@mui/lab/TabPanel'
 import TabContext from '@mui/lab/TabContext'
 import Typography from '@mui/material/Typography'
+import TextField from '@mui/material/TextField'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme, styled } from '@mui/material/styles'
 
 // Components Imports
+import { Button } from '@mui/material'
 import CustomTabList from '@core/components/mui/TabList'
 
 // Styled Component Imports
@@ -36,7 +38,6 @@ const tabData = [
   },
   {
     type: 'expense',
-    series: [{ data: [24, 21, 30, 25, 42, 26, 35, 29] }],
     title: 'Expenses',
     imgSrc: '/images/cards/paypal-error-bg.png',
     stats: '$316.5k',
@@ -69,52 +70,10 @@ const CircularProgressValue = styled(CircularProgress)({
   '& .MuiCircularProgress-circle': { strokeLinecap: 'round' }
 })
 
-const renderTabs = () => {
-  return tabData.map((tab, index) => <Tab key={index} label={tab.title} value={tab.type} />)
-}
-
-const renderTabPanels = options => {
-  return tabData.map((tab, index) => (
-    <TabPanel key={index} value={tab.type}>
-      <div className='flex gap-3 mbe-6'>
-        <img src={tab.imgSrc} alt={tab.title} className='is-[48px] bs-[48px]' />
-        <div className='flex flex-col gap-y-0.5'>
-          <Typography>{tab.title}</Typography>
-          <div className='flex gap-x-2 items-center'>
-            <Typography variant='h6'>{tab.stats}</Typography>
-            <Typography
-              variant='body2'
-              color={tab.trend === 'up' ? 'success.main' : 'error.main'}
-              className='flex items-center'
-            >
-              <i className={tab.trend === 'up' ? 'bx-chevron-up' : 'bx-chevron-down'} />
-              <span>{tab.trendPercent}%</span>
-            </Typography>
-          </div>
-        </div>
-      </div>
-      <AppReactApexCharts type='area' height={228} width='100%' options={{ ...options }} series={tab.series} />
-      <div className='flex items-center justify-center gap-4'>
-        <div className='relative mbs-3'>
-          <CircularProgressBg variant='determinate' value={100} size={48} />
-          <CircularProgressValue variant='determinate' size={48} value={tab.trendPercent} thickness={5} disableShrink />
-          <Typography className='text-xs absolute block-start-4 inline-start-2.5'>${tab.trendAmount}</Typography>
-        </div>
-        <div>
-          <Typography color='text.primary'>
-            <span className='capitalize'>{tab.type}</span>
-            <span> This Week</span>
-          </Typography>
-          <Typography variant='body2'>{tab.trendCompare} less than last week</Typography>
-        </div>
-      </div>
-    </TabPanel>
-  ))
-}
-
 const FinancialStatsTabs = () => {
   // States
   const [value, setValue] = useState('income')
+  const [expenseValue, setExpenseValue] = useState('316.5k')
 
   // Hooks
   const theme = useTheme()
@@ -213,10 +172,70 @@ const FinancialStatsTabs = () => {
     <Card>
       <CardContent>
         <TabContext value={value}>
-          <CustomTabList pill='true' onChange={handleChange} aria-label='Financial Stats Tabs'>
-            {renderTabs()}
+          <CustomTabList pill='true' onChange={handleChange} aria-label='Financial Stats Tabs' className='mbe-6'>
+            {tabData.map((tab, index) => (
+              <Tab key={index} label={tab.title} value={tab.type} />
+            ))}
           </CustomTabList>
-          {renderTabPanels(options)}
+          {tabData.map((tab, index) => (
+            <TabPanel key={index} value={tab.type} className='p-0 mt-5'>
+              <div className='flex gap-3 mbe-6'>
+                <img src={tab.imgSrc} alt={tab.title} className='is-[48px] bs-[48px]' />
+                <div className='flex flex-col gap-y-0.5'>
+                  <Typography>{tab.title}</Typography>
+                  <div className='flex gap-x-2 items-center'>
+                    <Typography variant='h6'>{tab.type === 'expense' ? `$${expenseValue}` : tab.stats}</Typography>
+                    <Typography
+                      variant='body2'
+                      color={tab.trend === 'up' ? 'success.main' : 'error.main'}
+                      className='flex items-center'
+                    >
+                      <i className={tab.trend === 'up' ? 'bx-chevron-up' : 'bx-chevron-down'} />
+                      <span>{tab.trendPercent}%</span>
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+              {tab.type === 'expense' ? (
+                <>
+                  <TextField
+                    fullWidth
+                    label='Expenses'
+                    value={expenseValue}
+                    onChange={e => setExpenseValue(e.target.value)}
+                    className='mbe-5'
+                  />
+                  <Button fullWidth variant='contained' color='primary' className='mb-2'>
+                    Update Expense
+                  </Button>
+                </>
+              ) : (
+                <AppReactApexCharts type='area' height={228} width='100%' options={options} series={tab.series} />
+              )}
+              <div className='flex items-center justify-center gap-4'>
+                <div className='relative mbs-3'>
+                  <CircularProgressBg variant='determinate' value={100} size={48} />
+                  <CircularProgressValue
+                    variant='determinate'
+                    size={48}
+                    value={tab.trendPercent}
+                    thickness={5}
+                    disableShrink
+                  />
+                  <Typography className='text-xs absolute block-start-4 inline-start-2.5'>
+                    ${tab.trendAmount}
+                  </Typography>
+                </div>
+                <div>
+                  <Typography color='text.primary'>
+                    <span className='capitalize'>{tab.type}</span>
+                    <span> This Month</span>
+                  </Typography>
+                  <Typography variant='body2'>{tab.trendCompare} less than last week</Typography>
+                </div>
+              </div>
+            </TabPanel>
+          ))}
         </TabContext>
       </CardContent>
     </Card>

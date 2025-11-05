@@ -20,48 +20,58 @@ import styles from './styles.module.css'
 const data = [
   {
     icon: 'bx-car',
-    heading: 'On the way',
+    heading: '1 day',
     time: '2hr 10min',
-    progressColor: 'action',
-    progressColorVariant: 'hover',
-    progressData: '39.7%',
-    widthClass: 'is-[39.7%]'
+    progressColor: 'success',
+    progressColorVariant: 'main',
+    progressData: '20.7%',
+    widthClass: 'is-[20.7%]'
   },
   {
     icon: 'bx-down-arrow-circle',
-    heading: 'Unloading',
+    heading: '2 days',
     time: '3hr 15min',
     progressColor: 'primary',
     progressColorVariant: 'main',
-    progressData: '28.3%',
-    widthClass: 'is-[28.3%]'
+    progressData: '20.3%',
+    widthClass: 'is-[20.3%]'
   },
   {
     icon: 'bx-up-arrow-circle',
-    heading: 'Loading',
+    heading: '5 days',
     time: '1hr 24min',
-    progressColor: 'info',
+    progressColor: 'orange',
     progressColorVariant: 'main',
-    progressData: '17.4%',
-    widthClass: 'is-[17.4%]'
+    progressData: '20.4%',
+    widthClass: 'is-[20.4%]'
   },
   {
     icon: 'bx-time-five',
-    heading: 'Waiting',
+    heading: '10 days',
+    time: '5hr 19min',
+    progressColor: 'info',
+    progressColorVariant: 'dark',
+    progressData: '20.6%',
+    widthClass: 'is-[20.6%]'
+  },
+  {
+    icon: 'bx-time-five',
+    heading: '10+',
     time: '5hr 19min',
     progressColor: 'SnackbarContent',
     progressColorVariant: 'bg',
-    progressData: '14.6%',
-    widthClass: 'is-[14.6%]'
+    progressData: '18%',
+    widthClass: 'is-[18%]'
   }
 ]
 
-const LogisticsVehicleOverview = () => {
+const DeliveryTimeManagement = () => {
   return (
     <Card>
-      <CardHeader title='Vehicle Overview' action={<OptionMenu options={['Refresh', 'Update', 'Share']} />} />
+      <CardHeader title='Delivery Time Management' action={<OptionMenu options={['Leopard', 'PostEx', 'M&P Express', 'Monthly']} />} />
       <CardContent>
-        <div className='flex flex-col gap-6'>
+        <div className='flex flex-col gap-2'>
+          <Typography variant='h6'>Delivered ratio in term of days</Typography>
           <div className='flex is-full'>
             {data.map((item, index) => (
               <div
@@ -125,4 +135,4 @@ const LogisticsVehicleOverview = () => {
   )
 }
 
-export default LogisticsVehicleOverview
+export default DeliveryTimeManagement

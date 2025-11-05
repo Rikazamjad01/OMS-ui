@@ -17,62 +17,62 @@ const data = [
     imgSrc: '/images/cards/us.png',
     title: '$8,656k',
     trendNumber: 22.5,
-    subtitle: 'United States of America',
+    subtitle: 'Faisalabad',
     stat: '894k'
   },
   {
     imgSrc: '/images/cards/brazil.png',
     title: '$2,415k',
     trendNumber: -6.2,
-    subtitle: 'Brazil',
+    subtitle: 'Lahore',
     stat: '645k'
   },
   {
     imgSrc: '/images/cards/india.png',
     title: '$865k',
     trendNumber: 25.8,
-    subtitle: 'India',
+    subtitle: 'Karachi',
     stat: '148k'
   },
   {
     imgSrc: '/images/cards/australia.png',
     title: '$745k',
     trendNumber: -11.9,
-    subtitle: 'Australia',
+    subtitle: 'Hyderabad',
     stat: '86k'
   },
   {
     imgSrc: '/images/cards/france.png',
     title: '$45k',
     trendNumber: 16.2,
-    subtitle: 'France',
+    subtitle: 'Gujranwala',
     stat: '42k'
   },
   {
     imgSrc: '/images/cards/china.png',
     title: '$12k',
     trendNumber: 14.8,
-    subtitle: 'China',
+    subtitle: 'Islamabad',
     stat: '8k'
   }
 ]
 
-const SalesByCountries = () => {
+const SalesByCities = () => {
   return (
     <Card>
       <CardHeader
-        title='Sales by Countries'
+        title='Sales by Cities'
         subheader='Monthly Sales Overview'
-        action={<OptionMenu options={['Last Week', 'Last Month', 'Last Year']} />}
+        action={<OptionMenu options={['Last Month', 'Last Quarter', 'Last Year']} />}
       />
       <CardContent className='flex flex-col gap-5'>
         {data.map(item => (
           <div key={item.title} className='flex items-center gap-3'>
-            <Avatar src={item.imgSrc} alt={item.subtitle} />
+            {/* <Avatar src={item.imgSrc} alt={item.subtitle} /> */}
             <div className='flex flex-wrap justify-between items-center gap-x-4 gap-y-1 is-full'>
               <div className='flex flex-col items-start'>
                 <div className='flex items-center flex-wrap gap-x-2 gap-y-1'>
-                  <Typography variant='h6'>{item.title}</Typography>
+                  <Typography variant='h6'>{item.subtitle}</Typography>
                   <div
                     className={classnames('flex items-center', {
                       'text-success': item.trendNumber > 0,
@@ -93,7 +93,7 @@ const SalesByCountries = () => {
                     </Typography>
                   </div>
                 </div>
-                <Typography variant='body2'>{item.subtitle}</Typography>
+                <Typography variant='body2'>{item.title}</Typography>
               </div>
               <Typography color='text.primary'>{item.stat}</Typography>
             </div>
@@ -104,4 +104,4 @@ const SalesByCountries = () => {
   )
 }
 
-export default SalesByCountries
+export default SalesByCities

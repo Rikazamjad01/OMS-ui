@@ -17,7 +17,7 @@ const deliveryData = [
   { title: 'Packages delivered', value: '15k', change: -12.5, icon: 'bx-check-circle', color: 'success' },
   { title: 'Delivery success rate', value: '95%', change: 35.6, icon: 'bx-bxs-offer', color: 'warning' },
   { title: 'Average delivery time', value: '2.5 Days', change: -2.15, icon: 'bx-time-five', color: 'secondary' },
-  { title: 'Customer satisfaction', value: '4.5/5', change: 5.7, icon: 'bx-group', color: 'error' }
+  { title: 'Total Shipped Packages', value: '4.5/5', change: 5.7, icon: 'bx-package', color: 'primary' }
 ]
 
 const LogisticsDeliveryPerformance = () => {

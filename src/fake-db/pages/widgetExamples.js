@@ -31,29 +31,29 @@ export const db = {
   ],
   statsHorizontalWithBorder: [
     {
-      title: 'On route vehicles',
+      title: 'Total Delivered Parcels',
       stats: 42,
       trendNumber: 18.2,
       avatarIcon: 'bx-bxs-truck',
       color: 'primary'
     },
     {
-      title: 'Vehicles with errors',
+      title: 'Total Returned Parcels',
       stats: 8,
       trendNumber: -8.7,
       avatarIcon: 'bx-error',
       color: 'warning'
     },
     {
-      title: 'Deviated from route',
+      title: 'Total Pending Parcels',
       stats: 27,
       trendNumber: 4.3,
       avatarIcon: 'bx-git-repo-forked',
       color: 'error'
     },
     {
-      title: 'Late vehicles',
-      stats: 13,
+      title: 'Average Delivery Time',
+      stats: '3 Days',
       trendNumber: 2.5,
       avatarIcon: 'bx-time-five',
       color: 'info'

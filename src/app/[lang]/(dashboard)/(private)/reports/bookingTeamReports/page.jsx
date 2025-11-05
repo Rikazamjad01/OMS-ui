@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useDispatch, useSelector } from 'react-redux'
 
 import {
   Box,
@@ -30,36 +31,15 @@ import {
 } from '@tanstack/react-table'
 import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
+import { fetchReports, selectReports, selectReportsLoading } from '@/redux-store/slices/reports'
 
 import DownloadDialog from '../downloadDialogue/page'
 
 const { RangePicker } = DatePicker
 
 const reportTabs = [
-  {
-    key: 'products',
-    label: 'Products',
-    subs: [
-      { key: 'topSelling', label: 'Top Selling' },
-      { key: 'lowStock', label: 'Low Stock' }
-    ]
-  },
-  {
-    key: 'couriers',
-    label: 'Couriers'
-  },
-  {
-    key: 'city',
-    label: 'City'
-  },
-  {
-    key: 'demand-sheet',
-    label: 'Demand Sheet'
-  },
-  {
-    key: 'dispatch',
-    label: 'Dispatch'
-  }
+  { key: 'demandSheet', label: 'Demand Sheet' },
+  { key: 'arrivalReport', label: 'Arrival Report' }
 ]
 
 // CSV/Excel Export
@@ -86,11 +66,25 @@ const exportToCSV = (data, fileName) => {
 const exportToPDF = (data, columns, fileName) => {
   const doc = new jsPDF({ orientation: 'landscape' })
 
-  doc.text('Admin Report', 14, 10)
-  const truncate = (str, maxLength = 15) => (str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str)
+  doc.text('Booking Team Report', 14, 10)
+
+  const truncate = (str, maxLength = 15) =>
+    str && str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str
 
   const headers = columns.map(col => col.header)
-  const rows = data.map(row => columns.map(col => truncate(row[col.accessorKey], 20)))
+
+  const rows = data.map(row =>
+    columns.map(col => {
+      const value = row[col.accessorKey]
+
+      if (value === null || value === undefined) return '—'
+      if (typeof value === 'object')
+        return Object.entries(value)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ')
+      return truncate(String(value), 20)
+    })
+  )
 
   autoTable(doc, {
     head: [headers],
@@ -99,12 +93,12 @@ const exportToPDF = (data, columns, fileName) => {
     styles: {
       fontSize: 8,
       cellPadding: 3,
-      overflow: 'ellipsize', // show dots instead of wrapping
+      overflow: 'ellipsize',
       lineWidth: 0.1,
       lineColor: [0, 0, 0]
     },
     headStyles: {
-      fillColor: [41, 128, 185], // nice blue header
+      fillColor: [41, 128, 185],
       textColor: 255,
       halign: 'center'
     }
@@ -113,64 +107,131 @@ const exportToPDF = (data, columns, fileName) => {
   doc.save(`${fileName}.pdf`)
 }
 
-export default function AdminReportsPage() {
+export default function BookingReportsPage() {
   const [selectedTab, setSelectedTab] = useState('')
   const [selectedSubTab, setSelectedSubTab] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
   const [filters, setFilters] = useState({ search: '' })
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  const dispatch = useDispatch()
+  const data = useSelector(selectReports)
+  const loading = useSelector(selectReportsLoading)
 
   useEffect(() => {
     if (!selectedTab) return
-    setLoading(true)
 
-    setTimeout(() => {
-      let apiData = []
-      let cols = []
+    const filtersToSend = {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      platform: filters.platform?.map(p => p.value),
+      brand: filters.brand?.map(b => b.value),
+      comparison: filters.comparison?.map(c => c.value)
+    }
 
-      if (selectedTab === 'products') {
-        if (selectedSubTab === 'topSelling') {
-          apiData = [
-            { name: 'Product A', sold: 500, stock: 100 },
-            { name: 'Product B', sold: 300, stock: 150 }
-          ]
+    dispatch(fetchReports({ reportType: selectedTab, subType: selectedSubTab, filters: filtersToSend }))
+  }, [selectedTab, selectedSubTab, filters])
+
+  const columnNameMap = {
+    noPick: 'No Pick',
+    PaymentPending: 'Payment Pending',
+    UnitGenerated: 'Units Generated',
+    UnitConfirmed: 'Units Confirmed',
+    UnitNoPick: 'Units Not Picked',
+    paymentPending: 'Payment Pending',
+    unitGenerated: 'Units Generated',
+    unitConfirmed: 'Units Confirmed',
+    unitNoPick: 'Units Not Picked',
+    UnitCancel: 'Units Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrdersCancelled: 'Orders Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrderCancelled: 'Orders Cancelled',
+    NoOfUnits: 'No of Units',
+    ChannelName: 'Channel Name',
+    ShopifyAddress: 'Shopify Address',
+    NoOfOrders: 'No of Orders'
+  }
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const activeKey = selectedSubTab || selectedTab
+
+      // Determine the report key part for highlighting
+      const activeReportKeyword = activeKey
+        ?.replace(/([A-Z])/g, ' $1') // make camelCase readable
+        ?.toLowerCase()
+        ?.split(' ')[0] 
+
+      const baseColumns = [
+        {
+          accessorKey: 'serial',
+          header: 'Sr. No',
+          size: 80,
+          enableSorting: false,
+          cell: ({ row }) => row.index + 1 // shows 1,2,3...
         }
+      ]
 
-        if (selectedSubTab === 'lowStock') {
-          apiData = [
-            { name: 'Product X', sold: 50, stock: 5 },
-            { name: 'Product Y', sold: 30, stock: 2 }
-          ]
-        }
+      const dynamicCols = Object.keys(data[0])
+        .filter(key => key !== '_id')
+        .map(key => ({
+          accessorKey: key,
+          header:
+            columnNameMap[key] ||
+            columnNameMap[key.toLowerCase()] ||
+            columnNameMap[key.charAt(0).toUpperCase() + key.slice(1)] ||
+            key,
+          cell: ({ getValue }) => {
+            const value = getValue()
 
-        cols = [
-          { accessorKey: 'name', header: 'Product Name' },
-          {
-            accessorKey: 'sold',
-            header: 'Units Sold',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='success' />
-          },
-          {
-            accessorKey: 'stock',
-            header: 'Stock Remaining',
-            cell: ({ getValue }) => <Chip label={getValue()} variant='tonal' size='small' color='warning' />
+            const isHighlight = activeReportKeyword && key.toLowerCase().includes(activeReportKeyword)
+
+            // Handle null or undefined values
+            if (value === null || value === undefined) return '—'
+
+            // Highlighted column: use chip with color
+            if (isHighlight) {
+              return (
+                <Chip
+                  label={String(value)}
+                  size='small'
+                  color='primary'
+                  className='text-white'
+                  sx={{
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
+                  }}
+                />
+              )
+            }
+
+            // Normal columns: plain readable text
+            if (Array.isArray(value)) return value.join(', ')
+            if (typeof value === 'object')
+              return Object.entries(value)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ')
+            return String(value)
           }
-        ]
-      }
+        }))
 
-      setData(apiData)
-      setColumns(cols)
-      setLoading(false)
-    }, 500)
-  }, [selectedTab, selectedSubTab])
+      dynamicCols.sort((a, b) => a.header.localeCompare(b.header))
+
+      setColumns([...baseColumns, ...dynamicCols])
+    } else {
+      setColumns([])
+    }
+  }, [data, selectedTab, selectedSubTab])
 
   const table = useReactTable({
-    data,
+    data: data || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -194,6 +255,7 @@ export default function AdminReportsPage() {
                 setSelectedTab(tab.key)
                 setSelectedSubTab(tab.subs?.[0]?.key || '') // auto-select first sub-tab
               }}
+              className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
             >
               {tab.label}
             </Button>
@@ -202,7 +264,7 @@ export default function AdminReportsPage() {
 
         {/* Sub-Tabs */}
         {selectedTab && reportTabs.find(t => t.key === selectedTab)?.subs && (
-          <Box mb={3} display='flex' gap={2} px={4}>
+          <Box mb={3} display='flex' gap={2} px={4} flexWrap='wrap'>
             {reportTabs
               .find(t => t.key === selectedTab)
               .subs.map(sub => (
@@ -210,6 +272,7 @@ export default function AdminReportsPage() {
                   key={sub.key}
                   variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
                   onClick={() => setSelectedSubTab(sub.key)}
+                  className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
                 >
                   {sub.label}
                 </Button>
@@ -250,8 +313,7 @@ export default function AdminReportsPage() {
                 className='flex flex-1'
                 options={[
                   { label: 'Shopify', value: 'shopify' },
-                  { label: 'Whatsapp', value: 'whatsapp' },
-                  { label: 'Manual', value: 'manual' }
+                  { label: 'Whatsapp', value: 'whatsapp' }
                 ]}
                 getOptionLabel={option => option.label}
                 value={filters.platform || []}
@@ -291,7 +353,7 @@ export default function AdminReportsPage() {
               />
 
               {/* Comparison */}
-              <Autocomplete
+              {/* <Autocomplete
                 multiple
                 fullWidth
                 className='flex flex-1'
@@ -313,14 +375,14 @@ export default function AdminReportsPage() {
                 renderInput={params => (
                   <TextField {...params} label='Comparison' size='small' placeholder='Select Comparison' />
                 )}
-              />
+              /> */}
             </Box>
 
             <Box className='flex gap-4 w-full items-center justify-end'>
               <Button variant='outlined' color='error' onClick={() => setFilters({})}>
                 Reset Filters
               </Button>
-              <Button variant='contained' onClick={() => console.log('Apply Filters:', filters)}>
+              <Button variant='contained' className='text-white' onClick={() => console.log('Apply Filters:', filters)}>
                 Apply Filters
               </Button>
             </Box>
@@ -339,9 +401,9 @@ export default function AdminReportsPage() {
                         <th
                           key={h.id}
                           className={classnames(
-                            'px-4 py-2 border-b text-left font-medium text-gray-700 whitespace-nowrap',
+                            'px-4 py-2 border-b text-left font-medium text-white bg-primary whitespace-nowrap',
                             {
-                              'cursor-pointer select-none': h.column.getCanSort?.()
+                              'cursor-pointer select-none capitalize': h.column.getCanSort?.()
                             }
                           )}
                           onClick={h.column.getToggleSortingHandler?.()}
@@ -357,7 +419,7 @@ export default function AdminReportsPage() {
                     table.getRowModel().rows.map(row => (
                       <tr key={row.id} className='hover:bg-gray-50'>
                         {row.getVisibleCells().map(cell => (
-                          <td key={cell.id} className='px-4 py-2 border-b text-gray-800'>
+                          <td key={cell.id} className='px-4 py-2 border-b border-x text-gray-800'>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         ))}
@@ -403,6 +465,7 @@ export default function AdminReportsPage() {
           <Button
             variant='contained'
             color='primary'
+            className='text-white'
             onClick={() => setDownloadDialogOpen(true)} // <-- open modal
           >
             Download Report

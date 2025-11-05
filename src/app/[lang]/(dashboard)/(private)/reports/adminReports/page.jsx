@@ -1,26 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react'
 
+import { useState, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-
 import Snackbar from '@mui/material/Snackbar'
 import MuiAlert from '@mui/material/Alert'
-
-import {
-  Box,
-  Typography,
-  Button,
-  CircularProgress,
-  Paper,
-  TextField,
-  LinearProgress,
-  Chip,
-  Card,
-  Autocomplete
-} from '@mui/material'
-import classnames from 'classnames'
+import { Box, Typography, Button, CircularProgress, TextField, Chip, Card, Autocomplete } from '@mui/material'
 import {
   useReactTable,
   getCoreRowModel,
@@ -28,37 +15,22 @@ import {
   getFilteredRowModel,
   flexRender
 } from '@tanstack/react-table'
-
-import { DatePicker, Space } from 'antd'
+import { DatePicker } from 'antd'
 import dayjs from 'dayjs'
 
 import DownloadDialog from '../downloadDialogue/page'
 
+// 🧠 Redux imports
+import { fetchReports, selectReports, selectReportsLoading } from '@/redux-store/slices/reports'
+
 const { RangePicker } = DatePicker
 
-const reportTabs = [
-  {
-    key: 'agents',
-    label: 'Agents',
-    subs: [
-      { key: 'activeAgents', label: 'Active Agents' },
-      { key: 'inactiveAgents', label: 'Inactive Agents' }
-    ]
-  },
-  { key: 'cities', label: 'Cities' }, // no subs
-  {
-    key: 'products',
-    label: 'Products',
-    subs: [
-      { key: 'topSelling', label: 'Top Selling' },
-      { key: 'lowStock', label: 'Low Stock' }
-    ]
-  },
-  { key: 'discounts', label: 'Discounts' },
-  { key: 'returns', label: 'Returns' }
+const adminTabs = [
+  { key: 'agentOrderReports', label: 'Agent Reports' },
+  { key: 'productUnitReports', label: 'Product Unit Reports' }
 ]
 
-// CSV/Excel Export
+// Export utilities
 const exportToExcel = (data, fileName) => {
   const worksheet = XLSX.utils.json_to_sheet(data)
   const workbook = XLSX.utils.book_new()
@@ -78,90 +50,150 @@ const exportToCSV = (data, fileName) => {
   link.click()
 }
 
-// PDF Export
 const exportToPDF = (data, columns, fileName) => {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: 'landscape' })
 
   doc.text('Admin Report', 14, 10)
 
   const headers = columns.map(col => col.header)
-  const rows = data.map(row => columns.map(col => row[col.accessorKey]))
+  const rows = data.map(row => columns.map(col => String(row[col.accessorKey] ?? '')))
 
-  autoTable(doc, {
-    head: [headers],
-    body: rows,
-    startY: 20
-  })
-
+  autoTable(doc, { head: [headers], body: rows, startY: 20 })
   doc.save(`${fileName}.pdf`)
 }
 
 export default function AdminReportsPage() {
+  const dispatch = useDispatch()
+  const data = useSelector(selectReports)
+  const loading = useSelector(selectReportsLoading)
+
   const [selectedTab, setSelectedTab] = useState('')
   const [selectedSubTab, setSelectedSubTab] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [data, setData] = useState([])
   const [columns, setColumns] = useState([])
-  const [filters, setFilters] = useState({ search: '' })
+  const [filters, setFilters] = useState({})
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
 
   useEffect(() => {
-    if (!selectedTab) return
-    setLoading(true)
+    const activeKey = selectedSubTab || selectedTab
 
-    setTimeout(() => {
-      let apiData = []
+    if (!activeKey) return
 
-      // --- Demo API data (replace with your real API) ---
-      if (selectedTab === 'agents' && selectedSubTab === 'activeAgents') {
-        apiData = [
-          { name: 'Ali', total: 50, confirmed: 30, assigned: 10 },
-          { name: 'Sara', total: 40, confirmed: 20, assigned: 15 }
-        ]
-      } else if (selectedTab === 'cities') {
-        apiData = [
-          { city: 'Lahore', orders: 120, revenue: 56000 },
-          { city: 'Karachi', orders: 200, revenue: 89000 }
-        ]
-      }
+    const reportTypeMap = {
+      agentOrderReports: 'agentOrderReport',
+      productUnitReports: 'productUnitReport'
+    }
 
-      // -------------------------------------------------
+    const reportType = reportTypeMap[activeKey]
 
-      // 🎨 Available chip colors
-      const chipColors = ['primary', 'secondary', 'success', 'error', 'warning', 'info', 'default']
+    if (!reportType) return
 
-      // 🎨 Mapping to keep consistent random colors per unique value
-      const valueColorMap = {}
+    const dateStart = filters.startDate || ''
+    const dateEnd = filters.endDate || ''
+    const brand = filters.brand?.[0]?.value || ''
+    const channel = filters.platform?.[0]?.value || ''
 
-      const getColorForValue = value => {
-        if (!valueColorMap[value]) {
-          const newColor = chipColors[Math.floor(Math.random() * chipColors.length)]
+    dispatch(fetchReports({ reportType, brand, channel, dateStart, dateEnd }))
+  }, [dispatch, selectedTab, selectedSubTab, filters])
 
-          valueColorMap[value] = newColor
+  const columnNameMap = {
+    noPick: 'No Pick',
+    PaymentPending: 'Payment Pending',
+    UnitGenerated: 'Units Generated',
+    UnitConfirmed: 'Units Confirmed',
+    UnitNoPick: 'Units Not Picked',
+    paymentPending: 'Payment Pending',
+    unitGenerated: 'Units Generated',
+    unitConfirmed: 'Units Confirmed',
+    unitNoPick: 'Units Not Picked',
+    UnitCancel: 'Units Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrdersCancelled: 'Orders Cancelled',
+    OrdersGenerated: 'Orders Generated',
+    OrdersConfirmed: 'Orders Confirmed',
+    OrdersNoPick: 'Orders Not Picked',
+    OrderCancelled: 'Orders Cancelled',
+    NoOfUnits: 'No of Units',
+    ChannelName: 'Channel Name',
+    ShopifyAddress: 'Shopify Address',
+    NoOfOrders: 'No of Orders'
+  }
+
+  // 🧠 Fetch data via thunk whenever tab/subtab or filters change
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const activeKey = selectedSubTab || selectedTab
+
+      // Determine the report key part for highlighting
+      const activeReportKeyword = activeKey
+        ?.replace(/([A-Z])/g, ' $1') // make camelCase readable
+        ?.toLowerCase()
+        ?.split(' ')[0] // e.g. "agentOrderReports" → "agent"
+
+      const baseColumns = [
+        {
+          accessorKey: 'serial',
+          header: 'Sr. No',
+          size: 80,
+          enableSorting: false,
+          cell: ({ row }) => row.index + 1 // shows 1,2,3...
         }
+      ]
 
-        return valueColorMap[value]
-      }
+      const dynamicCols = Object.keys(data[0])
+        .filter(key => key !== '_id')
+        .map(key => ({
+          accessorKey: key,
+          header:
+            columnNameMap[key] ||
+            columnNameMap[key.toLowerCase()] ||
+            columnNameMap[key.charAt(0).toUpperCase() + key.slice(1)] ||
+            key,
+          cell: ({ getValue }) => {
+            const value = getValue()
 
-      // 🔄 Dynamic columns
-      const dynamicCols = Object.keys(apiData[0] || {}).map(key => ({
-        accessorKey: key,
-        header: key.charAt(0).toUpperCase() + key.slice(1),
-        cell: ({ getValue }) => {
-          const value = getValue()
+            const isHighlight = activeReportKeyword && key.toLowerCase().includes(activeReportKeyword)
 
-          return <Chip label={value} size='small' variant='tonal' color={getColorForValue(value)} />
-        }
-      }))
+            // Handle null or undefined values
+            if (value === null || value === undefined) return '—'
 
-      setData(apiData)
-      setColumns(dynamicCols)
-      setLoading(false)
-    }, 500)
-  }, [selectedTab, selectedSubTab])
+            // Highlighted column: use chip with color
+            if (isHighlight) {
+              return (
+                <Chip
+                  label={String(value)}
+                  size='small'
+                  color='primary'
+                  className='text-white'
+                  sx={{
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
+                  }}
+                />
+              )
+            }
+
+            // Normal columns: plain readable text
+            if (Array.isArray(value)) return value.join(', ')
+            if (typeof value === 'object')
+              return Object.entries(value)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ')
+            return String(value)
+          }
+        }))
+
+      dynamicCols.sort((a, b) => a.header.localeCompare(b.header))
+
+      setColumns([...baseColumns, ...dynamicCols])
+    } else {
+      setColumns([])
+    }
+  }, [data, selectedTab, selectedSubTab])
 
   const table = useReactTable({
     data,
@@ -178,31 +210,34 @@ export default function AdminReportsPage() {
           Admin Reports
         </Typography>
 
-        {/* Tabs as buttons */}
+        {/* Tabs */}
         <Box mb={4} display='flex' gap={2} px={4}>
-          {reportTabs.map(tab => (
+          {adminTabs.map(tab => (
             <Button
               key={tab.key}
               variant={selectedTab === tab.key ? 'contained' : 'outlined'}
               onClick={() => {
                 setSelectedTab(tab.key)
-                setSelectedSubTab(tab.subs?.[0]?.key || '') // default to first sub if exists
+                setSelectedSubTab(tab.subs?.[0]?.key || '')
               }}
+              className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
             >
               {tab.label}
             </Button>
           ))}
         </Box>
 
-        {selectedTab && reportTabs.find(t => t.key === selectedTab)?.subs && (
+        {/* Sub Tabs */}
+        {selectedTab && adminTabs.find(t => t.key === selectedTab)?.subs && (
           <Box mb={3} display='flex' gap={2} px={4}>
-            {reportTabs
+            {adminTabs
               .find(t => t.key === selectedTab)
               .subs.map(sub => (
                 <Button
                   key={sub.key}
                   variant={selectedSubTab === sub.key ? 'contained' : 'outlined'}
                   onClick={() => setSelectedSubTab(sub.key)}
+                  className={`${selectedTab === tab.key ? 'bg-primary text-white' : 'bg-white text-primary'}`}
                 >
                   {sub.label}
                 </Button>
@@ -210,13 +245,14 @@ export default function AdminReportsPage() {
           </Box>
         )}
 
-        {/* Filters Section */}
+        {/* Filters */}
         {selectedTab && (
-          <div className='p-4'>
+          <Box className='p-4'>
             <Typography variant='h6' gutterBottom>
               Filters
             </Typography>
-            <div className='flex gap-4 mb-4'>
+
+            <Box className='flex gap-4 mb-4'>
               {/* Date Range */}
               <RangePicker
                 status='success'
@@ -230,24 +266,20 @@ export default function AdminReportsPage() {
                       endDate: dates[1].format('YYYY-MM-DD')
                     }))
                   } else {
-                    setFilters(prev => ({
-                      ...prev,
-                      startDate: '',
-                      endDate: ''
-                    }))
+                    setFilters(prev => ({ ...prev, startDate: '', endDate: '' }))
                   }
                 }}
               />
+
               {/* Platform */}
               <Autocomplete
                 multiple
                 fullWidth
+                className='flex flex-1'
                 options={[
                   { label: 'Shopify', value: 'shopify' },
-                  { label: 'Whatsapp', value: 'whatsapp' },
-                  { label: 'Manual', value: 'manual' }
+                  { label: 'Whatsapp', value: 'whatsapp' }
                 ]}
-                className='flex flex-1'
                 getOptionLabel={option => option.label}
                 value={filters.platform || []}
                 onChange={(e, newValue) => setFilters(prev => ({ ...prev, platform: newValue }))}
@@ -269,7 +301,7 @@ export default function AdminReportsPage() {
                 fullWidth
                 className='flex flex-1'
                 options={[
-                  { label: 'Sukoon Wellness', value: 'sukoon' },
+                  { label: 'Sukoon Wellness', value: 'Sukoon' },
                   { label: 'Glorify', value: 'glorify' }
                 ]}
                 getOptionLabel={option => option.label}
@@ -286,7 +318,7 @@ export default function AdminReportsPage() {
               />
 
               {/* Comparison */}
-              <Autocomplete
+              {/* <Autocomplete
                 multiple
                 fullWidth
                 className='flex flex-1'
@@ -308,17 +340,18 @@ export default function AdminReportsPage() {
                 renderInput={params => (
                   <TextField {...params} label='Comparison' size='small' placeholder='Select Comparison' />
                 )}
-              />
-            </div>
-            <div className='flex gap-4 w-full items-center justify-end'>
+              /> */}
+            </Box>
+
+            <Box className='flex gap-4 w-full items-center justify-end'>
               <Button variant='outlined' color='error' onClick={() => setFilters({})}>
                 Reset Filters
               </Button>
-              <Button variant='contained' onClick={() => console.log('Apply Filters:', filters)}>
+              <Button variant='contained' className='text-white' onClick={() => console.log('Apply Filters:', filters)}>
                 Apply Filters
               </Button>
-            </div>
-          </div>
+            </Box>
+          </Box>
         )}
 
         {/* Table Section */}
@@ -330,7 +363,7 @@ export default function AdminReportsPage() {
                   {table.getHeaderGroups().map(hg => (
                     <tr key={hg.id}>
                       {hg.headers.map(h => (
-                        <th key={h.id} className='px-4 py-2 border-b text-left font-medium text-gray-700'>
+                        <th key={h.id} className='px-4 py-2 border-b text-left font-medium text-white bg-primary'>
                           {flexRender(h.column.columnDef.header, h.getContext())}
                         </th>
                       ))}
@@ -358,6 +391,7 @@ export default function AdminReportsPage() {
                 </tbody>
               </table>
             </div>
+
             {loading && (
               <Box
                 position='absolute'
@@ -376,24 +410,22 @@ export default function AdminReportsPage() {
             )}
           </Box>
         ) : (
-          <Typography color='text.secondary' className='p-4 text-red-500 flex items-center'>
+          <Typography color='text.secondary' className='p-4 text-red-500'>
             Please select a report tab above to view data.
-            <i className='bx bx-arrow-to-top' />
           </Typography>
         )}
       </Box>
+
+      {/* Download Button */}
       {selectedTab && data.length > 0 ? (
         <div className='p-4 flex justify-end'>
-          <Button
-            variant='contained'
-            color='primary'
-            onClick={() => setDownloadDialogOpen(true)} // <-- open modal
-          >
+          <Button variant='contained' color='primary' onClick={() => setDownloadDialogOpen(true)}>
             Download Report
           </Button>
         </div>
       ) : null}
 
+      {/* Download Modal */}
       <DownloadDialog
         open={downloadDialogOpen}
         onClose={() => setDownloadDialogOpen(false)}
@@ -401,15 +433,10 @@ export default function AdminReportsPage() {
           const fileName = `${selectedTab}_report_${dayjs().format('YYYYMMDD')}`
 
           try {
-            if (format === 'csv') {
-              exportToCSV(data, fileName)
-            } else if (format === 'excel') {
-              exportToExcel(data, fileName)
-            } else if (format === 'pdf') {
-              exportToPDF(data, columns, fileName)
-            }
+            if (format === 'csv') exportToCSV(data, fileName)
+            else if (format === 'excel') exportToExcel(data, fileName)
+            else if (format === 'pdf') exportToPDF(data, columns, fileName)
 
-            // ✅ Show success snackbar
             setSnackbarMessage(`Report downloaded successfully as ${format.toUpperCase()}`)
             setSnackbarSeverity('success')
             setSnackbarOpen(true)
@@ -421,6 +448,8 @@ export default function AdminReportsPage() {
           }
         }}
       />
+
+      {/* Snackbar */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}

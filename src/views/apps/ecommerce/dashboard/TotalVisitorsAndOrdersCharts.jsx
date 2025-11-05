@@ -18,7 +18,7 @@ const series = {
   lineAreaSeries: [{ data: [14, 22, 17, 40, 12, 35, 25] }]
 }
 
-const NewVisitorsAndActivityCharts = () => {
+const TotalVisitorsAndOrdersCharts = () => {
   // Hook
   const theme = useTheme()
 
@@ -164,7 +164,7 @@ const NewVisitorsAndActivityCharts = () => {
           <Grid size={{ xs: 12, md: 6 }} className='max-md:border-be md:border-ie md:-mlb-6'>
             <div className='flex items-center justify-between pbe-6 md:mie-6 max-md:pie-6'>
               <Typography className='pbs-6' variant='h5'>
-                New Visitors
+                Total Visitors
               </Typography>
               <Typography variant='caption' color='text.secondary' className='pbs-6'>
                 Last Week
@@ -185,7 +185,7 @@ const NewVisitorsAndActivityCharts = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <div className='flex items-center justify-between pbe-6 max-md:pie-6'>
-              <Typography variant='h5'>Activity</Typography>
+              <Typography variant='h5'>Total Orders</Typography>
               <Typography variant='caption' color='text.secondary'>
                 Last Week
               </Typography>
@@ -215,4 +215,4 @@ const NewVisitorsAndActivityCharts = () => {
   )
 }
 
-export default NewVisitorsAndActivityCharts
+export default TotalVisitorsAndOrdersCharts

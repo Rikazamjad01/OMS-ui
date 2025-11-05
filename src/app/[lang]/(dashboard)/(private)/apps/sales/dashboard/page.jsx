@@ -10,10 +10,10 @@ import DonutChartGeneratedLeads from '@/views/dashboards/sales/DonutChartGenerat
 import TopProducts from '@/views/dashboards/sales/TopProducts'
 import EarningReports from '@/views/dashboards/sales/EarningReports'
 import SalesAnalytics from '@/views/dashboards/sales/SalesAnalytics'
-import SalesByCountries from '@/views/dashboards/sales/SalesByCountries'
 import SalesStats from '@/views/dashboards/sales/SalesStats'
 import TeamMembers from '@/views/dashboards/sales/TeamMembers'
 import CustomersTable from '@/views/dashboards/sales/CustomersTable'
+import SalesByCities from '@/views/dashboards/sales/SalesByCities'
 
 const DashboardSales = () => {
   return (
@@ -31,7 +31,7 @@ const DashboardSales = () => {
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3, lg: 6 }}>
             <Vertical
-              title='order'
+              title='Total Sales'
               imageSrc='/images/cards/cube-secondary-bg.png'
               stats='$1,286'
               trendNumber={13.24}
@@ -53,15 +53,15 @@ const DashboardSales = () => {
         <SalesAnalytics />
       </Grid>
       <Grid size={{ xs: 12, md: 6, xl: 4 }}>
-        <SalesByCountries />
+        <SalesByCities />
       </Grid>
       <Grid size={{ xs: 12, md: 6, xl: 4 }}>
         <SalesStats />
       </Grid>
-      <Grid size={{ xs: 12, xl: 5 }}>
+      {/* <Grid size={{ xs: 12, xl: 5 }}>
         <TeamMembers />
-      </Grid>
-      <Grid size={{ xs: 12, xl: 7 }}>
+      </Grid> */}
+      <Grid size={{ xs: 12 }}>
         <CustomersTable />
       </Grid>
     </Grid>

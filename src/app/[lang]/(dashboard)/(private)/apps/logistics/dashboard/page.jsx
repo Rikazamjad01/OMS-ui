@@ -3,8 +3,6 @@ import Grid from '@mui/material/Grid2'
 
 //Component Imports
 import LogisticsStatisticsCard from '@/views/logistics/dashboard/LogisticsStatisticsCard'
-import LogisticsVehicleOverview from '@/views/logistics/dashboard/LogisticsVehicleOverview'
-import LogisticsShipmentStatistics from '@/views/logistics/dashboard/LogisticsShipmentStatistics'
 import LogisticsDeliveryPerformance from '@/views/logistics/dashboard/LogisticsDeliveryPerformance'
 import LogisticsDeliveryExceptions from '@/views/logistics/dashboard/LogisticsDeliveryExceptions'
 import LogisticsOrdersByCountries from '@/views/logistics/dashboard/LogisticsOrdersByCountries'
@@ -12,6 +10,8 @@ import LogisticsOverviewTable from '@/views/logistics/dashboard/LogisticsOvervie
 
 //Data Imports
 import { getLogisticsData, getStatisticsData } from '@/app/server/actions'
+import DeliveryTimeManagement from '@/views/logistics/dashboard/DeliveryTimeManagement'
+import SuccessfulParcels from '@/views/logistics/dashboard/SuccessfulParcels'
 
 /**
  * ! If you need data using an API call, uncomment the below API code, update the `process.env.API_URL` variable in the
@@ -55,21 +55,21 @@ const LogisticsDashboard = async () => {
       <Grid size={{ xs: 12 }}>
         <LogisticsStatisticsCard data={data?.statsHorizontalWithBorder} />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
-        <LogisticsVehicleOverview />
+      <Grid size={{ xs: 12 }}>
+        <DeliveryTimeManagement />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
-        <LogisticsShipmentStatistics />
+      <Grid size={{ xs: 12, }}>
+        <SuccessfulParcels />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 7 }}>
         <LogisticsDeliveryPerformance />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 5 }}>
         <LogisticsDeliveryExceptions />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      {/* <Grid size={{ xs: 12, md: 4 }}>
         <LogisticsOrdersByCountries />
-      </Grid>
+      </Grid> */}
       <Grid size={{ xs: 12 }}>
         <LogisticsOverviewTable vehicleData={vehicleData?.vehicles} />
       </Grid>

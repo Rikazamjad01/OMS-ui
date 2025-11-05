@@ -3,7 +3,6 @@ import Grid from '@mui/material/Grid2'
 
 // Components Imports
 import Award from '@views/apps/ecommerce/dashboard/Award'
-import NewVisitorsAndActivityCharts from '@views/apps/ecommerce/dashboard/NewVisitorsAndActivityCharts'
 import Vertical from '@components/card-statistics/Vertical'
 import BarProfitChart from '@views/apps/ecommerce/dashboard/BarProfitChart'
 import RadialExpensesChart from '@views/apps/ecommerce/dashboard/RadialExpensesChart'
@@ -14,17 +13,18 @@ import SalesInfoCard from '@views/apps/ecommerce/dashboard/SalesInfoCard'
 import BarExpensesChart from '@views/apps/ecommerce/dashboard/BarExpensesChart'
 import TotalBalance from '@views/apps/ecommerce/dashboard/TotalBalance'
 import CustomersTable from '@views/apps/ecommerce/dashboard/CustomersTable'
+import TotalVisitorsAndOrdersCharts from '@/views/apps/ecommerce/dashboard/TotalVisitorsAndOrdersCharts'
 
 const EcommerceDashboard = () => {
   return (
     <Grid container spacing={6}>
-      <Grid size={{ xs: 12, md: 4 }}>
+      {/* <Grid size={{ xs: 12, md: 4 }}>
         <Award />
+      </Grid> */}
+      <Grid size={{ xs: 12 }}>
+        <TotalVisitorsAndOrdersCharts />
       </Grid>
-      <Grid size={{ xs: 12, md: 8 }}>
-        <NewVisitorsAndActivityCharts />
-      </Grid>
-      <Grid size={{ xs: 12, lg: 4 }}>
+      {/* <Grid size={{ xs: 12, md: 8 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12, sm: 6, md: 3, lg: 6 }}>
             <Vertical
@@ -51,17 +51,17 @@ const EcommerceDashboard = () => {
             />
           </Grid>
         </Grid>
-      </Grid>
-      <Grid size={{ xs: 12, lg: 8 }}>
+      </Grid> */}
+      {/* <Grid size={{ xs: 12, lg: 8 }}>
         <TotalIncome />
-      </Grid>
-      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+      </Grid> */}
+      <Grid size={{ xs: 12, md: 6 }}>
         <Performance />
       </Grid>
-      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+      <Grid size={{ xs: 12, md: 6}}>
         <ConversionRate />
       </Grid>
-      <Grid size={{ xs: 12, lg: 4 }}>
+      {/* <Grid size={{ xs: 12, lg: 4 }}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12, sm: 6, md: 3, lg: 6 }}>
             <Vertical
@@ -79,13 +79,13 @@ const EcommerceDashboard = () => {
             <BarExpensesChart />
           </Grid>
         </Grid>
-      </Grid>
-      <Grid size={{ xs: 12, lg: 8 }}>
+      </Grid> */}
+      <Grid size={{ xs: 12 }}>
         <CustomersTable />
       </Grid>
-      <Grid size={{ xs: 12, lg: 4 }}>
+      {/* <Grid size={{ xs: 12, lg: 4 }}>
         <TotalBalance />
-      </Grid>
+      </Grid> */}
     </Grid>
   )
 }

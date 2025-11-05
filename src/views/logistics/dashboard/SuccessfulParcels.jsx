@@ -115,7 +115,7 @@ const series = [
   }
 ]
 
-const LogisticsShipmentStatistics = () => {
+const SuccessfulParcels = () => {
   // Hooks
   const theme = useTheme()
 
@@ -217,7 +217,7 @@ const LogisticsShipmentStatistics = () => {
 
   return (
     <Card>
-      <CardHeader title='Shipment Statistics' subheader='Total number of deliveries 23.8k' action={<MonthButton />} />
+      <CardHeader title='Successful Parcels' subheader='Total number of deliveries 23.8k' action={<MonthButton />} />
       <CardContent>
         <AppReactApexCharts
           id='shipment-statistics'
@@ -232,4 +232,4 @@ const LogisticsShipmentStatistics = () => {
   )
 }
 
-export default LogisticsShipmentStatistics
+export default SuccessfulParcels
